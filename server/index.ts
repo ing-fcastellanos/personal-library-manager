@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import express from "express";
 import { createNextHandler } from "./next";
 import healthRouter from "./routes/health";
+import readersRouter from "./routes/readers";
 
 config();
 
@@ -12,7 +13,9 @@ async function main() {
   const app = express();
 
   // API layer (Express) — mounted before the Next.js catch-all.
+  app.use("/api", express.json());
   app.use("/api", healthRouter);
+  app.use("/api", readersRouter);
 
   // Web layer (Next.js SSR) — handles everything else.
   const handle = await createNextHandler(dev);

@@ -65,14 +65,28 @@ real/cloud environment (not needed for emulator-only development):
 4. In production (Cloud Run), the Admin SDK uses Application Default Credentials
    from the service account — no key file (see [ADR-0001](./docs/adr/0001-hosting-cloud-run.md)).
 
+#### Seed the readers
+
+With the emulators running (or pointed at the real project via env), create the
+two household readers — idempotent, safe to re-run:
+
+```bash
+npm run seed:readers
+```
+
+Then rename them and add each reader's Goodreads URL from **Settings → Lectores**
+(`/ajustes`).
+
 ## Scripts
 
-| Script             | Description                                        |
-| ------------------ | -------------------------------------------------- |
-| `npm run dev`      | Run Express + Next in development (hot reload)     |
-| `npm run build`    | Build the Next app and compile the Express server  |
-| `npm start`        | Run the compiled server in production mode         |
-| `npm run typecheck`| Type-check the project with no emit                |
+| Script                 | Description                                            |
+| ---------------------- | ----------------------------------------------------- |
+| `npm run dev`          | Run Express + Next in development (hot reload)         |
+| `npm run build`        | Build the Next app and compile the Express server     |
+| `npm start`            | Run the compiled server in production mode            |
+| `npm run typecheck`    | Type-check the project with no emit                   |
+| `npm run emulators`    | Start the Firebase emulators (Firestore/Auth/Storage) |
+| `npm run seed:readers` | Seed the two household readers (idempotent)           |
 
 ## Project structure
 

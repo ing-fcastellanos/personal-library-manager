@@ -7,11 +7,18 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ReadersManager } from "@/components/readers/readers-manager";
 
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Ajustes</h1>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Lectores</h2>
+        <ReadersManager />
+      </section>
+
       <Card>
         <CardHeader>
           <CardTitle>Apariencia</CardTitle>
