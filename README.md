@@ -86,6 +86,14 @@ docs/adr/    Architecture Decision Records
 openspec/    Spec-driven change proposals (OpenSpec)
 ```
 
+## UI / design system
+
+The UI uses **Tailwind CSS + shadcn/ui** with design tokens defined as CSS
+variables in `app/globals.css` (the single source of truth), light/dark theming,
+and a responsive app shell (sidebar on desktop, bottom-nav on mobile). See
+[ADR-0010](./docs/adr/0010-ui-stack-claude-design-handoff.md). Primitives live in
+`components/ui/`; the living reference is the **style guide** at `/style-guide`.
+
 ## Spec-driven development
 
 This project uses [OpenSpec](https://github.com/Fission-AI/OpenSpec). Propose a
