@@ -31,3 +31,4 @@ decisiones de arquitectura importantes, su contexto y sus consecuencias.
 | [0007](./0007-domain-model-book-copy-readingevent.md) | Modelo de dominio: Book / Copy / ReadingEvent | Accepted |
 | [0008](./0008-metadata-enrichment-sources.md) | Enriquecimiento de metadata: Google Books + Open Library | Accepted |
 | [0009](./0009-data-access-pattern.md) | Patrón de acceso a datos: server-mediated + cliente directo selecto | Accepted |
+| [0010](./0010-ui-stack-claude-design-handoff.md) | Stack de UI (Tailwind + shadcn/ui) y pipeline de handoff con Claude Design | Accepted |
