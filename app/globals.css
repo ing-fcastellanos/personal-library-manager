@@ -1,105 +1,90 @@
-@import "tailwindcss";
-
-@custom-variant dark (&:is(.dark *));
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /*
- * Design tokens — single source of truth (ADR-0010).
- * Defined as CSS variables here and mapped into the Tailwind theme below, so a
- * single edit cascades to every consumer and to Claude Design handoffs.
- * Neutral base; brand colors are finalized during the Claude Design step (#6.6).
- */
-:root {
-  --radius: 0.625rem;
+  Personal Library Manager — design tokens (single source of truth)
+  Warm, paper/leather palette for a book app. Coffee-brown brand.
+  Values are space-separated RGB channels so Tailwind can inject alpha:
+  e.g. bg-primary/90 → rgb(var(--primary) / 0.9). AA-checked in light & dark.
+*/
+@layer base {
+  :root {
+    --background: 247 243 236;
+    --foreground: 43 38 32;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.6 0.13 160);
-  --success-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-}
+    --card: 255 253 248;
+    --card-foreground: 43 38 32;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.7 0.13 160);
-  --success-foreground: oklch(0.145 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-}
+    --popover: 255 253 248;
+    --popover-foreground: 43 38 32;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+    --primary: 111 84 54;          /* #6f5436 coffee */
+    --primary-foreground: 250 246 239;
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+    --secondary: 236 228 214;
+    --secondary-foreground: 58 50 40;
+
+    --muted: 239 232 219;
+    --muted-foreground: 117 108 93;
+
+    --accent: 232 220 198;         /* #e8dcc6 tan */
+    --accent-foreground: 92 74 48;
+
+    --destructive: 179 38 30;
+    --destructive-foreground: 255 255 255;
+
+    --success: 63 125 78;
+    --success-foreground: 255 255 255;
+
+    --border: 226 217 200;
+    --input: 226 217 200;
+    --ring: 111 84 54;
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 33 29 24;
+    --foreground: 236 229 216;
+
+    --card: 42 37 31;
+    --card-foreground: 236 229 216;
+
+    --popover: 42 37 31;
+    --popover-foreground: 236 229 216;
+
+    --primary: 201 168 124;        /* #c9a87c lifted tan for dark */
+    --primary-foreground: 38 33 27;
+
+    --secondary: 54 48 42;
+    --secondary-foreground: 236 229 216;
+
+    --muted: 51 46 40;
+    --muted-foreground: 168 158 141;
+
+    --accent: 61 53 44;
+    --accent-foreground: 236 229 216;
+
+    --destructive: 229 72 77;
+    --destructive-foreground: 255 255 255;
+
+    --success: 103 185 122;
+    --success-foreground: 28 42 32;
+
+    --border: 58 52 44;
+    --input: 58 52 44;
+    --ring: 201 168 124;
+  }
 }
 
 @layer base {
   * {
-    border-color: var(--color-border);
+    @apply border-border;
   }
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    font-family:
-      system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    line-height: 1.5;
-    margin: 0;
-  }
-  code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    @apply bg-background text-foreground;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 }

@@ -30,8 +30,8 @@
 ## 6. Claude Design handoff
 
 - [x] 6.1 Author the Claude Design prompt for the shell + primitive library: sections, states (default/hover/focus/disabled/loading/empty/error), responsive (mobile-first), accessibility, and the project token set
-- [ ] 6.2 Run the design in Claude Design and integrate the output: map to shadcn primitives + tokens, reconcile with the shell, replace placeholders
-- [ ] 6.3 QA visual responsive (mobile/desktop) and accessibility on the integrated result
+- [x] 6.2 Run the design in Claude Design and integrate the output: map to shadcn primitives + tokens, reconcile with the shell, replace placeholders
+- [x] 6.3 QA visual responsive (mobile/desktop) and accessibility on the integrated result
 
 ## 7. Style guide & verification
 

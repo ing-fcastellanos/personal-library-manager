@@ -1,7 +1,6 @@
 "use client";
 
 import { Inbox } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +39,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/components/ui/use-toast";
 
 const tokenSwatches = [
   "background",
@@ -68,6 +68,8 @@ function Section({
 }
 
 export default function StyleGuidePage() {
+  const { toast } = useToast();
+
   return (
     <div className="mx-auto max-w-3xl space-y-10">
       <div>
@@ -84,7 +86,7 @@ export default function StyleGuidePage() {
             <div key={token} className="space-y-1">
               <div
                 className="h-12 rounded-md border"
-                style={{ backgroundColor: `var(--${token})` }}
+                style={{ backgroundColor: `rgb(var(--${token}))` }}
               />
               <p className="text-xs text-muted-foreground">{token}</p>
             </div>
@@ -93,13 +95,14 @@ export default function StyleGuidePage() {
       </Section>
 
       <Section title="Buttons">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button>Default</Button>
           <Button variant="secondary">Secondary</Button>
           <Button variant="outline">Outline</Button>
           <Button variant="ghost">Ghost</Button>
           <Button variant="destructive">Destructive</Button>
           <Button variant="link">Link</Button>
+          <Button loading>Loading</Button>
           <Button disabled>Disabled</Button>
         </div>
       </Section>
@@ -140,7 +143,7 @@ export default function StyleGuidePage() {
 
       <Section title="Empty state">
         <EmptyState
-          icon={Inbox}
+          icon={<Inbox />}
           title="Sin resultados"
           description="No hay nada para mostrar todavía."
         />
@@ -192,7 +195,7 @@ export default function StyleGuidePage() {
               <DropdownMenuLabel>Acciones</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Editar</DropdownMenuItem>
-              <DropdownMenuItem>Eliminar</DropdownMenuItem>
+              <DropdownMenuItem variant="destructive">Eliminar</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -200,7 +203,17 @@ export default function StyleGuidePage() {
             <AvatarFallback>FC</AvatarFallback>
           </Avatar>
 
-          <Button onClick={() => toast("Libro agregado")}>Toast</Button>
+          <Button
+            onClick={() =>
+              toast({
+                title: "Libro agregado",
+                description: "Cien años de soledad",
+                variant: "success",
+              })
+            }
+          >
+            Toast
+          </Button>
         </div>
       </Section>
     </div>

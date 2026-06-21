@@ -6,7 +6,7 @@ export default function CatalogPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Catálogo</h1>
       <EmptyState
-        icon={Library}
+        icon={<Library />}
         title="Tu biblioteca"
         description="Búsqueda, filtros y estantes (M2)."
       />

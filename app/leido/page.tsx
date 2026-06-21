@@ -6,7 +6,7 @@ export default function MarkReadPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold tracking-tight">Marcar leído</h1>
       <EmptyState
-        icon={BookCheck}
+        icon={<BookCheck />}
         title="Registrar lectura terminada"
         description="Buscá en el catálogo o identificá por foto, con rating y reseña (M4)."
       />
