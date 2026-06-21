@@ -30,3 +30,4 @@ decisiones de arquitectura importantes, su contexto y sus consecuencias.
 | [0006](./0006-auth-qr-reader-identity.md) | Modelo de autenticación: QR deep-link + identidad de lector | Accepted |
 | [0007](./0007-domain-model-book-copy-readingevent.md) | Modelo de dominio: Book / Copy / ReadingEvent | Accepted |
 | [0008](./0008-metadata-enrichment-sources.md) | Enriquecimiento de metadata: Google Books + Open Library | Accepted |
+| [0009](./0009-data-access-pattern.md) | Patrón de acceso a datos: server-mediated + cliente directo selecto | Accepted |
