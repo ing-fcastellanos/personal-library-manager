@@ -1,0 +1,30 @@
+{
+  "name": "personal-library-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-assisted personal library management system",
+  "scripts": {
+    "dev": "tsx watch server/index.ts",
+    "build": "next build && tsc -p tsconfig.server.json",
+    "start": "NODE_ENV=production node dist/server/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.7",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}
