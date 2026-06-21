@@ -7,11 +7,14 @@
     "dev": "tsx watch server/index.ts",
     "build": "next build && tsc -p tsconfig.server.json",
     "start": "NODE_ENV=production node dist/server/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "emulators": "firebase emulators:start --only firestore,auth,storage --project personal-library-manager-frank"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "firebase": "^11.3.0",
+    "firebase-admin": "^13.0.2",
     "next": "^15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -21,6 +24,7 @@
     "@types/node": "^22.10.7",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
+    "firebase-tools": "^13.29.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },

@@ -24,16 +24,46 @@ Architecture decisions are recorded in [`docs/adr/`](./docs/adr/).
 
 ```bash
 npm install
-cp .env.example .env        # optional; PORT defaults to 3000
-npm run dev                 # http://localhost:3000
+cp .env.example .env.local   # fill in the NEXT_PUBLIC_FIREBASE_* values
+
+# Terminal 1 — local Firebase (Firestore, Auth, Storage) emulators
+npm run emulators
+
+# Terminal 2 — the app (connects to the emulators in dev)
+npm run dev                  # http://localhost:3000
 ```
 
-Verify the API is up:
+Verify the API and Firestore connectivity:
 
 ```bash
-curl http://localhost:3000/api/health
-# {"status":"ok"}
+curl http://localhost:3000/api/health        # {"status":"ok"}      (liveness)
+curl http://localhost:3000/api/health/ready   # {"status":"ready"}   (Firestore reachable)
 ```
+
+### Firebase & local emulators
+
+Local development uses the **Firebase Emulator Suite** — no cloud project or
+credentials are needed to run and test. The emulators read `firebase.json`,
+`firestore.rules` and `storage.rules`; the SDKs connect to them when the
+`*_EMULATOR_HOST` / `NEXT_PUBLIC_FIREBASE_USE_EMULATOR` variables are set (see
+`.env.example`). Requires a Java runtime (JRE 11+).
+
+Access patterns follow [ADR-0009](./docs/adr/0009-data-access-pattern.md):
+server-mediated by default (Express + Admin SDK), with direct client access only
+for Storage uploads and read-only dashboard listeners. Security rules are
+**deny-by-default**.
+
+#### One-time project provisioning (owner)
+
+Done once in the [Firebase Console](https://console.firebase.google.com/) for the
+real/cloud environment (not needed for emulator-only development):
+
+1. Create the Firebase project (this repo uses `personal-library-manager-frank`).
+2. Enable **Firestore**, **Authentication** and **Storage**.
+3. Register a **Web app** and copy its config into `.env.local`
+   (`NEXT_PUBLIC_FIREBASE_*`). These are public identifiers, not secrets.
+4. In production (Cloud Run), the Admin SDK uses Application Default Credentials
+   from the service account — no key file (see [ADR-0001](./docs/adr/0001-hosting-cloud-run.md)).
 
 ## Scripts
 

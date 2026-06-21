@@ -1,0 +1,22 @@
+rules_version = '2';
+
+// Data access pattern: server-mediated by default (ADR-0009).
+// All catalog/reading data is read and written through the Express API using the
+// Admin SDK, which bypasses these rules. Direct client access is denied by default;
+// the only planned opening is read-only dashboard listeners (#27), kept closed here
+// until that feature lands.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Deny-by-default: no direct client read/write.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // STUB (#27) — read-only dashboard listeners for the authenticated reader.
+    // Intentionally left closed until the real-time dashboard is implemented.
+    // match /dashboard/{readerId}/{document=**} {
+    //   allow read: if request.auth != null && request.auth.uid == readerId;
+    // }
+  }
+}

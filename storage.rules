@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// Data access pattern: direct client upload is the one permitted client write to
+// Storage (ADR-0009), so book/shelf photos for AI ingestion (#3) don't pass through
+// Express. That path is stubbed but kept closed until the upload feature lands.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Deny-by-default: no direct client read/write.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // STUB (#3) — reader-scoped photo upload path.
+    // Intentionally left closed until the upload pipeline is implemented.
+    // match /readers/{readerId}/uploads/{fileName} {
+    //   allow write: if request.auth != null
+    //     && request.auth.uid == readerId
+    //     && request.resource.size < 15 * 1024 * 1024
+    //     && request.resource.contentType.matches('image/.*');
+    // }
+  }
+}

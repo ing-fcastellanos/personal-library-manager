@@ -10,6 +10,6 @@
     "incremental": false,
     "isolatedModules": false
   },
-  "include": ["server/**/*.ts", "lib/**/*.ts"],
-  "exclude": ["node_modules", ".next", "dist", "app", "components"]
+  "include": ["server/**/*.ts"],
+  "exclude": ["node_modules", ".next", "dist", "app", "components", "lib/firebase/client.ts"]
 }
