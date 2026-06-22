@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/auth-provider";
 import { SetPin } from "@/components/auth/set-pin";
+import { buildNextParam } from "@/lib/auth/next-param";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +17,6 @@ import {
 /** Settings card for the device-switch PIN. Only meaningful when signed in. */
 export function PinSection() {
   const { reader, loading } = useAuth();
-  const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -49,10 +48,11 @@ export function PinSection() {
             onDone={() => router.push("/")}
           />
         ) : (
-          <Button asChild variant="outline">
-            <Link href={`/login?next=${encodeURIComponent(pathname)}`}>
-              Iniciá sesión para configurar tu PIN
-            </Link>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/login?next=${buildNextParam()}`)}
+          >
+            Iniciá sesión para configurar tu PIN
           </Button>
         )}
       </CardContent>

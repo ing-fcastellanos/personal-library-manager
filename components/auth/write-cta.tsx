@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/auth-provider";
 import { SignInPrompt } from "@/components/auth/sign-in-prompt";
+import { buildNextParam } from "@/lib/auth/next-param";
 import { useToast } from "@/components/ui/use-toast";
 
 /**
@@ -14,7 +15,6 @@ import { useToast } from "@/components/ui/use-toast";
 export function WriteCta({ label, action }: { label: string; action?: string }) {
   const { reader } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
   const { toast } = useToast();
   const [promptOpen, setPromptOpen] = React.useState(false);
 
@@ -38,9 +38,7 @@ export function WriteCta({ label, action }: { label: string; action?: string }) 
       <SignInPrompt
         open={promptOpen}
         onOpenChange={setPromptOpen}
-        onSignIn={() =>
-          router.push(`/login?next=${encodeURIComponent(pathname)}`)
-        }
+        onSignIn={() => router.push(`/login?next=${buildNextParam()}`)}
         action={action}
       />
     </>
