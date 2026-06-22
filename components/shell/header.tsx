@@ -2,8 +2,8 @@
 
 import { usePathname } from "next/navigation";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/shell/theme-toggle";
+import { AuthControl } from "@/components/auth/auth-control";
 import { NAV_ITEMS } from "@/components/shell/nav-items";
 
 function useCurrentTitle() {
@@ -27,10 +27,7 @@ export function Header() {
         {title}
       </h1>
       <ThemeToggle />
-      <Avatar className="size-9">
-        <AvatarImage src="" alt="" />
-        <AvatarFallback>LM</AvatarFallback>
-      </Avatar>
+      <AuthControl />
     </header>
   );
 }

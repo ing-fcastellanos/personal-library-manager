@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/shell/theme-provider";
+import { AuthProvider } from "@/components/auth/auth-provider";
+import { ShelfProvider } from "@/components/shelf/shelf-context";
 import { AppShell } from "@/components/shell/app-shell";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -29,7 +31,11 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AppShell>{children}</AppShell>
+          <AuthProvider>
+            <ShelfProvider>
+              <AppShell>{children}</AppShell>
+            </ShelfProvider>
+          </AuthProvider>
           <Toaster />
         </ThemeProvider>
       </body>

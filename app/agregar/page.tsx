@@ -1,5 +1,6 @@
 import { BookPlus } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { WriteCta } from "@/components/auth/write-cta";
 
 export default function AddPage() {
   return (
@@ -9,6 +10,7 @@ export default function AddPage() {
         icon={<BookPlus />}
         title="Alta de libros"
         description="Manual, por ISBN/código de barras o por foto con IA (M2–M3)."
+        action={<WriteCta label="Agregar libro" />}
       />
     </div>
   );
