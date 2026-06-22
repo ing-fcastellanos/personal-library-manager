@@ -1,6 +1,8 @@
 "use client";
 
+import * as React from "react";
 import { Inbox } from "lucide-react";
+import { ReaderPicker } from "@/components/readers/reader-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,6 +69,11 @@ function Section({
   );
 }
 
+function ReaderPickerDemo() {
+  const [picked, setPicked] = React.useState<string | null>(null);
+  return <ReaderPicker value={picked} onChange={setPicked} />;
+}
+
 export default function StyleGuidePage() {
   const { toast } = useToast();
 
@@ -92,6 +99,10 @@ export default function StyleGuidePage() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section title="Reader picker">
+        <ReaderPickerDemo />
       </Section>
 
       <Section title="Buttons">

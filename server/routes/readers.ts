@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { readerUpdateSchema } from "../../lib/types/reader";
+import { readerUpdateSchema, toClientReader } from "../../lib/types/reader";
 import {
   listReaders,
   getReader,
@@ -16,7 +16,7 @@ const router = Router();
 
 router.get("/readers", async (_req, res) => {
   try {
-    res.json(await listReaders());
+    res.json((await listReaders()).map(toClientReader));
   } catch {
     res.status(500).json({ error: "internal" });
   }
@@ -26,7 +26,7 @@ router.get("/readers/:id", async (req, res) => {
   try {
     const reader = await getReader(req.params.id);
     if (!reader) return res.status(404).json({ error: "not found" });
-    res.json(reader);
+    res.json(toClientReader(reader));
   } catch {
     res.status(500).json({ error: "internal" });
   }
@@ -42,7 +42,7 @@ router.patch("/readers/:id", requireAuth, async (req, res) => {
   try {
     const reader = await updateReader(req.params.id as string, parsed.data);
     if (!reader) return res.status(404).json({ error: "not found" });
-    res.json(reader);
+    res.json(toClientReader(reader));
   } catch (err) {
     if (err instanceof ReaderEmailConflictError) {
       return res.status(409).json({ error: "email already in use" });

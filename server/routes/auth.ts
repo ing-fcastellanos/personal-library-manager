@@ -22,6 +22,7 @@ import {
   recordSuccess,
 } from "../../lib/auth/pin";
 import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
+import { toClientReader } from "../../lib/types/reader";
 
 const dev = process.env.NODE_ENV !== "production";
 const CSRF_COOKIE = "csrf";
@@ -77,7 +78,7 @@ router.post("/auth/session", async (req, res) => {
     });
     const cookie = await createSessionCookie(idToken);
     res.cookie(sessionCookieName, cookie, sessionCookieOptions(dev));
-    res.json({ reader: { ...reader, uid: decoded.uid } });
+    res.json({ reader: toClientReader({ ...reader, uid: decoded.uid }) });
   } catch {
     res.status(401).json({ error: "invalid token" });
   }
@@ -107,7 +108,8 @@ router.get("/auth/me", async (req, res) => {
   }
   try {
     const decoded = await verifySessionCookie(cookie);
-    res.json({ reader: (await findReaderByUid(decoded.uid)) ?? null });
+    const me = await findReaderByUid(decoded.uid);
+    res.json({ reader: me ? toClientReader(me) : null });
   } catch {
     res.json({ reader: null });
   }
