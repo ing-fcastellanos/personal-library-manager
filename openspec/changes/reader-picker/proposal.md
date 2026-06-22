@@ -1,29 +1,28 @@
 ## Why
 
-With ADR-0013 settled, the only multi-reader need is **attribution** — which reader read a book, and per-reader dashboard views — not a session switch (each reader uses their own phone; switching = full logout/login). This change delivers issue **#11**, reframed: a **reusable reader picker** that selecting flows (#24 mark-read) and the dashboard (#27–#29) consume to attribute or filter by reader. Built on the design system (#6) via the Claude Design handoff (ADR-0010).
+There's a shared device on the shelf in addition to each reader's phone (ADR-0013). That creates two multi-reader needs: **switching the operating reader** on the shared device, and **attributing** a reading to a reader (plus per-reader dashboard views). This change delivers issue **#11** as **both**: a reusable attribution **picker**, a **switch-reader** affordance (full re-login — pure), and a **PIN lock** that re-confirms the active reader on the shared device (the PIN's kept function, ADR-0013). Built on the design system (#6) via the Claude Design handoff (ADR-0010).
 
 ## What Changes
 
-- Add a reusable, accessible **`ReaderPicker`** component: shows the household readers (avatar + name) and selects one. Controlled (`value` / `onChange`), mobile-first, keyboard-accessible. **No PIN / no security gate** — attribution is not a security boundary (ADR-0013).
-- Add a small **readers hook** (`useReaders`) that loads the household readers from `/api/readers` for the picker (and future consumers).
-- Exercise the component in the **style guide** (`/style-guide`) as the living reference, since its real consumers (#24, dashboard) land later.
-- Run the **Claude Design handoff** for the picker (prompt + integration).
-- Record the consequence (already in ADR-0013): the **PIN** built in #7/#9 is now **dormant** (it gated the removed reader-switch). This change does **not** remove it; a follow-up cleanup can.
+- Add a reusable, accessible **`ReaderPicker`** (avatar + name, controlled `value`/`onChange`, mobile-first) — **no PIN** (attribution is not a security boundary). Plus a `useReaders` loader over `/api/readers`.
+- Add a **"Cambiar de lector"** affordance (in the account menu): signs out and routes to login, so the other reader logs in fresh. **Pure** — the PIN never mints another reader's session (ADR-0013).
+- Add a **PIN lock**: a "Bloquear" action that locks the shared device to the **active reader**; unlocking requires that reader's **PIN** (reuses `PinPad` + `POST /api/auth/pin/verify`). It only re-confirms the same reader — never switches identity. This is the PIN's kept function (so #7/#9's PIN is **not** dormant).
+- Exercise the picker in the **style guide**; run the **Claude Design handoff** for the picker, switch, and lock screens.
 
-Out of scope: using the picker to attribute a reading (#24 — overlap noted there), the dashboard per-reader filter (#27–#29), any reader-switch / PIN flow (removed by ADR-0013), removing the dormant PIN code (optional follow-up).
+Out of scope: mounting the picker to attribute a reading (#24 — overlap noted there), the dashboard per-reader filter (#27–#29), any multi-account/PIN-minted switch (rejected by ADR-0013).
 
 ## Capabilities
 
 ### New Capabilities
-- `reader-picker`: A reusable component to select one of the household readers for **attribution** and dashboard filtering — controlled, accessible, no security gate (ADR-0013), with a `useReaders` loader.
+- `reader-picker`: The multi-reader UI for the household — a reusable ungated reader **attribution picker** (+ `useReaders`), a pure **switch-reader** affordance (re-login), and a **PIN lock** that re-confirms the active reader on a shared device.
 
 ### Modified Capabilities
-<!-- None. Consumes readers (#8), auth-ui (#9) and design-system (#6); their requirements don't change. The PIN's deprecation is recorded in ADR-0013, not as a spec change here. -->
+<!-- None. Consumes readers (#8), auth-ui/auth-session (#9/#7) and design-system (#6); their requirements don't change. The PIN endpoints from #7 are reused as-is. -->
 
 ## Impact
 
-- **New code:** `components/readers/reader-picker.tsx`, `components/readers/use-readers.ts`; a `ReaderPicker` example in `app/style-guide`.
-- **Consumes:** `/api/readers` (#8), the design-system primitives (#6), the auth state (#9) for the default-selected reader where a consumer wants it.
-- **No new deps; no backend changes.**
-- **Downstream:** #24 mounts the picker to attribute a reading (default = authenticated reader, override allowed); #27–#29 use it to filter the dashboard by reader.
-- **Decision record:** ADR-0013 (no reader switch; PIN dormant) supersedes the reader-switch parts of ADR-0012.
+- **New code:** `components/readers/reader-picker.tsx`, `components/readers/use-readers.ts`, a `LockScreen` + lock state (e.g. `components/auth/lock-*`), a "Cambiar de lector" item in the account menu, and a `ReaderPicker` example in `app/style-guide`.
+- **Consumes:** `/api/readers` (#8), `/api/auth/pin/verify` + `signOut` (#7/#9), design-system primitives + `PinPad` (#6/#9), auth state (#9).
+- **No new deps; no backend changes** (the PIN verify endpoint already exists).
+- **Downstream:** #24 mounts the picker for attribution (default = authenticated reader, override allowed); #27–#29 use it to filter the dashboard.
+- **Decision record:** ADR-0013 (switch = re-login; PIN kept as active-reader lock; ungated attribution) refines ADR-0012.

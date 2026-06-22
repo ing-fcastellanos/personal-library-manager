@@ -1,49 +1,46 @@
-# ADR-0013: Sin cambio de lector — atribución por picker (supersede en parte a ADR-0012)
+# ADR-0013: Switch de lector en dispositivo compartido + atribución (refina ADR-0012)
 
 - **Estado:** Accepted
 - **Fecha:** 2026-06-22
-- **Responsable(s):** ing-fcastellanos
-- **Supersede (en parte):** ADR-0012 (los aspectos de "cambio de lector" y el rol del PIN)
+- **Refina:** ADR-0012
 - **Issues relacionados:** #11, #24, #27–#29
 
 ## Contexto
 
-Al llegar a #11 (selector de lector) se aclaró el modelo de uso real: **cada lector
-usa su propio teléfono**, no se mantienen multicuentas en un dispositivo, y cambiar de
-lector = **logout + login completo**. Por lo tanto **no existe un "cambio de lector"
-dentro de la app**. El lector que **opera** la app es siempre el de la sesión
-autenticada (un dispositivo por lector, ADR-0011/0012).
-
-La única necesidad multi-lector que queda es la **atribución**: qué lector **leyó** un
-libro (`ReadingEvent.reader`) y ver el dashboard **por lector**. Eso no es una frontera
-de seguridad en una casa de 2 personas — es un *picker*.
+Cada lector usa **su propio teléfono por defecto**, pero **además hay un dispositivo
+compartido en la repisa** (tablet/kiosko). Eso genera dos necesidades multi-lector:
+**(1) cambiar el lector que opera** ese dispositivo compartido, y **(2) atribuir** una
+lectura a un lector (`ReadingEvent.reader`) y filtrar el dashboard por lector. El **PIN**
+se **conserva** para su función decidida (no queda dormido).
 
 ## Decisión
 
-- **No hay cambio de lector en la app.** Cambiar el lector que opera = cerrar sesión e
-  iniciar sesión (magic-link). El lector autenticado **es** el lector de la sesión.
-- **Picker de atribución reutilizable.** Un componente selecciona el lector
-  **atribuido** (para un `ReadingEvent` y para filtrar el dashboard). **Sin PIN** —
-  la atribución no es una frontera de seguridad. El **default** es el lector
-  autenticado; el picker permite override (p. ej. registrar un libro que leyó el otro).
-- **El PIN queda dormido.** El backend de PIN (set/verify, #7) y la UI de set-PIN (#9)
-  pierden su único caso de uso (gateaban el switch en ADR-0012). Quedan **sin uso**;
-  **pueden eliminarse** en una limpieza futura. Esto **supersede** las partes de
-  "PIN solo al cambiar de lector" y "flujo de cambio de lector (#11)" de ADR-0012.
+- **Cambio de lector = re-login completo (PIN "puro").** Para operar como otro lector,
+  se **cierra sesión y se inicia sesión** (magic-link del otro). El PIN **nunca mintea
+  identidad ni sesión** de otro lector — no hay multicuenta persistida en el dispositivo.
+  Esto alinea con "un usuario por dispositivo" del Client SDK de Firebase.
+- **PIN = re-confirmación/bloqueo del lector ACTIVO en el dispositivo compartido.** Su
+  función (la decidida en ADR-0012, **conservada**): bloquear el dispositivo compartido y
+  re-confirmar "soy yo" con el PIN del **lector que ya está autenticado** —
+  rápido, sin esperar el correo, sin abrir la sesión a cualquiera. Verifica contra
+  `reader.pinHash` (rate-limited, `/api/auth/pin/verify`); **solo re-confirma al mismo
+  lector**, jamás cambia de identidad.
+- **Atribución = picker sin gate.** Un `ReaderPicker` reutilizable selecciona el lector
+  **atribuido** para un `ReadingEvent` y para filtrar el dashboard. **Sin PIN** (la
+  atribución no es frontera de seguridad). Default = lector autenticado; se permite
+  override. Lo consumen #24 (atribución) y #27–#29 (dashboard).
 
 ## Consecuencias
 
-- **Positivas:** se disuelve la tensión "¿el PIN mintea identidad?"; modelo más simple;
-  atribución clara y sin fricción.
-- **Negativas / trade-offs:** queda **código muerto** del PIN hasta que se elimine; si en
-  el futuro aparece un dispositivo compartido, habrá que reintroducir un mecanismo de
-  switch (nuevo ADR).
-- **Seguimiento:** decidir si se elimina ya el PIN o se deja dormido; el picker lo
-  consumen #24 (atribución de lectura) y M5 (#27–#29, dashboard por lector).
+- **Positivas:** el PIN mantiene un uso real (bloqueo del kiosko) sin la tensión de
+  "mintear identidad"; el switch entre lectores es simple y seguro (re-login); la
+  atribución es fluida.
+- **Negativas / trade-offs:** cambiar de lector en el dispositivo compartido cuesta un
+  re-login (aceptable: es ocasional); el "bloqueo" es un lock suave del lado cliente.
 
 ## Alternativas consideradas
 
-- **Switch con PIN (B1: PIN mintea sesión / B2: PIN puro + re-login)** — descartado:
-  cada quien usa su teléfono y cambiar es re-login completo.
-- **Mantener el PIN "por las dudas"** — se documenta como dormido; no se le inventa un
-  uso para no agregar fricción ni complejidad.
+- **PIN mintea sesión del otro lector (switch sin re-login)** — descartado: requeriría
+  multicuenta persistida y haría del PIN una credencial de identidad.
+- **Eliminar el PIN (quedaba sin uso)** — descartado: se conserva para el bloqueo/
+  re-confirmación del lector activo en el dispositivo compartido.

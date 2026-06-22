@@ -1,24 +1,27 @@
-## 1. Readers loader
+## 1. Readers loader & picker
 
-- [ ] 1.1 Add `components/readers/use-readers.ts`: `useReaders()` fetching `/api/readers` (no-store), returning `{ readers, loading }`
+- [ ] 1.1 Add `components/readers/use-readers.ts`: `useReaders()` fetching `/api/readers` (no-store) → `{ readers, loading }`
+- [ ] 1.2 Add `components/readers/reader-picker.tsx`: controlled `ReaderPicker({ value, onChange, readers? })`, avatar + name, accessible + mobile-first, ungated; loading + empty states
+- [ ] 1.3 Add a `ReaderPicker` example (controlled) to `app/style-guide`
 
-## 2. ReaderPicker component
+## 2. Switch reader (re-login)
 
-- [ ] 2.1 Add `components/readers/reader-picker.tsx`: controlled `ReaderPicker({ value, onChange, readers? })` rendering avatar + name options
-- [ ] 2.2 Accessible + mobile-first: keyboard navigation, focus-visible, selected state via tokens; no PIN/gate (ADR-0013)
-- [ ] 2.3 Falls back to `useReaders` when `readers` is not provided; loading + empty states
+- [ ] 2.1 Add a "Cambiar de lector" action to the account menu that calls `signOut()` then routes to `/login` (pure; no PIN)
 
-## 3. Exercise in the style guide
+## 3. PIN lock (active reader)
 
-- [ ] 3.1 Add a `ReaderPicker` example (controlled) to `app/style-guide`
+- [ ] 3.1 Add a lock state (sessionStorage-persisted) + a "Bloquear" action in the account menu
+- [ ] 3.2 Add a `LockScreen` using `PinPad`: shows the active reader, verifies via `POST /api/auth/pin/verify` for that reader, unlock on success; locked on wrong PIN (rate-limited by backend)
+- [ ] 3.3 If the active reader has no PIN, route the lock action to set-PIN (Settings) instead
 
 ## 4. Claude Design handoff
 
-- [ ] 4.1 Author `claude-design-prompt.md` for the picker (states: default/selected/focus/loading/empty; avatar treatment; mobile-first; a11y; project tokens)
+- [ ] 4.1 Author `claude-design-prompt.md` for the picker, the switch confirmation, and the lock screen (states; avatar treatment; mobile-first; a11y; project tokens)
 - [ ] 4.2 Integrate the Claude Design output: map to primitives + tokens, reconcile with the scaffold
 - [ ] 4.3 QA visual responsive (mobile/desktop) and accessibility on the integrated result
 
 ## 5. Verification
 
 - [ ] 5.1 `npm run typecheck` passes
-- [ ] 5.2 `npm run build` succeeds; the style-guide example renders the household readers and selection updates
+- [ ] 5.2 `npm run build` succeeds; the style-guide picker renders the readers and selection updates; "switch reader" signs out → login
+- [ ] 5.3 With the Auth emulator: lock → wrong PIN stays locked, correct PIN unlocks the same reader
