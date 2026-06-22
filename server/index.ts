@@ -1,8 +1,10 @@
 import { config } from "dotenv";
 import express from "express";
+import cookieParser from "cookie-parser";
 import { createNextHandler } from "./next";
 import healthRouter from "./routes/health";
 import readersRouter from "./routes/readers";
+import authRouter from "./routes/auth";
 
 config();
 
@@ -14,7 +16,9 @@ async function main() {
 
   // API layer (Express) — mounted before the Next.js catch-all.
   app.use("/api", express.json());
+  app.use("/api", cookieParser());
   app.use("/api", healthRouter);
+  app.use("/api", authRouter);
   app.use("/api", readersRouter);
 
   // Web layer (Next.js SSR) — handles everything else.

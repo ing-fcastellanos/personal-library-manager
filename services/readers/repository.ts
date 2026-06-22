@@ -16,6 +16,14 @@ export class ReaderUidConflictError extends Error {
   }
 }
 
+/** Thrown when an email is already used by a different reader. */
+export class ReaderEmailConflictError extends Error {
+  constructor(email: string) {
+    super(`email already used by another reader: ${email}`);
+    this.name = "ReaderEmailConflictError";
+  }
+}
+
 function collection() {
   return getAdminFirestore().collection(COLLECTION);
 }
@@ -28,6 +36,7 @@ function mapDoc(doc: DocumentSnapshot): Reader {
     avatar: data.avatar ?? null,
     displayColor: data.displayColor ?? null,
     goodreadsUrl: data.goodreadsUrl ?? null,
+    email: data.email ?? null,
     preferences: data.preferences ?? {},
     uid: data.uid ?? null,
     pinHash: data.pinHash ?? null,
@@ -56,6 +65,7 @@ export async function createReader(
     avatar: input.avatar ?? null,
     displayColor: input.displayColor ?? null,
     goodreadsUrl: input.goodreadsUrl ?? null,
+    email: input.email ?? null,
     preferences: input.preferences ?? {},
     uid: input.uid ?? null,
     pinHash: null,
@@ -73,6 +83,16 @@ export async function updateReader(
   const ref = collection().doc(id);
   const existing = await ref.get();
   if (!existing.exists) return null;
+
+  if (input.email) {
+    const dup = await collection()
+      .where("email", "==", input.email)
+      .limit(1)
+      .get();
+    if (!dup.empty && dup.docs[0].id !== id) {
+      throw new ReaderEmailConflictError(input.email);
+    }
+  }
 
   const updates: Record<string, unknown> = {
     updatedAt: new Date().toISOString(),
@@ -115,4 +135,24 @@ export async function ensureReaderByName(
     return { reader: mapDoc(existing.docs[0]), created: false };
   }
   return { reader: await createReader(input), created: true };
+}
+
+export async function findReaderByEmail(email: string): Promise<Reader | null> {
+  const snap = await collection().where("email", "==", email).limit(1).get();
+  return snap.empty ? null : mapDoc(snap.docs[0]);
+}
+
+export async function findReaderByUid(uid: string): Promise<Reader | null> {
+  const snap = await collection().where("uid", "==", uid).limit(1).get();
+  return snap.empty ? null : mapDoc(snap.docs[0]);
+}
+
+/** Sets the reader's PIN hash (written only by the auth PIN endpoints, #7). */
+export async function setPinHash(
+  readerId: string,
+  pinHash: string,
+): Promise<void> {
+  await collection()
+    .doc(readerId)
+    .set({ pinHash, updatedAt: new Date().toISOString() }, { merge: true });
 }

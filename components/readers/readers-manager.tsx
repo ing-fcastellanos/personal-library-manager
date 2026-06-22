@@ -139,6 +139,7 @@ function EditReaderDialog({
   const [goodreadsUrl, setGoodreadsUrl] = React.useState(
     reader.goodreadsUrl ?? "",
   );
+  const [email, setEmail] = React.useState(reader.email ?? "");
   const [saving, setSaving] = React.useState(false);
 
   async function save() {
@@ -152,6 +153,7 @@ function EditReaderDialog({
           avatar: avatar || null,
           displayColor: displayColor || null,
           goodreadsUrl: goodreadsUrl || null,
+          email: email || null,
         }),
       });
       if (!res.ok) throw new Error("save failed");
@@ -182,6 +184,15 @@ function EditReaderDialog({
               id="reader-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+            />
+          </Field>
+          <Field label="Email (para magic-link)" id="reader-email">
+            <Input
+              id="reader-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="nombre@gmail.com"
             />
           </Field>
           <Field label="Avatar (URL)" id="reader-avatar">

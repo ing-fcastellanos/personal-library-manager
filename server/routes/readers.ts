@@ -4,11 +4,13 @@ import {
   listReaders,
   getReader,
   updateReader,
+  ReaderEmailConflictError,
 } from "../../services/readers/repository";
+import { requireAuth } from "../middleware/require-auth";
 
 /**
- * Reader profile API (server-mediated, ADR-0009).
- * TODO(#7): protect the write routes with requireAuth once sessions exist.
+ * Reader profile API (server-mediated, ADR-0009). Reads are public; writes
+ * require a valid session (ADR-0006).
  */
 const router = Router();
 
@@ -30,7 +32,7 @@ router.get("/readers/:id", async (req, res) => {
   }
 });
 
-router.patch("/readers/:id", async (req, res) => {
+router.patch("/readers/:id", requireAuth, async (req, res) => {
   const parsed = readerUpdateSchema.safeParse(req.body);
   if (!parsed.success) {
     return res
@@ -38,10 +40,13 @@ router.patch("/readers/:id", async (req, res) => {
       .json({ error: "validation", details: parsed.error.flatten() });
   }
   try {
-    const reader = await updateReader(req.params.id, parsed.data);
+    const reader = await updateReader(req.params.id as string, parsed.data);
     if (!reader) return res.status(404).json({ error: "not found" });
     res.json(reader);
-  } catch {
+  } catch (err) {
+    if (err instanceof ReaderEmailConflictError) {
+      return res.status(409).json({ error: "email already in use" });
+    }
     res.status(500).json({ error: "internal" });
   }
 });

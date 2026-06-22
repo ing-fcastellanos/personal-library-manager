@@ -11,6 +11,7 @@ export const readerSchema = z.object({
   avatar: z.string().nullish(),
   displayColor: z.string().nullish(),
   goodreadsUrl: z.string().nullish(),
+  email: z.string().email().nullish(),
   preferences: z.record(z.string(), z.unknown()).default({}),
   uid: z.string().nullish(),
   pinHash: z.string().nullish(),
@@ -26,6 +27,7 @@ export const readerCreateSchema = z.object({
   avatar: z.string().nullish(),
   displayColor: z.string().nullish(),
   goodreadsUrl: z.string().nullish(),
+  email: z.string().email().nullish(),
   preferences: z.record(z.string(), z.unknown()).optional(),
 });
 export type ReaderCreateInput = z.infer<typeof readerCreateSchema>;
