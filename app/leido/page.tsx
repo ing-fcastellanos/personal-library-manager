@@ -1,5 +1,6 @@
 import { BookCheck } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { WriteCta } from "@/components/auth/write-cta";
 
 export default function MarkReadPage() {
   return (
@@ -9,6 +10,7 @@ export default function MarkReadPage() {
         icon={<BookCheck />}
         title="Registrar lectura terminada"
         description="Buscá en el catálogo o identificá por foto, con rating y reseña (M4)."
+        action={<WriteCta label="Registrar lectura" />}
       />
     </div>
   );

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ReadersManager } from "@/components/readers/readers-manager";
+import { PinSection } from "@/components/auth/pin-section";
 
 export default function SettingsPage() {
   return (
@@ -17,6 +18,11 @@ export default function SettingsPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Lectores</h2>
         <ReadersManager />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">Seguridad</h2>
+        <PinSection />
       </section>
 
       <Card>
