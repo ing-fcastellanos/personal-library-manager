@@ -27,12 +27,12 @@
 ## 6. Claude Design handoff
 
 - [x] 6.1 Author `claude-design-prompt.md` for the auth screens (login, check-email, callback states, set-PIN, PIN-pad, header states; mobile-first, a11y, project tokens)
-- [ ] 6.2 Integrate the Claude Design output: map to primitives + tokens, reconcile with the scaffold, replace placeholders
-- [ ] 6.3 QA visual responsive (mobile/desktop) and accessibility on the integrated result
+- [x] 6.2 Integrate the Claude Design output: map to primitives + tokens, reconcile with the scaffold, replace placeholders
+- [x] 6.3 QA visual responsive (mobile/desktop) and accessibility on the integrated result
 
 ## 7. Verification
 
 - [x] 7.1 `npm run typecheck` passes
-- [ ] 7.2 With the Auth emulator: the login → callback flow establishes a session and the header reflects the reader; sign out clears it
-- [ ] 7.3 An unauthenticated write entry point redirects to `/login?next=…`; reads remain public
+- [x] 7.2 With the Auth emulator: the login → callback flow establishes a session and the header reflects the reader; sign out clears it
+- [x] 7.3 An unauthenticated write entry point redirects to `/login?next=…`; reads remain public
 - [x] 7.4 `npm run build` succeeds

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/auth-provider";
 import { SetPin } from "@/components/auth/set-pin";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,6 +18,8 @@ import {
 export function PinSection() {
   const { reader, loading } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
 
   return (
     <Card>
@@ -28,7 +31,23 @@ export function PinSection() {
       </CardHeader>
       <CardContent>
         {loading ? null : reader ? (
-          <SetPin />
+          <SetPin
+            onSave={async (pin) => {
+              const res = await fetch("/api/auth/pin", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ pin }),
+              });
+              if (!res.ok) {
+                toast({
+                  title: "No se pudo guardar el PIN",
+                  variant: "destructive",
+                });
+                throw new Error("failed");
+              }
+            }}
+            onDone={() => router.push("/")}
+          />
         ) : (
           <Button asChild variant="outline">
             <Link href={`/login?next=${encodeURIComponent(pathname)}`}>

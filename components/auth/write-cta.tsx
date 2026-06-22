@@ -1,28 +1,48 @@
 "use client";
 
+import * as React from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { useRequireAuthToWrite } from "@/components/auth/require-auth-to-write";
+import { useAuth } from "@/components/auth/auth-provider";
+import { SignInPrompt } from "@/components/auth/sign-in-prompt";
 import { useToast } from "@/components/ui/use-toast";
 
 /**
- * Placeholder write entry point that demonstrates contextual gating: signed-out
- * users are sent to login; the real action lands in a later milestone.
+ * Write entry point with contextual gating (ADR-0006): signed-out readers get the
+ * SignInPrompt (→ /login); the real action lands in a later milestone.
  */
-export function WriteCta({ label }: { label: string }) {
-  const ensureAuthed = useRequireAuthToWrite();
+export function WriteCta({ label, action }: { label: string; action?: string }) {
+  const { reader } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
+  const [promptOpen, setPromptOpen] = React.useState(false);
+
   return (
-    <Button
-      onClick={() => {
-        if (ensureAuthed()) {
-          toast({
-            title: "Próximamente",
-            description: "Esta acción se construye en un milestone siguiente.",
-          });
+    <>
+      <Button
+        onClick={() => {
+          if (reader) {
+            toast({
+              title: "Próximamente",
+              description:
+                "Esta acción se construye en un milestone siguiente.",
+            });
+          } else {
+            setPromptOpen(true);
+          }
+        }}
+      >
+        {label}
+      </Button>
+      <SignInPrompt
+        open={promptOpen}
+        onOpenChange={setPromptOpen}
+        onSignIn={() =>
+          router.push(`/login?next=${encodeURIComponent(pathname)}`)
         }
-      }}
-    >
-      {label}
-    </Button>
+        action={action}
+      />
+    </>
   );
 }
