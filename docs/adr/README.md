@@ -33,3 +33,4 @@ decisiones de arquitectura importantes, su contexto y sus consecuencias.
 | [0009](./0009-data-access-pattern.md) | Patrón de acceso a datos: server-mediated + cliente directo selecto | Accepted |
 | [0010](./0010-ui-stack-claude-design-handoff.md) | Stack de UI (Tailwind + shadcn/ui) y pipeline de handoff con Claude Design | Accepted |
 | [0011](./0011-identity-and-session-model.md) | Modelo de identidad y sesión (lector = usuario Firebase, PIN de desbloqueo, sesión server-authoritative) | Accepted |
+| [0012](./0012-auth-session-mechanics.md) | Mecánicas de auth y sesión: email único + membresía cerrada, recordado por refresh token, PIN solo al cambiar lector (refina ADR-0011) | Accepted |
