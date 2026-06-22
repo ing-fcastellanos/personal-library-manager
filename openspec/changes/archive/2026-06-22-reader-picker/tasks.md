@@ -17,11 +17,11 @@
 ## 4. Claude Design handoff
 
 - [x] 4.1 Author `claude-design-prompt.md` for the picker, the switch confirmation, and the lock screen (states; avatar treatment; mobile-first; a11y; project tokens)
-- [ ] 4.2 Integrate the Claude Design output: map to primitives + tokens, reconcile with the scaffold
-- [ ] 4.3 QA visual responsive (mobile/desktop) and accessibility on the integrated result
+- [x] 4.2 Integrate the Claude Design output: map to primitives + tokens, reconcile with the scaffold
+- [x] 4.3 QA visual responsive (mobile/desktop) and accessibility on the integrated result
 
 ## 5. Verification
 
 - [x] 5.1 `npm run typecheck` passes
 - [x] 5.2 `npm run build` succeeds; the style-guide picker renders the readers and selection updates; "switch reader" signs out → login
-- [ ] 5.3 With the Auth emulator: lock → wrong PIN stays locked, correct PIN unlocks the same reader
+- [x] 5.3 With the Auth emulator: lock → wrong PIN stays locked, correct PIN unlocks the same reader
