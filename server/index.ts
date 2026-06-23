@@ -5,6 +5,10 @@ import { createNextHandler } from "./next";
 import healthRouter from "./routes/health";
 import readersRouter from "./routes/readers";
 import authRouter from "./routes/auth";
+import shelvesRouter from "./routes/shelves";
+import booksRouter from "./routes/books";
+import copiesRouter from "./routes/copies";
+import readingEventsRouter from "./routes/reading-events";
 
 config();
 
@@ -20,6 +24,10 @@ async function main() {
   app.use("/api", healthRouter);
   app.use("/api", authRouter);
   app.use("/api", readersRouter);
+  app.use("/api", shelvesRouter);
+  app.use("/api", booksRouter);
+  app.use("/api", copiesRouter);
+  app.use("/api", readingEventsRouter);
 
   // Web layer (Next.js SSR) — handles everything else.
   const handle = await createNextHandler(dev);
