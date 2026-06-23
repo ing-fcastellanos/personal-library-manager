@@ -35,3 +35,4 @@ decisiones de arquitectura importantes, su contexto y sus consecuencias.
 | [0011](./0011-identity-and-session-model.md)          | Modelo de identidad y sesión (lector = usuario Firebase, PIN de desbloqueo, sesión server-authoritative)                               | Accepted |
 | [0012](./0012-auth-session-mechanics.md)              | Mecánicas de auth y sesión: email único + membresía cerrada, recordado por refresh token, PIN solo al cambiar lector (refina ADR-0011) | Accepted |
 | [0013](./0013-reader-attribution-no-switch.md)        | Switch de lector en dispositivo compartido (re-login) + atribución por picker; PIN conservado (refina ADR-0012)                        | Accepted |
+| [0014](./0014-reader-lifecycle-soft-delete.md)        | Ciclo de vida del lector: archivado (soft delete) en vez de borrado en duro; purga GDPR como operación de identidad aparte             | Accepted |
