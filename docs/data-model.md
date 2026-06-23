@@ -33,85 +33,89 @@ es la que hace ganar "simple y derivado" sobre "denormalizado y mantenido".
    └────────────────────────────────────────┘
 ```
 
-- `book`   ← `copy.bookId` (N copies → 1 book)
-- `book`   ← `readingEvent.bookId` (N events → 1 book)
+- `book` ← `copy.bookId` (N copies → 1 book)
+- `book` ← `readingEvent.bookId` (N events → 1 book)
 - `reader` ← `readingEvent.readerId` (N events → 1 reader)
-- `copy`   ← `readingEvent.copyId?` (opcional)
-- `shelf`  ← `copy.shelfId?` (opcional)
+- `copy` ← `readingEvent.copyId?` (opcional)
+- `shelf` ← `copy.shelfId?` (opcional)
 
 ### `books`
+
 Edición canónica (≈ 1 ISBN). Tipo: `lib/types/book.ts`.
 
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `id` | string | auto-id (no se llavea por ISBN, Decisión B) |
-| `title` | string | requerido |
-| `subtitle` | string? | |
-| `authors` | string[] | nombres display |
-| `authorKeys` | string[] | slugs normalizados (filtro/agrupado, Decisión F) |
-| `publisher` | string? | |
-| `publishedYear` | number? | |
-| `isbn13` / `isbn10` | string? | indexados (lookup/dedup #16) |
-| `categories` | string[] | display |
-| `categoryKeys` | string[] | slugs normalizados |
-| `coverUrl` | string? | portada en Storage (#13) |
-| `pageCount` | number? | |
-| `language` | string? | |
-| `description` | string? | |
-| `workKey` | string? | agrupa ediciones de una misma obra (#38) |
-| `titleKey` | string? | título lowercased para prefix search (#17) |
-| `source` | string? | `google-books`/`open-library`/`manual`/`ai` |
-| `createdAt`/`updatedAt` | string | ISO |
+| Campo                   | Tipo     | Notas                                            |
+| ----------------------- | -------- | ------------------------------------------------ |
+| `id`                    | string   | auto-id (no se llavea por ISBN, Decisión B)      |
+| `title`                 | string   | requerido                                        |
+| `subtitle`              | string?  |                                                  |
+| `authors`               | string[] | nombres display                                  |
+| `authorKeys`            | string[] | slugs normalizados (filtro/agrupado, Decisión F) |
+| `publisher`             | string?  |                                                  |
+| `publishedYear`         | number?  |                                                  |
+| `isbn13` / `isbn10`     | string?  | indexados (lookup/dedup #16)                     |
+| `categories`            | string[] | display                                          |
+| `categoryKeys`          | string[] | slugs normalizados                               |
+| `coverUrl`              | string?  | portada en Storage (#13)                         |
+| `pageCount`             | number?  |                                                  |
+| `language`              | string?  |                                                  |
+| `description`           | string?  |                                                  |
+| `workKey`               | string?  | agrupa ediciones de una misma obra (#38)         |
+| `titleKey`              | string?  | título lowercased para prefix search (#17)       |
+| `source`                | string?  | `google-books`/`open-library`/`manual`/`ai`      |
+| `createdAt`/`updatedAt` | string   | ISO                                              |
 
 ### `copies`
+
 Ejemplar físico poseído. Tipo: `lib/types/copy.ts`.
 
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `id` | string | auto-id |
-| `bookId` | string | **requerido** → `books` |
-| `shelfId` | string? | → `shelves` (un ejemplar sin estante es válido) |
-| `condition` | string? | string abierto por ahora (enum diferido a #12/#15) |
-| `acquiredAt` | string? | fecha ISO de alta |
-| `notes` | string? | notas por ejemplar (#15) |
-| `createdAt`/`updatedAt` | string | ISO |
+| Campo                   | Tipo    | Notas                                              |
+| ----------------------- | ------- | -------------------------------------------------- |
+| `id`                    | string  | auto-id                                            |
+| `bookId`                | string  | **requerido** → `books`                            |
+| `shelfId`               | string? | → `shelves` (un ejemplar sin estante es válido)    |
+| `condition`             | string? | string abierto por ahora (enum diferido a #12/#15) |
+| `acquiredAt`            | string? | fecha ISO de alta                                  |
+| `notes`                 | string? | notas por ejemplar (#15)                           |
+| `createdAt`/`updatedAt` | string  | ISO                                                |
 
 Sin flag de lectura por lector — el estado de lectura vive solo en `readingEvents`
 (Decisión D).
 
 ### `readingEvents`
+
 Una lectura de un libro por un lector. Tipo: `lib/types/reading-event.ts`.
 
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `id` | string | auto-id |
-| `readerId` | string | **requerido** → `readers` |
-| `bookId` | string | **requerido** → `books` |
-| `copyId` | string? | **opcional** (imports/sin ejemplar, Decisión C) |
-| `status` | enum | `finished` \| `reading` \| `abandoned` |
-| `dateStarted` | string? | ISO |
-| `dateFinished` | string? | ISO |
-| `rating` | number? | entero 1–5 |
-| `review` | string? | |
-| `bookTitle` | string | **snapshot** al momento del evento |
-| `bookAuthors` | string[] | snapshot |
-| `isbn13` | string? | snapshot |
-| `coverUrl` | string? | snapshot |
-| `createdAt`/`updatedAt` | string | ISO |
+| Campo                   | Tipo     | Notas                                           |
+| ----------------------- | -------- | ----------------------------------------------- |
+| `id`                    | string   | auto-id                                         |
+| `readerId`              | string   | **requerido** → `readers`                       |
+| `bookId`                | string   | **requerido** → `books`                         |
+| `copyId`                | string?  | **opcional** (imports/sin ejemplar, Decisión C) |
+| `status`                | enum     | `finished` \| `reading` \| `abandoned`          |
+| `dateStarted`           | string?  | ISO                                             |
+| `dateFinished`          | string?  | ISO                                             |
+| `rating`                | number?  | entero 1–5                                      |
+| `review`                | string?  |                                                 |
+| `bookTitle`             | string   | **snapshot** al momento del evento              |
+| `bookAuthors`           | string[] | snapshot                                        |
+| `isbn13`                | string?  | snapshot                                        |
+| `coverUrl`              | string?  | snapshot                                        |
+| `createdAt`/`updatedAt` | string   | ISO                                             |
 
 El snapshot es **histórico** ("qué era el libro cuando se leyó"); el `bookId` vivo es
 la fuente de verdad cuando se necesita el dato actual.
 
 ### `shelves`
+
 Ubicación física. Tipo: `lib/types/shelf.ts`.
 
-| Campo | Tipo | Notas |
-|-------|------|-------|
-| `id` | string | auto-id |
-| `name` | string | **requerido** |
-| `location` | string? | |
-| `description` | string? | |
-| `createdAt`/`updatedAt` | string | ISO |
+| Campo                   | Tipo    | Notas         |
+| ----------------------- | ------- | ------------- |
+| `id`                    | string  | auto-id       |
+| `name`                  | string  | **requerido** |
+| `location`              | string? |               |
+| `description`           | string? |               |
+| `createdAt`/`updatedAt` | string  | ISO           |
 
 ## Decisiones (A–F)
 
@@ -156,14 +160,14 @@ prefijo no alcanza.
 
 Bocetadas para que encajen sin repintar:
 
-| Futuro | Issue | Forma prevista |
-|--------|-------|----------------|
-| Series | #38 | `book.workKey` + futura colección `series` (orden de tomos) |
-| Préstamo (Loan) | #39 | campo/subcolección en `copy` (a quién, fecha, devolución) |
-| Wishlist | #37 | `book` sin `copy` + marcador de wishlist por lector |
-| AuditLog | #40 | colección `auditLog` (actor, entidad, ts) |
-| ImportSession | #22 / #35 | colección `importSessions` (resumen de la sesión de alta) |
-| Metas de lectura | #30 | subdoc en `reader` **o** colección `readingGoals` (se decide en M5) |
+| Futuro           | Issue     | Forma prevista                                                      |
+| ---------------- | --------- | ------------------------------------------------------------------- |
+| Series           | #38       | `book.workKey` + futura colección `series` (orden de tomos)         |
+| Préstamo (Loan)  | #39       | campo/subcolección en `copy` (a quién, fecha, devolución)           |
+| Wishlist         | #37       | `book` sin `copy` + marcador de wishlist por lector                 |
+| AuditLog         | #40       | colección `auditLog` (actor, entidad, ts)                           |
+| ImportSession    | #22 / #35 | colección `importSessions` (resumen de la sesión de alta)           |
+| Metas de lectura | #30       | subdoc en `reader` **o** colección `readingGoals` (se decide en M5) |
 
 ## Preguntas abiertas
 

@@ -26,6 +26,9 @@ export function ShelfProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [shelf, setShelf] = React.useState<string | null>(null);
 
+  // Syncs `shelf` from an external system (the URL / sessionStorage) on navigation —
+  // the intended use of an effect, not a cascading-render bug.
+  /* eslint-disable react-hooks/set-state-in-effect */
   React.useEffect(() => {
     const fromUrl = new URLSearchParams(window.location.search).get("shelf");
     if (fromUrl) {
@@ -44,6 +47,7 @@ export function ShelfProvider({ children }: { children: React.ReactNode }) {
       // ignore storage failures
     }
   }, [pathname]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <ShelfContext.Provider value={{ shelf }}>{children}</ShelfContext.Provider>

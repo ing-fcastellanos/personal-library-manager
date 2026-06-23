@@ -1,6 +1,13 @@
 "use client";
 
-import { LogIn, LogOut, User, KeyRound, Lock, UserRoundCog } from "lucide-react";
+import {
+  LogIn,
+  LogOut,
+  User,
+  KeyRound,
+  Lock,
+  UserRoundCog,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

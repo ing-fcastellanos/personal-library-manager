@@ -12,7 +12,13 @@ import { useToast } from "@/components/ui/use-toast";
  * Write entry point with contextual gating (ADR-0006): signed-out readers get the
  * SignInPrompt (→ /login); the real action lands in a later milestone.
  */
-export function WriteCta({ label, action }: { label: string; action?: string }) {
+export function WriteCta({
+  label,
+  action,
+}: {
+  label: string;
+  action?: string;
+}) {
   const { reader } = useAuth();
   const router = useRouter();
   const { toast } = useToast();

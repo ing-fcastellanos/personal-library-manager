@@ -38,11 +38,13 @@ emulator.
 ## Capabilities
 
 ### New Capabilities
+
 - `quality-baseline`: the project's automated quality gate — linting, formatting,
   a unit-test runner with the dual browser/node environment, a pre-commit hook, and
   a CI workflow that blocks PRs on lint/typecheck/test failures.
 
 ### Modified Capabilities
+
 <!-- None. This adds tooling around existing code; no product behavior or existing
      spec requirements change. -->
 

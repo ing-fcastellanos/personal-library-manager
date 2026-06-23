@@ -206,7 +206,9 @@ export default function StyleGuidePage() {
               <DropdownMenuLabel>Acciones</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Editar</DropdownMenuItem>
-              <DropdownMenuItem variant="destructive">Eliminar</DropdownMenuItem>
+              <DropdownMenuItem variant="destructive">
+                Eliminar
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

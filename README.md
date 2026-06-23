@@ -79,9 +79,9 @@ Then rename them and add each reader's Goodreads URL from **Settings → Lectore
 
 ## Scripts
 
-| Script                 | Description                                            |
+| Script                 | Description                                           |
 | ---------------------- | ----------------------------------------------------- |
-| `npm run dev`          | Run Express + Next in development (hot reload)         |
+| `npm run dev`          | Run Express + Next in development (hot reload)        |
 | `npm run build`        | Build the Next app and compile the Express server     |
 | `npm start`            | Run the compiled server in production mode            |
 | `npm run typecheck`    | Type-check the project with no emit                   |

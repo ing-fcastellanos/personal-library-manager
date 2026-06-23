@@ -1,7 +1,7 @@
 # Architecture Decision Records (ADR)
 
 Este directorio contiene los **Architecture Decision Records** del proyecto
-*Personal Library Manager*: registros cortos e inmutables que documentan
+_Personal Library Manager_: registros cortos e inmutables que documentan
 decisiones de arquitectura importantes, su contexto y sus consecuencias.
 
 ## ¿Por qué ADRs?
@@ -20,18 +20,18 @@ decisiones de arquitectura importantes, su contexto y sus consecuencias.
 
 ## Índice
 
-| ADR | Título | Estado |
-|-----|--------|--------|
-| [0001](./0001-hosting-cloud-run.md) | Hosting en Google Cloud Run | Accepted |
-| [0002](./0002-database-firestore.md) | Firestore como base de datos principal | Accepted |
-| [0003](./0003-app-framework-next-express.md) | Next.js servido por servidor Express custom | Accepted |
-| [0004](./0004-ai-provider-abstraction.md) | Abstracción multi-motor de IA (OpenAI default + fallback Gemini) | Accepted |
-| [0005](./0005-goodreads-csv-manual.md) | Integración con Goodreads vía export CSV + link manual | Accepted |
-| [0006](./0006-auth-qr-reader-identity.md) | Modelo de autenticación: QR deep-link + identidad de lector | Accepted |
-| [0007](./0007-domain-model-book-copy-readingevent.md) | Modelo de dominio: Book / Copy / ReadingEvent | Accepted |
-| [0008](./0008-metadata-enrichment-sources.md) | Enriquecimiento de metadata: Google Books + Open Library | Accepted |
-| [0009](./0009-data-access-pattern.md) | Patrón de acceso a datos: server-mediated + cliente directo selecto | Accepted |
-| [0010](./0010-ui-stack-claude-design-handoff.md) | Stack de UI (Tailwind + shadcn/ui) y pipeline de handoff con Claude Design | Accepted |
-| [0011](./0011-identity-and-session-model.md) | Modelo de identidad y sesión (lector = usuario Firebase, PIN de desbloqueo, sesión server-authoritative) | Accepted |
-| [0012](./0012-auth-session-mechanics.md) | Mecánicas de auth y sesión: email único + membresía cerrada, recordado por refresh token, PIN solo al cambiar lector (refina ADR-0011) | Accepted |
-| [0013](./0013-reader-attribution-no-switch.md) | Switch de lector en dispositivo compartido (re-login) + atribución por picker; PIN conservado (refina ADR-0012) | Accepted |
+| ADR                                                   | Título                                                                                                                                 | Estado   |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| [0001](./0001-hosting-cloud-run.md)                   | Hosting en Google Cloud Run                                                                                                            | Accepted |
+| [0002](./0002-database-firestore.md)                  | Firestore como base de datos principal                                                                                                 | Accepted |
+| [0003](./0003-app-framework-next-express.md)          | Next.js servido por servidor Express custom                                                                                            | Accepted |
+| [0004](./0004-ai-provider-abstraction.md)             | Abstracción multi-motor de IA (OpenAI default + fallback Gemini)                                                                       | Accepted |
+| [0005](./0005-goodreads-csv-manual.md)                | Integración con Goodreads vía export CSV + link manual                                                                                 | Accepted |
+| [0006](./0006-auth-qr-reader-identity.md)             | Modelo de autenticación: QR deep-link + identidad de lector                                                                            | Accepted |
+| [0007](./0007-domain-model-book-copy-readingevent.md) | Modelo de dominio: Book / Copy / ReadingEvent                                                                                          | Accepted |
+| [0008](./0008-metadata-enrichment-sources.md)         | Enriquecimiento de metadata: Google Books + Open Library                                                                               | Accepted |
+| [0009](./0009-data-access-pattern.md)                 | Patrón de acceso a datos: server-mediated + cliente directo selecto                                                                    | Accepted |
+| [0010](./0010-ui-stack-claude-design-handoff.md)      | Stack de UI (Tailwind + shadcn/ui) y pipeline de handoff con Claude Design                                                             | Accepted |
+| [0011](./0011-identity-and-session-model.md)          | Modelo de identidad y sesión (lector = usuario Firebase, PIN de desbloqueo, sesión server-authoritative)                               | Accepted |
+| [0012](./0012-auth-session-mechanics.md)              | Mecánicas de auth y sesión: email único + membresía cerrada, recordado por refresh token, PIN solo al cambiar lector (refina ADR-0011) | Accepted |
+| [0013](./0013-reader-attribution-no-switch.md)        | Switch de lector en dispositivo compartido (re-login) + atribución por picker; PIN conservado (refina ADR-0012)                        | Accepted |

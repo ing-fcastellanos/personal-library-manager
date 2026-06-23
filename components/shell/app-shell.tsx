@@ -22,7 +22,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
         {/* pb-20 clears the fixed bottom nav on mobile; removed at md+ */}
-        <main className="flex-1 px-4 py-5 pb-24 md:px-6 md:pb-8">{children}</main>
+        <main className="flex-1 px-4 py-5 pb-24 md:px-6 md:pb-8">
+          {children}
+        </main>
       </div>
       <BottomNav />
     </div>

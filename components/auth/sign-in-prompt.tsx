@@ -44,8 +44,9 @@ export function SignInPrompt({
         <DialogHeader>
           <DialogTitle>Iniciá sesión para guardar</DialogTitle>
           <DialogDescription>
-            Podés leer y explorar sin cuenta. Para {action ?? "agregar libros o marcar lecturas"}{" "}
-            necesitás iniciar sesión.
+            Podés leer y explorar sin cuenta. Para{" "}
+            {action ?? "agregar libros o marcar lecturas"} necesitás iniciar
+            sesión.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

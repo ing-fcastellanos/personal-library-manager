@@ -22,9 +22,10 @@ export function GET(req: NextRequest) {
   const shelf = searchParams.get("shelf");
 
   const path = ACTION_ROUTES[action] ?? "/";
-  const location = shelf
-    ? `${path}?shelf=${encodeURIComponent(shelf)}`
-    : path;
+  const location = shelf ? `${path}?shelf=${encodeURIComponent(shelf)}` : path;
 
-  return new NextResponse(null, { status: 307, headers: { Location: location } });
+  return new NextResponse(null, {
+    status: 307,
+    headers: { Location: location },
+  });
 }

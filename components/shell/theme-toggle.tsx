@@ -10,7 +10,9 @@ export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
-  // Avoid hydration mismatch: render a stable shell until mounted.
+  // Avoid hydration mismatch: render a stable shell until mounted. The one-shot
+  // mount flag is the canonical hydration guard, not a cascading-render bug.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   React.useEffect(() => setMounted(true), []);
 
   const isDark = resolvedTheme === "dark";
@@ -23,7 +25,11 @@ export function ThemeToggle() {
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       {mounted ? (
-        isDark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />
+        isDark ? (
+          <Sun aria-hidden="true" />
+        ) : (
+          <Moon aria-hidden="true" />
+        )
       ) : (
         <span className="size-4" />
       )}

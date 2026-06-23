@@ -1,8 +1,11 @@
 # data-model Specification
 
 ## Purpose
+
 TBD - created by archiving change data-model. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Domain schema document
 
 The system SHALL provide `docs/data-model.md` as the canonical description of the
@@ -131,4 +134,3 @@ considered read by a reader when a `ReadingEvent` exists for that `readerId` and
 - **WHEN** `docs/data-model.md` is inspected for the read/pending query
 - **THEN** it lists a composite index on `readingEvents` over `readerId`, `status`,
   and `dateFinished` that supports computing a reader's read and pending sets
-

@@ -20,7 +20,7 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
       ref={ref}
       className={cn(
         "flex flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-border bg-card px-6 py-12 text-center",
-        className
+        className,
       )}
       {...props}
     >
@@ -40,7 +40,7 @@ const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
       ) : null}
       {action ? <div className="mt-2">{action}</div> : null}
     </div>
-  )
+  ),
 );
 EmptyState.displayName = "EmptyState";
 
