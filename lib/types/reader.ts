@@ -15,6 +15,7 @@ export const readerSchema = z.object({
   preferences: z.record(z.string(), z.unknown()).default({}),
   uid: z.string().nullish(),
   pinHash: z.string().nullish(),
+  hasPin: z.boolean().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -35,3 +36,12 @@ export type ReaderCreateInput = z.infer<typeof readerCreateSchema>;
 /** Fields accepted when updating a reader profile. */
 export const readerUpdateSchema = readerCreateSchema.partial();
 export type ReaderUpdateInput = z.infer<typeof readerUpdateSchema>;
+
+/**
+ * Client-safe view of a reader: never expose the PIN hash; surface only whether
+ * a PIN is set (`hasPin`). Use this to serialize readers in API responses.
+ */
+export function toClientReader(reader: Reader): Reader {
+  const { pinHash, ...rest } = reader;
+  return { ...rest, pinHash: undefined, hasPin: Boolean(pinHash) };
+}

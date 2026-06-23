@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/shell/theme-provider";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { ShelfProvider } from "@/components/shelf/shelf-context";
+import { LockProvider, LockGate } from "@/components/auth/lock-context";
 import { AppShell } from "@/components/shell/app-shell";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -33,7 +34,11 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
             <ShelfProvider>
-              <AppShell>{children}</AppShell>
+              <LockProvider>
+                <LockGate>
+                  <AppShell>{children}</AppShell>
+                </LockGate>
+              </LockProvider>
             </ShelfProvider>
           </AuthProvider>
           <Toaster />

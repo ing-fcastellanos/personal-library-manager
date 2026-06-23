@@ -1,6 +1,6 @@
 "use client";
 
-import { LogIn, LogOut, User, KeyRound } from "lucide-react";
+import { LogIn, LogOut, User, KeyRound, Lock, UserRoundCog } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,6 +19,10 @@ export interface AuthMenuProps {
   onSignOut: () => void;
   onAccount?: () => void;
   onChangePin?: () => void;
+  /** Shared device: switch reader = full re-login (ADR-0013). */
+  onSwitchReader?: () => void;
+  /** Shared device: lock to the active reader (PIN to unlock). */
+  onLock?: () => void;
 }
 
 /**
@@ -32,6 +36,8 @@ export function AuthMenu({
   onSignOut,
   onAccount,
   onChangePin,
+  onSwitchReader,
+  onLock,
 }: AuthMenuProps) {
   if (!user) {
     return (
@@ -78,6 +84,18 @@ export function AuthMenu({
           <DropdownMenuItem onSelect={onChangePin}>
             <KeyRound aria-hidden="true" />
             Cambiar PIN
+          </DropdownMenuItem>
+        )}
+        {onLock && (
+          <DropdownMenuItem onSelect={onLock}>
+            <Lock aria-hidden="true" />
+            Bloquear
+          </DropdownMenuItem>
+        )}
+        {onSwitchReader && (
+          <DropdownMenuItem onSelect={onSwitchReader}>
+            <UserRoundCog aria-hidden="true" />
+            Cambiar de lector
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
