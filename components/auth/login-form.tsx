@@ -27,7 +27,10 @@ type Phase = "idle" | "sending" | "sent" | "error";
  * disabled), validation error, loading and the "revisá tu correo" success state
  * with a throttled resend.
  */
-export function LoginForm({ onSendLink, onExploreWithoutAccount }: LoginFormProps) {
+export function LoginForm({
+  onSendLink,
+  onExploreWithoutAccount,
+}: LoginFormProps) {
   const [email, setEmail] = React.useState("");
   const [phase, setPhase] = React.useState<Phase>("idle");
   const [fieldError, setFieldError] = React.useState<string | null>(null);
@@ -70,8 +73,8 @@ export function LoginForm({ onSendLink, onExploreWithoutAccount }: LoginFormProp
         <h1 className="text-xl font-bold tracking-tight">Revisá tu correo</h1>
         <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">
           Enviamos un enlace a{" "}
-          <span className="font-semibold text-foreground">{email.trim()}</span>. Abrilo
-          en este dispositivo para entrar.
+          <span className="font-semibold text-foreground">{email.trim()}</span>.
+          Abrilo en este dispositivo para entrar.
         </p>
         <Button
           variant="outline"

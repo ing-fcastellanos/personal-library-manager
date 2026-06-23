@@ -10,7 +10,7 @@
 Hay **2 lectores** en la casa. Cada lectura y cada publicación a Goodreads debe
 quedar **atribuida a un lector concreto** (ADR-0005, ADR-0007), y las acciones de
 escritura exigen identidad (ADR-0006). Firebase Auth aporta su propio `uid`. Hay que
-fijar cómo se relaciona un *lector* con un *usuario* de Firebase, qué es el PIN, y
+fijar cómo se relaciona un _lector_ con un _usuario_ de Firebase, qué es el PIN, y
 dónde vive la verdad de la sesión. Además se decidió construir **#8 (perfiles) antes
 que #7 (sesión)**, así que el modelo de lector no puede depender de que el `uid` ya
 exista.

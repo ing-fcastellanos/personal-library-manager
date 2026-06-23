@@ -83,7 +83,11 @@ export function SetPin({ length = 4, onSave, onDone }: SetPinProps) {
         </p>
       </div>
 
-      <div role="status" aria-live="polite" className="min-h-[22px] text-center text-sm font-semibold text-destructive">
+      <div
+        role="status"
+        aria-live="polite"
+        className="min-h-[22px] text-center text-sm font-semibold text-destructive"
+      >
         {mismatch ? "Los PIN no coinciden" : ""}
       </div>
 

@@ -32,6 +32,8 @@ export function LockProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     try {
+      // Restore the lock flag from sessionStorage on mount (external-system sync).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocked(window.sessionStorage.getItem(STORAGE_KEY) === "1");
     } catch {
       // ignore

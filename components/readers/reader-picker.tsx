@@ -146,7 +146,9 @@ export function ReaderPicker({
             )}
           >
             <Avatar className="size-[30px] text-xs font-bold">
-              {reader.avatar ? <AvatarImage src={reader.avatar} alt="" /> : null}
+              {reader.avatar ? (
+                <AvatarImage src={reader.avatar} alt="" />
+              ) : null}
               <AvatarFallback
                 className={cn(
                   "text-xs font-bold",

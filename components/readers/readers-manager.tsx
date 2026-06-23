@@ -71,7 +71,9 @@ export function ReadersManager() {
         <Card key={reader.id}>
           <CardContent className="flex items-center gap-3 p-4">
             <Avatar>
-              {reader.avatar ? <AvatarImage src={reader.avatar} alt="" /> : null}
+              {reader.avatar ? (
+                <AvatarImage src={reader.avatar} alt="" />
+              ) : null}
               <AvatarFallback
                 style={
                   reader.displayColor

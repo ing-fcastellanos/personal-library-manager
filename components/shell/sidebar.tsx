@@ -27,7 +27,9 @@ export function Sidebar() {
         <span className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
           <BookOpen className="size-4" aria-hidden="true" />
         </span>
-        <span className="text-base font-bold tracking-tight">Mi biblioteca</span>
+        <span className="text-base font-bold tracking-tight">
+          Mi biblioteca
+        </span>
       </Link>
 
       <nav aria-label="Navegación principal">
@@ -45,7 +47,7 @@ export function Sidebar() {
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     active
                       ? "bg-accent font-semibold text-accent-foreground"
-                      : "font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                      : "font-medium text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                   )}
                 >
                   <Icon className="size-[18px]" aria-hidden="true" />

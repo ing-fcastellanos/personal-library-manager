@@ -18,7 +18,20 @@ export interface PinPadProps {
   className?: string;
 }
 
-const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"] as const;
+const KEYS = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "",
+  "0",
+  "del",
+] as const;
 
 /**
  * Mobile numeric PIN keypad with a dot progress indicator.
@@ -50,7 +63,7 @@ export function PinPad({
       if (value.length >= length) return;
       onChange(value + d);
     },
-    [value, length, onChange]
+    [value, length, onChange],
   );
 
   const pop = React.useCallback(() => {
@@ -87,7 +100,7 @@ export function PinPad({
                   ? "border-destructive bg-destructive"
                   : filled
                     ? "border-primary bg-primary"
-                    : "border-border bg-transparent"
+                    : "border-border bg-transparent",
               )}
             />
           );

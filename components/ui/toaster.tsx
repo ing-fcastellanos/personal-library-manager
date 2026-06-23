@@ -20,7 +20,11 @@ export function Toaster() {
       {toasts.map(({ id, title, description, action, variant, ...props }) => (
         <Toast key={id} variant={variant} {...props}>
           {variant === "success" && (
-            <CheckCircle2 data-icon className="mt-0.5 size-5 shrink-0" aria-hidden />
+            <CheckCircle2
+              data-icon
+              className="mt-0.5 size-5 shrink-0"
+              aria-hidden
+            />
           )}
           {variant === "destructive" && (
             <XCircle data-icon className="mt-0.5 size-5 shrink-0" aria-hidden />

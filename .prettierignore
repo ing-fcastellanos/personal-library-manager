@@ -1,0 +1,9 @@
+dist
+.next
+node_modules
+coverage
+*.tsbuildinfo
+package-lock.json
+openspec/changes/archive
+.claude
+.husky/_

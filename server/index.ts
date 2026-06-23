@@ -26,7 +26,6 @@ async function main() {
   app.all("*", (req, res) => handle(req, res));
 
   app.listen(port, () => {
-    // eslint-disable-next-line no-console
     console.log(
       `> Personal Library Manager ready on http://localhost:${port} (${
         dev ? "development" : "production"
@@ -36,7 +35,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error("Failed to start server:", err);
   process.exit(1);
 });

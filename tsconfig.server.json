@@ -11,5 +11,12 @@
     "isolatedModules": false
   },
   "include": ["server/**/*.ts"],
-  "exclude": ["node_modules", ".next", "dist", "app", "components", "lib/firebase/client.ts"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "app",
+    "components",
+    "lib/firebase/client.ts"
+  ]
 }

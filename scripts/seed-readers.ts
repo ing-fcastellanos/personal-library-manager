@@ -20,18 +20,15 @@ async function main() {
     if (reader.email !== r.email) {
       await updateReader(reader.id, { email: r.email });
     }
-    // eslint-disable-next-line no-console
     console.log(
       `${created ? "created" : "exists "}  ${reader.name} <${r.email}> (${reader.id})`,
     );
   }
-  // eslint-disable-next-line no-console
   console.log("Seed complete.");
   process.exit(0);
 }
 
 main().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error("Seed failed:", err);
   process.exit(1);
 });

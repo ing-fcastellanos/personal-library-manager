@@ -9,7 +9,7 @@ import { NAV_ITEMS } from "@/components/shell/nav-items";
 function useCurrentTitle() {
   const pathname = usePathname();
   const match = NAV_ITEMS.find((item) =>
-    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
+    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
   );
   return match?.label ?? "Mi biblioteca";
 }

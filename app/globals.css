@@ -19,7 +19,7 @@
     --popover: 255 253 248;
     --popover-foreground: 43 38 32;
 
-    --primary: 111 84 54;          /* #6f5436 coffee */
+    --primary: 111 84 54; /* #6f5436 coffee */
     --primary-foreground: 250 246 239;
 
     --secondary: 236 228 214;
@@ -28,7 +28,7 @@
     --muted: 239 232 219;
     --muted-foreground: 117 108 93;
 
-    --accent: 232 220 198;         /* #e8dcc6 tan */
+    --accent: 232 220 198; /* #e8dcc6 tan */
     --accent-foreground: 92 74 48;
 
     --destructive: 179 38 30;
@@ -54,7 +54,7 @@
     --popover: 42 37 31;
     --popover-foreground: 236 229 216;
 
-    --primary: 201 168 124;        /* #c9a87c lifted tan for dark */
+    --primary: 201 168 124; /* #c9a87c lifted tan for dark */
     --primary-foreground: 38 33 27;
 
     --secondary: 54 48 42;
@@ -84,7 +84,12 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 }

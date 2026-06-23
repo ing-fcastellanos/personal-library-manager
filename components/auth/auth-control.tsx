@@ -18,9 +18,7 @@ export function AuthControl() {
 
   if (loading) return <Skeleton className="size-9 rounded-full" />;
 
-  const user = reader
-    ? { email: reader.email ?? "", name: reader.name }
-    : null;
+  const user = reader ? { email: reader.email ?? "", name: reader.name } : null;
 
   return (
     <AuthMenu
