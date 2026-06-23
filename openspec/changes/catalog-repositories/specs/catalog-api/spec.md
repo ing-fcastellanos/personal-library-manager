@@ -96,15 +96,22 @@ and to `ReadingEvent.readerId`, `ReadingEvent.bookId`, and optional `ReadingEven
 
 ### Requirement: Referential integrity on delete
 
-On deleting a parent that still has children, the system SHALL block the delete with
+On deleting a `book` that still has children, the system SHALL block the delete with
 `409`, EXCEPT that deleting a `shelf` SHALL desasociate its copies by nulling their
 `shelfId` rather than blocking. Specifically: deleting a `book` with copies or reading
-events SHALL be blocked; deleting a `reader` with reading events SHALL be blocked;
-deleting a `shelf` SHALL succeed and unshelve any copies referencing it.
+events SHALL be blocked; deleting a `shelf` SHALL succeed and unshelve any copies
+referencing it. To protect reading events from a reader deletion (an operation owned by
+the `readers` capability, not added here), the system SHALL expose a `readerHasEvents`
+guard so that reader deletion can refuse to orphan reading events.
 
 #### Scenario: Delete a book that still has copies
 
 - **WHEN** a client deletes a book that is referenced by one or more copies
+- **THEN** the system responds `409` and deletes nothing
+
+#### Scenario: Delete a book that still has reading events
+
+- **WHEN** a client deletes a book that is referenced by one or more reading events
 - **THEN** the system responds `409` and deletes nothing
 
 #### Scenario: Delete a shelf desasociates its copies
@@ -113,10 +120,15 @@ deleting a `shelf` SHALL succeed and unshelve any copies referencing it.
 - **THEN** the system deletes the shelf, sets each referencing copy's `shelfId` to null,
   and responds success
 
-#### Scenario: Delete a leaf entity
+#### Scenario: Delete a leaf book or shelf
 
-- **WHEN** a client deletes a book, reader, or shelf with no children
+- **WHEN** a client deletes a book or shelf with no children
 - **THEN** the system deletes it and responds success
+
+#### Scenario: Reader-events guard available
+
+- **WHEN** the `readerHasEvents` guard is called for a reader with at least one event
+- **THEN** it reports `true`, so reader deletion can block rather than orphan the events
 
 ### Requirement: Relationship queries
 
