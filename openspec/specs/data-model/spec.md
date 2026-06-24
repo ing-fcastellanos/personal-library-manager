@@ -36,7 +36,10 @@ inferred type, create/update input schemas, ISO-string timestamps). A `Book` SHA
 represent a canonical edition with `authors` and `categories` as display string
 arrays plus normalized `authorKeys` and `categoryKeys` slug arrays, optional
 `isbn13`/`isbn10`, and an optional `workKey` for soft grouping. The book document key
-SHALL be a Firestore auto-id, not the ISBN.
+SHALL be a Firestore auto-id, not the ISBN. A `Book` SHALL also carry an optional
+`coverSource` field of `"metadata" | "user"` that records whether the current cover
+came from metadata enrichment or was uploaded by a reader (#15), so re-enrichment can
+avoid overwriting a user-uploaded cover.
 
 #### Scenario: Valid book accepted
 
@@ -55,6 +58,12 @@ SHALL be a Firestore auto-id, not the ISBN.
 - **WHEN** the schema and document model are inspected
 - **THEN** `isbn13`/`isbn10` are optional document fields and the document id is an
   auto-generated id (a book without any ISBN is still valid)
+
+#### Scenario: Cover source recorded
+
+- **WHEN** a reader uploads a cover for a book
+- **THEN** the book's `coverSource` is `"user"`, distinguishing it from a `"metadata"`
+  cover so re-enrichment does not overwrite it
 
 ### Requirement: Shared copy type
 

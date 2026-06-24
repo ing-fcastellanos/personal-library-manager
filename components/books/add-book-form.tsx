@@ -5,10 +5,8 @@ import {
   Search,
   ArrowRight,
   FilePen,
-  ChevronDown,
   Info,
   RotateCw,
-  BookOpen,
   Check,
 } from "lucide-react";
 
@@ -16,18 +14,13 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 
-import { TokenField } from "./token-field";
 import { DuplicateDialog } from "./duplicate-dialog";
 import { EnrichSkeleton, CoverPreview } from "./enrich-skeleton";
+import { FieldShell } from "./field";
+import { BookFields } from "./book-fields";
+import { CopyFields } from "./copy-fields";
 import {
   type BookData,
   type CopyData,
@@ -35,8 +28,6 @@ import {
   type ExistingBook,
   type Shelf,
   type SearchMode,
-  CONDITIONS,
-  LANGUAGES,
   emptyBook,
 } from "./types";
 
@@ -59,6 +50,8 @@ export interface AddBookFormProps {
     asCopy: boolean,
   ) => Promise<{ id: string; copies: number }>;
   onViewBook?: (id: string) => void;
+  /** Navigate to edit the existing book from the duplicate dialog (#15). */
+  onEditExisting?: (bookId: string) => void;
 }
 
 /**
@@ -78,6 +71,7 @@ export function AddBookForm({
   onCheckDuplicate,
   onSave,
   onViewBook,
+  onEditExisting,
 }: AddBookFormProps) {
   const { toast } = useToast();
 
@@ -97,11 +91,7 @@ export function AddBookForm({
     id: string;
     copies: number;
   } | null>(null);
-  const [copyOpen, setCopyOpen] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
-
-  const set = <K extends keyof BookData>(k: K, v: BookData[K]) =>
-    setBook((b) => ({ ...b, [k]: v }));
 
   // ---- search → loading → form -------------------------------------------
   async function runSearch() {
@@ -451,226 +441,23 @@ export function AddBookForm({
             </div>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <Field id="f-title" label="Título" required error={errors.title}>
-              <Input
-                id="f-title"
-                value={book.title}
-                onChange={(e) => {
-                  set("title", e.target.value);
-                  if (errors.title) setErrors({});
-                }}
-                aria-invalid={!!errors.title}
-                aria-describedby={errors.title ? "f-title-error" : undefined}
-                className={cn("h-11", errors.title && "border-destructive")}
-              />
-            </Field>
-
-            <Field id="f-sub" label="Subtítulo">
-              <Input
-                id="f-sub"
-                value={book.subtitle ?? ""}
-                onChange={(e) => set("subtitle", e.target.value)}
-                className="h-11"
-                placeholder="—"
-              />
-            </Field>
-
-            <Field id="f-authors" label="Autores">
-              <TokenField
-                value={book.authors}
-                ariaLabel="Agregar autor"
-                onChange={(v) => set("authors", v)}
-              />
-            </Field>
-
-            <div className="flex gap-3">
-              <Field id="f-pub" label="Editorial" className="flex-1">
-                <Input
-                  id="f-pub"
-                  value={book.publisher ?? ""}
-                  onChange={(e) => set("publisher", e.target.value)}
-                  className="h-11"
-                />
-              </Field>
-              <Field id="f-year" label="Año" className="w-24 shrink-0">
-                <Input
-                  id="f-year"
-                  inputMode="numeric"
-                  value={book.year ?? ""}
-                  onChange={(e) => set("year", e.target.value)}
-                  className="h-11"
-                />
-              </Field>
-            </div>
-
-            <div className="flex gap-3">
-              <Field id="f-i13" label="ISBN-13" className="flex-1">
-                <Input
-                  id="f-i13"
-                  inputMode="numeric"
-                  value={book.isbn13 ?? ""}
-                  onChange={(e) => set("isbn13", e.target.value)}
-                  className="h-11 font-mono text-sm"
-                />
-              </Field>
-              <Field id="f-i10" label="ISBN-10" className="flex-1">
-                <Input
-                  id="f-i10"
-                  inputMode="numeric"
-                  value={book.isbn10 ?? ""}
-                  onChange={(e) => set("isbn10", e.target.value)}
-                  className="h-11 font-mono text-sm"
-                />
-              </Field>
-            </div>
-
-            <Field id="f-cats" label="Categorías">
-              <TokenField
-                value={book.categories}
-                ariaLabel="Agregar categoría"
-                onChange={(v) => set("categories", v)}
-              />
-            </Field>
-
-            <div className="flex gap-3">
-              <Field id="f-lang" label="Idioma" className="flex-1">
-                <Select
-                  value={book.language}
-                  onValueChange={(v) => set("language", v)}
-                >
-                  <SelectTrigger id="f-lang" className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LANGUAGES.map((l) => (
-                      <SelectItem key={l} value={l}>
-                        {l}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field id="f-pages" label="Páginas" className="w-24 shrink-0">
-                <Input
-                  id="f-pages"
-                  inputMode="numeric"
-                  value={book.pages ?? ""}
-                  onChange={(e) => set("pages", e.target.value)}
-                  className="h-11"
-                />
-              </Field>
-            </div>
-
-            <Field id="f-desc" label="Descripción">
-              <textarea
-                id="f-desc"
-                rows={3}
-                value={book.description ?? ""}
-                onChange={(e) => set("description", e.target.value)}
-                className="w-full resize-y rounded-lg border border-input bg-background px-3 py-2.5 text-sm leading-relaxed text-foreground outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              />
-            </Field>
-          </div>
+          <BookFields
+            value={book}
+            onChange={setBook}
+            errors={errors}
+            onClearError={() => setErrors({})}
+            idPrefix="f"
+          />
         </div>
 
         {/* Copy / shelf — collapsible on mobile, fixed panel at md+ */}
         <div className="md:w-72 md:shrink-0">
-          <div className="overflow-hidden rounded-xl border border-border md:bg-accent/30">
-            <button
-              type="button"
-              onClick={() => setCopyOpen((o) => !o)}
-              aria-expanded={copyOpen}
-              className="flex w-full items-center gap-2.5 bg-card p-3.5 text-left md:cursor-default md:bg-transparent"
-            >
-              <BookOpen
-                className="size-[17px] text-muted-foreground"
-                aria-hidden="true"
-              />
-              <div className="flex-1">
-                <p className="text-sm font-semibold">Este ejemplar</p>
-                <p className="text-xs text-muted-foreground">
-                  Estante, condición, fecha, notas
-                </p>
-              </div>
-              <ChevronDown
-                className={cn(
-                  "size-[18px] text-muted-foreground transition-transform md:hidden",
-                  copyOpen && "rotate-180",
-                )}
-                aria-hidden="true"
-              />
-            </button>
-
-            <div
-              className={cn(
-                "flex-col gap-4 border-t border-border p-3.5 md:flex md:border-t-0",
-                copyOpen ? "flex" : "hidden",
-              )}
-            >
-              <Field id="f-shelf" label="Estante">
-                <Select
-                  value={copy.shelfId}
-                  onValueChange={(v) => setCopy((c) => ({ ...c, shelfId: v }))}
-                >
-                  <SelectTrigger id="f-shelf" className="h-11">
-                    <SelectValue placeholder="Elegí un estante (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {shelves.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <Field id="f-cond" label="Condición">
-                <Select
-                  value={copy.condition}
-                  onValueChange={(v) =>
-                    setCopy((c) => ({ ...c, condition: v }))
-                  }
-                >
-                  <SelectTrigger id="f-cond" className="h-11">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CONDITIONS.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <Field id="f-acq" label="Adquirido">
-                <Input
-                  id="f-acq"
-                  type="date"
-                  value={copy.acquiredAt ?? ""}
-                  onChange={(e) =>
-                    setCopy((c) => ({ ...c, acquiredAt: e.target.value }))
-                  }
-                  className="h-11"
-                />
-              </Field>
-
-              <Field id="f-notes" label="Notas">
-                <Input
-                  id="f-notes"
-                  value={copy.notes ?? ""}
-                  onChange={(e) =>
-                    setCopy((c) => ({ ...c, notes: e.target.value }))
-                  }
-                  className="h-11"
-                  placeholder="Edición firmada, regalo de…"
-                />
-              </Field>
-            </div>
-          </div>
+          <CopyFields
+            value={copy}
+            onChange={setCopy}
+            shelves={shelves}
+            idPrefix="f"
+          />
 
           {/* Save: sticky bar on mobile, inline button at md+ */}
           <div className="sticky bottom-0 -mx-4 mt-5 border-t border-border bg-card p-4 md:static md:mx-0 md:border-0 md:bg-transparent md:p-0">
@@ -692,58 +479,14 @@ export function AddBookForm({
           existing={dupModal}
           onAddCopy={() => trySave(true)}
           onSkip={() => setDupModal(null)}
-          // onEditExisting omitted → disabled with "Próximamente" tooltip
+          onEditExisting={
+            onEditExisting ? () => onEditExisting(dupModal.id) : undefined
+          }
         />
       )}
     </>
   );
 }
 
-/* ---- small local layout helpers ---------------------------------------- */
-
-function FieldShell({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div className={cn("mx-auto w-full max-w-xl", className)}>{children}</div>
-  );
-}
-
-function Field({
-  id,
-  label,
-  required,
-  error,
-  className,
-  children,
-}: {
-  id: string;
-  label: string;
-  required?: boolean;
-  error?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={className}>
-      <Label htmlFor={id} className="mb-1.5 block">
-        {label}
-        {required && <span className="text-destructive"> *</span>}
-      </Label>
-      {children}
-      {error && (
-        <p
-          id={`${id}-error`}
-          role="alert"
-          className="mt-1.5 flex items-center gap-1 text-xs font-medium text-destructive"
-        >
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
+/* Field / FieldShell / BookFields / CopyFields now live in their own files and
+   are shared with the edit screen (#15). */

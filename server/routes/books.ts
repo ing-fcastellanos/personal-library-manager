@@ -9,7 +9,9 @@ import {
 } from "../../services/books/repository";
 import { bookHasCopies } from "../../services/copies/repository";
 import { bookHasEvents } from "../../services/reading-events/repository";
-import { requireAuth } from "../middleware/require-auth";
+import { recordChange } from "../../services/audit/repository";
+import { changedFields } from "../../services/audit/diff";
+import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
 
 /**
  * Book API (server-mediated, ADR-0009). Reads are public; writes require a valid
@@ -57,8 +59,21 @@ router.patch("/books/:id", requireAuth, async (req, res) => {
       .json({ error: "validation", details: parsed.error.flatten() });
   }
   try {
-    const book = await updateBook(req.params.id as string, parsed.data);
+    const id = req.params.id as string;
+    const existing = await getBook(id);
+    if (!existing) return res.status(404).json({ error: "not found" });
+    const book = await updateBook(id, parsed.data);
     if (!book) return res.status(404).json({ error: "not found" });
+    // Minimal change log (#15 D7): record which fields changed and by whom.
+    await recordChange({
+      entity: "book",
+      entityId: id,
+      changedFields: changedFields(
+        existing as unknown as Record<string, unknown>,
+        parsed.data as Record<string, unknown>,
+      ),
+      readerId: (req as AuthedRequest).reader!.id,
+    });
     res.json(book);
   } catch {
     res.status(500).json({ error: "internal" });

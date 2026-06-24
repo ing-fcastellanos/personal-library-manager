@@ -11,7 +11,9 @@ import {
   createCopy,
   ReferenceNotFoundError,
 } from "../../services/copies/service";
-import { requireAuth } from "../middleware/require-auth";
+import { recordChange } from "../../services/audit/repository";
+import { changedFields } from "../../services/audit/diff";
+import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
 
 /**
  * Copy API (server-mediated, ADR-0009). Reads are public; writes require a valid
@@ -71,8 +73,21 @@ router.patch("/copies/:id", requireAuth, async (req, res) => {
       .json({ error: "validation", details: parsed.error.flatten() });
   }
   try {
-    const copy = await updateCopy(req.params.id as string, parsed.data);
+    const id = req.params.id as string;
+    const existing = await getCopy(id);
+    if (!existing) return res.status(404).json({ error: "not found" });
+    const copy = await updateCopy(id, parsed.data);
     if (!copy) return res.status(404).json({ error: "not found" });
+    // Minimal change log (#15 D7).
+    await recordChange({
+      entity: "copy",
+      entityId: id,
+      changedFields: changedFields(
+        existing as unknown as Record<string, unknown>,
+        parsed.data as Record<string, unknown>,
+      ),
+      readerId: (req as AuthedRequest).reader!.id,
+    });
     res.json(copy);
   } catch {
     res.status(500).json({ error: "internal" });

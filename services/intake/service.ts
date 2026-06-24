@@ -36,15 +36,20 @@ export async function intakeBook(
 
   // The book always carries the external cover as a fallback (design D2); a
   // successful re-host overrides it with the internal Storage URL below.
-  const coverSource = input.coverSourceUrl ?? input.book.coverUrl ?? null;
-  const book = await createBook({ ...input.book, coverUrl: coverSource });
+  const coverUrl = input.coverSourceUrl ?? input.book.coverUrl ?? null;
+  const book = await createBook({
+    ...input.book,
+    coverUrl,
+    // A cover present at intake originates from metadata enrichment (#15 D5).
+    coverSource: coverUrl ? "metadata" : null,
+  });
 
   // Best-effort cover re-hosting: needs an ISBN-13 for the deterministic path.
   // A failed/absent re-host leaves the external (or null) coverUrl untouched.
   let finalBook = book;
   const isbn13 = book.isbn13 ?? toIsbn13(input.book.isbn13 ?? null);
-  if (coverSource && isbn13) {
-    const internalUrl = await rehost(coverSource, isbn13);
+  if (coverUrl && isbn13) {
+    const internalUrl = await rehost(coverUrl, isbn13);
     if (internalUrl) {
       finalBook =
         (await updateBook(book.id, { coverUrl: internalUrl })) ?? book;
