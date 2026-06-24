@@ -1,4 +1,5 @@
 import { slugify } from "../../lib/text/slug";
+import { tokenize, countOverlap } from "../../lib/text/similarity";
 import type { Candidate } from "./types";
 
 /**
@@ -21,29 +22,23 @@ const WEIGHTS = {
 
 const DEFAULT_LIMIT = 5;
 
-/** Splits a slug into its non-empty hyphen-separated tokens. */
-function tokens(slug: string): string[] {
-  return slug.split("-").filter(Boolean);
-}
-
 /**
  * Scores a single candidate against the (slug-normalized) query. Exported so the
- * ranking is transparent and unit-testable in isolation.
+ * ranking is transparent and unit-testable in isolation. Tokenization and
+ * token-overlap come from the shared `lib/text/similarity` primitives (#16 D5).
  */
 export function scoreCandidate(
   querySlug: string,
   candidate: Candidate,
 ): number {
-  const queryTokens = new Set(tokens(querySlug));
+  const queryTokens = new Set(tokenize(querySlug));
   let score = 0;
 
   // Title: exact slug match beats partial token overlap.
   if (candidate.titleKey && candidate.titleKey === querySlug) {
     score += WEIGHTS.titleExact;
   } else {
-    const overlap = tokens(candidate.titleKey ?? "").filter((t) =>
-      queryTokens.has(t),
-    ).length;
+    const overlap = countOverlap(tokenize(candidate.titleKey), queryTokens);
     if (overlap > 0) {
       score += Math.min(
         WEIGHTS.titlePartialMax,
@@ -53,7 +48,7 @@ export function scoreCandidate(
   }
 
   // Author: any author token present in the query.
-  const authorTokens = candidate.authorKeys.flatMap(tokens);
+  const authorTokens = candidate.authorKeys.flatMap((k) => tokenize(k));
   if (authorTokens.some((t) => t.length >= 3 && queryTokens.has(t))) {
     score += WEIGHTS.authorMatch;
   }

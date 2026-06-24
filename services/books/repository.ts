@@ -72,6 +72,37 @@ export async function getBook(id: string): Promise<Book | null> {
   return doc.exists ? mapDoc(doc) : null;
 }
 
+/**
+ * Books whose canonical ISBN-13 equals `isbn13` (duplicate detection #16). Uses a
+ * single-field equality (auto-indexed); normally 0–1 results.
+ */
+export async function findBooksByIsbn13(isbn13: string): Promise<Book[]> {
+  const snap = await collection().where("isbn13", "==", isbn13).get();
+  return snap.docs.map(mapDoc);
+}
+
+/**
+ * Books whose derived `titleKey` equals `titleKey` (duplicate detection #16). The
+ * author overlap that distinguishes a real match is evaluated in memory by the
+ * matcher.
+ */
+export async function findBooksByTitleKey(titleKey: string): Promise<Book[]> {
+  const snap = await collection().where("titleKey", "==", titleKey).get();
+  return snap.docs.map(mapDoc);
+}
+
+/**
+ * Books whose `authorKeys` array contains `authorKey` (duplicate detection #16).
+ * Widens the candidate set when titles differ slightly; the matcher still requires
+ * a `titleKey` match for a strong classification.
+ */
+export async function findBooksByAuthorKey(authorKey: string): Promise<Book[]> {
+  const snap = await collection()
+    .where("authorKeys", "array-contains", authorKey)
+    .get();
+  return snap.docs.map(mapDoc);
+}
+
 export async function createBook(input: BookCreateInput): Promise<Book> {
   const now = new Date().toISOString();
   const ref = collection().doc();
