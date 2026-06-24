@@ -11,6 +11,7 @@ import copiesRouter from "./routes/copies";
 import readingEventsRouter from "./routes/reading-events";
 import enrichRouter from "./routes/enrich";
 import duplicatesRouter from "./routes/duplicates";
+import intakeRouter from "./routes/intake";
 
 config();
 
@@ -29,6 +30,7 @@ async function main() {
   app.use("/api", shelvesRouter);
   // Mounted before booksRouter so `/books/duplicates` is not captured by `/books/:id`.
   app.use("/api", duplicatesRouter);
+  app.use("/api", intakeRouter);
   app.use("/api", booksRouter);
   app.use("/api", copiesRouter);
   app.use("/api", readingEventsRouter);
