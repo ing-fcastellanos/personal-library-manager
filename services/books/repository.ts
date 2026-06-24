@@ -34,6 +34,7 @@ function mapDoc(doc: DocumentSnapshot): Book {
     workKey: data.workKey ?? null,
     titleKey: data.titleKey ?? null,
     source: data.source ?? null,
+    coverSource: data.coverSource ?? null,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   };
@@ -123,6 +124,7 @@ export async function createBook(input: BookCreateInput): Promise<Book> {
     description: input.description ?? null,
     workKey: input.workKey ?? null,
     source: input.source ?? null,
+    coverSource: input.coverSource ?? null,
     ...deriveSlugs({ title: input.title, authors, categories }),
     createdAt: now,
     updatedAt: now,

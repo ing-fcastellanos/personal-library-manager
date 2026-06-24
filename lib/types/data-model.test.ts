@@ -33,6 +33,25 @@ describe("bookSchema", () => {
       bookSchema.safeParse({ id: "b1", title: "Sin ISBN", ...ts }).success,
     ).toBe(true);
   });
+
+  it("accepts a coverSource of metadata or user and rejects others (#15)", () => {
+    expect(
+      bookSchema.safeParse({
+        id: "b1",
+        title: "Con portada",
+        coverSource: "user",
+        ...ts,
+      }).success,
+    ).toBe(true);
+    expect(
+      bookSchema.safeParse({
+        id: "b1",
+        title: "Con portada",
+        coverSource: "scanner",
+        ...ts,
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("copySchema", () => {

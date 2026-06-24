@@ -33,6 +33,11 @@ export const bookSchema = z.object({
   titleKey: z.string().nullish(),
   /** Where the metadata came from: 'google-books' | 'open-library' | 'manual' | 'ai'. */
   source: z.string().nullish(),
+  /**
+   * Whether the current cover came from metadata enrichment or was uploaded by a
+   * reader (#15). A `"user"` cover is preserved by re-enrichment.
+   */
+  coverSource: z.enum(["metadata", "user"]).nullish(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -58,6 +63,7 @@ export const bookCreateSchema = z.object({
   description: z.string().nullish(),
   workKey: z.string().nullish(),
   source: z.string().nullish(),
+  coverSource: z.enum(["metadata", "user"]).nullish(),
 });
 export type BookCreateInput = z.infer<typeof bookCreateSchema>;
 
