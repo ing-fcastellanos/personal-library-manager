@@ -214,7 +214,7 @@ export function AddBook() {
       onResolveCandidate={onResolveCandidate}
       onCheckDuplicate={onCheckDuplicate}
       onSave={onSave}
-      onViewBook={(id) => router.push(`/libros/${id}/editar`)}
+      onViewBook={(id) => router.push(`/libros/${id}`)}
       onEditExisting={(id) => router.push(`/libros/${id}/editar`)}
     />
   );
