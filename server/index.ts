@@ -9,6 +9,8 @@ import shelvesRouter from "./routes/shelves";
 import booksRouter from "./routes/books";
 import copiesRouter from "./routes/copies";
 import readingEventsRouter from "./routes/reading-events";
+import enrichRouter from "./routes/enrich";
+import duplicatesRouter from "./routes/duplicates";
 
 config();
 
@@ -25,9 +27,12 @@ async function main() {
   app.use("/api", authRouter);
   app.use("/api", readersRouter);
   app.use("/api", shelvesRouter);
+  // Mounted before booksRouter so `/books/duplicates` is not captured by `/books/:id`.
+  app.use("/api", duplicatesRouter);
   app.use("/api", booksRouter);
   app.use("/api", copiesRouter);
   app.use("/api", readingEventsRouter);
+  app.use("/api", enrichRouter);
 
   // Web layer (Next.js SSR) — handles everything else.
   const handle = await createNextHandler(dev);
