@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useShelf } from "@/components/shelf/shelf-context";
 import { AddBookForm } from "./add-book-form";
 import {
   type BookData,
@@ -95,6 +96,7 @@ async function jsonOrThrow(res: Response) {
 
 export function AddBook() {
   const router = useRouter();
+  const { shelf: scanShelf } = useShelf();
   const [shelves, setShelves] = React.useState<Shelf[]>([]);
   // Candidates from a title search, keyed by the synthetic id handed to the form.
   const candidateStore = React.useRef(new Map<string, EnrichCandidate>());
@@ -216,6 +218,7 @@ export function AddBook() {
       onSave={onSave}
       onViewBook={(id) => router.push(`/libros/${id}`)}
       onEditExisting={(id) => router.push(`/libros/${id}/editar`)}
+      initialShelfId={scanShelf ?? undefined}
     />
   );
 }

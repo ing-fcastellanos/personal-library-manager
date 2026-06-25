@@ -34,6 +34,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useShelf } from "@/components/shelf/shelf-context";
 import { CoverPreview } from "@/components/books/enrich-skeleton";
 import type { Book } from "@/lib/types/book";
 
@@ -92,8 +93,10 @@ const EMPTY_FILTERS: Filters = {
 
 export function CatalogBrowse() {
   const { reader } = useAuth();
+  const { shelf: scanShelf } = useShelf();
   const [q, setQ] = React.useState("");
   const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS);
+  const [scanApplied, setScanApplied] = React.useState(false);
   const [sort, setSort] = React.useState("title");
   const [view, setView] = React.useState<"list" | "grid">("grid");
   const [page, setPage] = React.useState(1);
@@ -132,6 +135,18 @@ export function CatalogBrowse() {
   }, [q, filters, sort, page, reader]);
 
   const facets = result?.facets;
+  // Preselect the shelf carried from a QR scan once it's a known shelf (#18 D5).
+  // Render-time state adjustment (guarded), not an effect, to avoid a re-render loop.
+  if (
+    !scanApplied &&
+    scanShelf &&
+    !filters.shelf &&
+    facets?.shelves.some((s) => s.value === scanShelf)
+  ) {
+    setScanApplied(true);
+    setFilters((f) => ({ ...f, shelf: scanShelf }));
+  }
+
   const total = result?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / LIMIT));
   const activeCount =
