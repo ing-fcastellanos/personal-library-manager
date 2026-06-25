@@ -43,8 +43,8 @@ curl http://localhost:3000/api/health/ready   # {"status":"ready"}   (Firestore 
 ### Firebase & local emulators
 
 Local development uses the **Firebase Emulator Suite** — no cloud project or
-credentials are needed to run and test. The emulators read `firebase.json`,
-`firestore.rules` and `storage.rules`; the SDKs connect to them when the
+credentials are needed to run and test. The emulators read `firebase.json` and
+the rules under `firebase/` (`firestore.rules`, `storage.rules`); the SDKs connect to them when the
 `*_EMULATOR_HOST` / `NEXT_PUBLIC_FIREBASE_USE_EMULATOR` variables are set (see
 `.env.example`). Requires a Java runtime (JRE 11+).
 
