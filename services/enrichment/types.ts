@@ -7,8 +7,12 @@ import type { BookCreateInput } from "../../lib/types/book";
  * persistence is the existing `POST /api/books` (two-step flow, design D1/Non-Goals).
  */
 
-/** Free metadata sources, in priority order (design D2). */
-export type EnrichmentSource = "google-books" | "open-library";
+/**
+ * Candidate provenance. The free metadata sources are listed in priority order
+ * (design D2); `"ai"` marks a candidate produced by the AI vision layer
+ * (`services/ai`, #19) so AI identifications flow through the same intake path.
+ */
+export type EnrichmentSource = "google-books" | "open-library" | "ai";
 
 /**
  * A normalized metadata candidate. `coverUrl` is the *external* source URL (a
