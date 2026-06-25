@@ -13,8 +13,10 @@ describe("statusMeta", () => {
     expect(statusMeta("not_configured").variant).toBe("outline");
   });
 
-  it("maps error to a destructive badge", () => {
-    expect(statusMeta("error").variant).toBe("destructive");
+  it("maps error to a soft-destructive outline badge", () => {
+    const meta = statusMeta("error");
+    expect(meta.variant).toBe("outline");
+    expect(meta.className).toContain("destructive");
   });
 
   it("maps testing to a transient outline badge", () => {

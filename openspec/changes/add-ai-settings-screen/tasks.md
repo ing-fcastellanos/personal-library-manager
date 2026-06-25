@@ -26,9 +26,9 @@
 ## 4. Claude Design handoff
 
 - [x] 4.1 Generate the Claude Design prompt for the AI settings screen (states: key validation, test result, error; responsive; accessibility; design tokens M0)
-- [ ] 4.2 Produce the design in Claude Design and validate against the base design system
-- [ ] 4.3 Integrate the handoff: map markup to the Next components + tokens/styles
-- [ ] 4.4 QA visual responsive + accessibility
+- [x] 4.2 Produce the design in Claude Design and validate against the base design system
+- [x] 4.3 Integrate the handoff: map markup to the Next components + tokens/styles
+- [x] 4.4 QA visual responsive + accessibility
 
 ## 5. Verify
 

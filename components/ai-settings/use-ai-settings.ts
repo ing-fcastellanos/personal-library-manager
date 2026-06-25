@@ -35,20 +35,37 @@ export const ENGINE_LABELS: Record<AIEngine, string> = {
   gemini: "Gemini",
 };
 
-/** Pure status → display mapping (label + badge variant). Unit-tested. */
+/**
+ * Pure status → badge display mapping (label + Badge variant + optional class
+ * overrides). Matches the Claude Design handoff: connected = secondary, nokey /
+ * testing = muted outline, error = soft destructive (never solid). Unit-tested.
+ */
 export function statusMeta(status: EngineConnectionStatus): {
   label: string;
-  variant: "secondary" | "destructive" | "outline";
+  variant: "secondary" | "outline";
+  className?: string;
 } {
   switch (status) {
     case "connected":
       return { label: "Conectado", variant: "secondary" };
     case "not_configured":
-      return { label: "Sin API key", variant: "outline" };
+      return {
+        label: "Sin API key",
+        variant: "outline",
+        className: "text-muted-foreground",
+      };
     case "testing":
-      return { label: "Probando…", variant: "outline" };
+      return {
+        label: "Probando…",
+        variant: "outline",
+        className: "text-muted-foreground",
+      };
     case "error":
-      return { label: "Error de conexión", variant: "destructive" };
+      return {
+        label: "Error de conexión",
+        variant: "outline",
+        className: "border-destructive/30 bg-destructive/10 text-destructive",
+      };
   }
 }
 
