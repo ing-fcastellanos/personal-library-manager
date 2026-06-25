@@ -9,6 +9,10 @@ import { AddBook } from "./add-book";
  */
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const shelfMock = vi.hoisted(() => ({ value: null as string | null }));
+vi.mock("@/components/shelf/shelf-context", () => ({
+  useShelf: () => ({ shelf: shelfMock.value }),
+}));
 
 function jsonResponse(body: unknown, status = 200) {
   return Promise.resolve({
@@ -27,20 +31,26 @@ const candidate = {
 };
 
 let duplicatesResponse: unknown = { recommendation: "add-new", matches: [] };
+let lastIntakeBody: { copy?: { shelfId?: string | null } } | null = null;
 const intake = vi.fn(() =>
   jsonResponse({ book: { id: "b1" }, copy: { id: "c1" } }, 201),
 );
 
 beforeEach(() => {
   duplicatesResponse = { recommendation: "add-new", matches: [] };
+  lastIntakeBody = null;
+  shelfMock.value = null;
   intake.mockClear();
-  global.fetch = vi.fn((input: RequestInfo | URL) => {
+  global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.startsWith("/api/shelves")) return jsonResponse([]);
     if (url.startsWith("/api/enrich")) return jsonResponse({ candidate });
     if (url.startsWith("/api/books/duplicates"))
       return jsonResponse(duplicatesResponse);
-    if (url.startsWith("/api/books/intake")) return intake();
+    if (url.startsWith("/api/books/intake")) {
+      lastIntakeBody = init?.body ? JSON.parse(init.body as string) : null;
+      return intake();
+    }
     if (url.startsWith("/api/copies")) return jsonResponse({ id: "c1" }, 201);
     return jsonResponse({}, 404);
   }) as unknown as typeof fetch;
@@ -112,5 +122,19 @@ describe("AddBook", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar libro" }));
     await waitFor(() => expect(intake).toHaveBeenCalledOnce());
     expect(await screen.findByText("¡Libro agregado!")).toBeInTheDocument();
+  });
+
+  it("defaults the new copy's shelf to the scanned shelf (#18)", async () => {
+    shelfMock.value = "shelf-9";
+    render(<AddBook />);
+    searchIsbn();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Título/)).toHaveValue(
+        "El nombre del viento",
+      ),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Guardar libro" }));
+    await waitFor(() => expect(intake).toHaveBeenCalledOnce());
+    expect(lastIntakeBody?.copy?.shelfId).toBe("shelf-9");
   });
 });

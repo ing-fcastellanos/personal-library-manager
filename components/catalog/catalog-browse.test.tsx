@@ -11,6 +11,10 @@ import { CatalogBrowse } from "./catalog-browse";
 vi.mock("@/components/auth/auth-provider", () => ({
   useAuth: () => ({ reader: { id: "r1", name: "Frank" }, loading: false }),
 }));
+const shelfMock = vi.hoisted(() => ({ value: null as string | null }));
+vi.mock("@/components/shelf/shelf-context", () => ({
+  useShelf: () => ({ shelf: shelfMock.value }),
+}));
 vi.mock("next/link", () => ({
   default: ({
     href,
@@ -54,13 +58,17 @@ let total = 1;
 beforeEach(() => {
   total = 1;
   lastUrl = "";
+  shelfMock.value = null;
   global.fetch = vi.fn((input: RequestInfo | URL) => {
     lastUrl = String(input);
     return jsonResponse({
       items: total > 0 ? [book] : [],
       total,
       page: 1,
-      facets: emptyFacets,
+      facets: {
+        ...emptyFacets,
+        shelves: [{ value: "s1", label: "Living", count: 1 }],
+      },
     });
   }) as unknown as typeof fetch;
 });
@@ -72,6 +80,12 @@ describe("CatalogBrowse", () => {
       name: /El nombre del viento/,
     });
     expect(link).toHaveAttribute("href", "/libros/b1");
+  });
+
+  it("preselects the shelf carried from a QR scan (#18)", async () => {
+    shelfMock.value = "s1";
+    render(<CatalogBrowse />);
+    await waitFor(() => expect(lastUrl).toContain("shelf=s1"));
   });
 
   it("sends the query to the endpoint when typing", async () => {

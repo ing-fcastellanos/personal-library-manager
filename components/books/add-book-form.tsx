@@ -52,6 +52,8 @@ export interface AddBookFormProps {
   onViewBook?: (id: string) => void;
   /** Navigate to edit the existing book from the duplicate dialog (#15). */
   onEditExisting?: (bookId: string) => void;
+  /** Default shelf for the new copy, e.g. from a shelf QR scan (#18). */
+  initialShelfId?: string;
 }
 
 /**
@@ -72,6 +74,7 @@ export function AddBookForm({
   onSave,
   onViewBook,
   onEditExisting,
+  initialShelfId,
 }: AddBookFormProps) {
   const { toast } = useToast();
 
@@ -80,7 +83,10 @@ export function AddBookForm({
   const [query, setQuery] = React.useState("");
 
   const [book, setBook] = React.useState<BookData>(emptyBook);
-  const [copy, setCopy] = React.useState<CopyData>({ condition: "Bueno" });
+  const [copy, setCopy] = React.useState<CopyData>({
+    condition: "Bueno",
+    shelfId: initialShelfId,
+  });
   const [candidates, setCandidates] = React.useState<BookCandidate[]>([]);
   const [chosen, setChosen] = React.useState<string | null>(null);
 
