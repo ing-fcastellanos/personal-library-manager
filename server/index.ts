@@ -14,6 +14,7 @@ import duplicatesRouter from "./routes/duplicates";
 import intakeRouter from "./routes/intake";
 import coverRouter from "./routes/cover";
 import catalogRouter from "./routes/catalog";
+import aiSettingsRouter from "./routes/ai-settings";
 
 config();
 
@@ -43,6 +44,7 @@ async function main() {
   app.use("/api", readingEventsRouter);
   app.use("/api", enrichRouter);
   app.use("/api", catalogRouter);
+  app.use("/api", aiSettingsRouter);
 
   // Web layer (Next.js SSR) — handles everything else.
   const handle = await createNextHandler(dev);

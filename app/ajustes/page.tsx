@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ReadersManager } from "@/components/readers/readers-manager";
 import { ShelvesManager } from "@/components/shelves/shelves-manager";
+import { AISettingsManager } from "@/components/ai-settings/ai-settings-manager";
 import { PinSection } from "@/components/auth/pin-section";
 
 export default function SettingsPage() {
@@ -24,6 +25,11 @@ export default function SettingsPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Estantes</h2>
         <ShelvesManager />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold">IA</h2>
+        <AISettingsManager />
       </section>
 
       <section className="space-y-3">
