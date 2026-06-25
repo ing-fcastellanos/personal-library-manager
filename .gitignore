@@ -20,3 +20,6 @@ npm-debug.log*
 # misc
 .DS_Store
 *.tsbuildinfo
+
+# firebase emulator persisted data (--import/--export-on-exit)
+.emulator-data/

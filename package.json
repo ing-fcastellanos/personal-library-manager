@@ -14,7 +14,7 @@
     "test": "vitest run --project node --project jsdom",
     "test:watch": "vitest --project node --project jsdom",
     "test:emulator": "firebase emulators:exec --only firestore --project demo-plm-test 'vitest run --project integration --no-file-parallelism'",
-    "emulators": "firebase emulators:start --only firestore,auth,storage --project personal-library-manager-frank",
+    "emulators": "firebase emulators:start --only firestore,auth,storage --project personal-library-manager-frank --import=.emulator-data --export-on-exit",
     "seed:readers": "tsx scripts/seed-readers.ts",
     "prepare": "husky"
   },
