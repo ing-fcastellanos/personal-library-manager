@@ -17,7 +17,7 @@ Architecture decisions are recorded in [`docs/adr/`](./docs/adr/).
 
 ## Requirements
 
-- Node.js `>= 20.19.0`
+- Node.js `>= 22.12.0` (see `.nvmrc`)
 - npm
 
 ## Getting started
