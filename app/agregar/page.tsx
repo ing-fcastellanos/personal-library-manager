@@ -41,7 +41,11 @@ export default function AddPage() {
               label="Manual"
             />
           </div>
-          {mode === "photo" ? <AddBookByPhoto /> : <AddBook />}
+          {mode === "photo" ? (
+            <AddBookByPhoto onManual={() => setMode("manual")} />
+          ) : (
+            <AddBook />
+          )}
         </>
       ) : (
         <EmptyState

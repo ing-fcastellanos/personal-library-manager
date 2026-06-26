@@ -37,6 +37,9 @@
     --success: 63 125 78;
     --success-foreground: 255 255 255;
 
+    --warning: 154 107 21; /* #9a6b15 */
+    --warning-bg: 246 233 207; /* #f6e9cf */
+
     --border: 226 217 200;
     --input: 226 217 200;
     --ring: 111 84 54;
@@ -71,6 +74,9 @@
 
     --success: 103 185 122;
     --success-foreground: 28 42 32;
+
+    --warning: 224 178 87; /* #e0b257 */
+    --warning-bg: 55 48 31; /* #37301f */
 
     --border: 58 52 44;
     --input: 58 52 44;

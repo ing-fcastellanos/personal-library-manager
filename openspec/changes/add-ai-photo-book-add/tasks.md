@@ -31,9 +31,9 @@
 ## 5. Claude Design handoff
 
 - [x] 5.1 Generate the Claude Design prompt: states (capturing, analyzing, candidate, low-confidence, error), mobile-first, a11y, design tokens (M0)
-- [ ] 5.2 Produce the design in Claude Design and validate against the base design system
-- [ ] 5.3 Integrate the handoff: map markup to Next components + tokens/styles
-- [ ] 5.4 QA visual responsive + accessibility
+- [x] 5.2 Produce the design in Claude Design and validate against the base design system
+- [x] 5.3 Integrate the handoff: map markup to Next components + tokens/styles
+- [x] 5.4 QA visual responsive + accessibility
 
 ## 6. Verify
 

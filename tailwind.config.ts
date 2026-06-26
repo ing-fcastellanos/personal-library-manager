@@ -44,6 +44,10 @@ const config: Config = {
           DEFAULT: color("--success"),
           foreground: color("--success-foreground"),
         },
+        warning: {
+          DEFAULT: color("--warning"),
+          bg: color("--warning-bg"),
+        },
         border: color("--border"),
         input: color("--input"),
         ring: color("--ring"),
@@ -68,11 +72,16 @@ const config: Config = {
           "20%, 60%": { transform: "translateX(-7px)" },
           "40%, 80%": { transform: "translateX(7px)" },
         },
+        scan: {
+          "0%": { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(800%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shake: "shake 0.5s",
+        scan: "scan 1.6s ease-in-out infinite",
       },
     },
   },
