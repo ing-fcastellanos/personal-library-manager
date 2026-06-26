@@ -16,15 +16,23 @@ function fakeStorage() {
 const PNG_BASE64 = Buffer.from("fake-png-bytes").toString("base64");
 
 describe("uploadCover", () => {
-  it("uploads a valid image to covers/<bookId> and returns the internal URL", async () => {
+  it("uploads a valid image to covers/<bookId> and returns a tokenized download URL", async () => {
     const { storage, file, save } = fakeStorage();
     const url = await uploadCover("b1", PNG_BASE64, "image/png", {
       storage: storage as never,
     });
     expect(file).toHaveBeenCalledWith("covers/b1.png");
     expect(save).toHaveBeenCalledOnce();
+    // A per-object download token is saved as metadata and echoed in the URL so
+    // the cover is readable without opening storage.rules.
+    const token = (
+      save.mock.calls[0][1] as {
+        metadata: { metadata: Record<string, string> };
+      }
+    ).metadata.metadata.firebaseStorageDownloadTokens;
+    expect(token).toMatch(/[0-9a-f-]{36}/);
     expect(url).toBe(
-      "https://storage.googleapis.com/demo-bucket/covers/b1.png",
+      `https://firebasestorage.googleapis.com/v0/b/demo-bucket/o/covers%2Fb1.png?alt=media&token=${token}`,
     );
   });
 

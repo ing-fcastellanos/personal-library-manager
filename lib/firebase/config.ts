@@ -31,19 +31,18 @@ export function assertClientConfig(): void {
   }
 }
 
-/** Project id used by the Admin SDK (server side). */
+/**
+ * Project id used by the Admin SDK (server side).
+ *
+ * NOTE: the Admin SDK (`lib/firebase/admin.ts`) reads projectId and the Storage
+ * bucket from `process.env` lazily at init time, not from these module-level
+ * consts — the custom server loads `.env*` after these modules are imported, so
+ * a module-scope read here can be `undefined`. This export is for client/config
+ * consumers only.
+ */
 export const serverProjectId =
   process.env.GOOGLE_CLOUD_PROJECT ??
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-
-/**
- * Default Storage bucket for the Admin SDK. Without it `storage().bucket()`
- * throws "Bucket name not specified" and cover uploads fail (#15/#20). Reuses the
- * public client bucket id, falling back to the conventional `<project>` bucket.
- */
-export const serverStorageBucket =
-  process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ??
-  (serverProjectId ? `${serverProjectId}.firebasestorage.app` : undefined);
 
 /** True when the server should talk to the Firestore emulator (dev). */
 export const isServerEmulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);

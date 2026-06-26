@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { getAdminStorage, storageObjectUrl } from "../../lib/firebase/admin";
 
 /**
@@ -61,12 +62,14 @@ export async function rehostCover(
     const bucket = storage.bucket();
     const path = `${COVER_PREFIX}/${isbn13}.${extensionFor(contentType)}`;
     const file = bucket.file(path);
+    const token = randomUUID();
     await file.save(buffer, {
       contentType: contentType ?? "image/jpeg",
       resumable: false,
+      metadata: { metadata: { firebaseStorageDownloadTokens: token } },
     });
 
-    return storageObjectUrl(bucket.name, path);
+    return storageObjectUrl(bucket.name, path, token);
   } catch {
     return null;
   } finally {

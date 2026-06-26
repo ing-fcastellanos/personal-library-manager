@@ -8,7 +8,6 @@ import {
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getStorage, type Storage } from "firebase-admin/storage";
-import { serverProjectId, serverStorageBucket } from "./config";
 
 /**
  * Server-side Firebase Admin SDK access (ADR-0009: server-mediated by default).
@@ -25,11 +24,19 @@ function getAdminApp(): App {
   if (getApps().length > 0) {
     return getApp();
   }
+  // Read env HERE, not at module scope: the custom server loads `.env*` after
+  // these modules are imported, so module-level reads would see undefined.
   // Credentials come from ADC in production (ADR-0001); we only set projectId and
   // the Storage bucket so `storage().bucket()` resolves a default (#15/#20).
+  const projectId =
+    process.env.GOOGLE_CLOUD_PROJECT ??
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const storageBucket =
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ??
+    (projectId ? `${projectId}.firebasestorage.app` : undefined);
   const options: AppOptions = {};
-  if (serverProjectId) options.projectId = serverProjectId;
-  if (serverStorageBucket) options.storageBucket = serverStorageBucket;
+  if (projectId) options.projectId = projectId;
+  if (storageBucket) options.storageBucket = storageBucket;
   return initializeApp(Object.keys(options).length > 0 ? options : undefined);
 }
 
@@ -46,14 +53,21 @@ export function getAdminAuth(): Auth {
 }
 
 /**
- * Public URL for a Storage object. In development (Storage emulator) this points
- * at the emulator's media endpoint so uploaded covers are actually viewable;
- * otherwise it is the canonical Cloud Storage URL.
+ * Firebase download URL for a Storage object. The `token` (a per-object download
+ * token saved as `firebaseStorageDownloadTokens` metadata at upload) grants read
+ * access bypassing `storage.rules` — the same mechanism the Firebase console
+ * uses — so covers are viewable in both the emulator and production without
+ * opening the rules or making the bucket public. Points at the emulator host in
+ * development, `firebasestorage.googleapis.com` otherwise.
  */
-export function storageObjectUrl(bucketName: string, path: string): string {
+export function storageObjectUrl(
+  bucketName: string,
+  path: string,
+  token: string,
+): string {
   const emulator = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
-  if (emulator) {
-    return `http://${emulator}/v0/b/${bucketName}/o/${encodeURIComponent(path)}?alt=media`;
-  }
-  return `https://storage.googleapis.com/${bucketName}/${path}`;
+  const base = emulator
+    ? `http://${emulator}`
+    : "https://firebasestorage.googleapis.com";
+  return `${base}/v0/b/${bucketName}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
 }
