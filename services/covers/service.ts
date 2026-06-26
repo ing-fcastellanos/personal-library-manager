@@ -1,4 +1,4 @@
-import { getAdminStorage } from "../../lib/firebase/admin";
+import { getAdminStorage, storageObjectUrl } from "../../lib/firebase/admin";
 
 /**
  * User cover upload (#15, design D4). Validates and stores a reader-supplied cover
@@ -55,5 +55,5 @@ export async function uploadCover(
   const bucket = storage.bucket();
   const path = `${COVER_PREFIX}/${bookId}.${extensionFor(contentType)}`;
   await bucket.file(path).save(buffer, { contentType, resumable: false });
-  return `https://storage.googleapis.com/${bucket.name}/${path}`;
+  return storageObjectUrl(bucket.name, path);
 }

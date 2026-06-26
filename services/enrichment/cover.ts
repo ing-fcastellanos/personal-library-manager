@@ -1,4 +1,4 @@
-import { getAdminStorage } from "../../lib/firebase/admin";
+import { getAdminStorage, storageObjectUrl } from "../../lib/firebase/admin";
 
 /**
  * Cover re-hosting (#13, design D6). When an enriched book is *persisted*, the
@@ -66,7 +66,7 @@ export async function rehostCover(
       resumable: false,
     });
 
-    return `https://storage.googleapis.com/${bucket.name}/${path}`;
+    return storageObjectUrl(bucket.name, path);
   } catch {
     return null;
   } finally {
