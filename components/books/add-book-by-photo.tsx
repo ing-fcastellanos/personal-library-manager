@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import {
   candidateToBookData,
-  fileToBase64,
+  prepareImage,
   intakePayload,
   isLowConfidence,
   type IdentifyCandidate,
@@ -65,7 +65,7 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
     if (!file) return;
     setPhase("analyzing");
     try {
-      const { base64, contentType } = await fileToBase64(file);
+      const { base64, contentType } = await prepareImage(file);
       setPhoto({
         dataUrl: `data:${contentType};base64,${base64}`,
         base64,
@@ -147,7 +147,9 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
     });
     if (!res.ok) throw new Error("intake failed");
     const { book: created } = (await res.json()) as { book: { id: string } };
-    await fetch(`/api/books/${created.id}/cover`, {
+    // Best-effort: the book is already saved; a failed cover upload shouldn't
+    // block navigation, but warn so it isn't silently lost.
+    const coverRes = await fetch(`/api/books/${created.id}/cover`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -155,6 +157,12 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
         contentType: photo!.contentType,
       }),
     });
+    if (!coverRes.ok) {
+      toast({
+        title: "Se guardó el libro, pero no se pudo subir la portada",
+        variant: "destructive",
+      });
+    }
     router.push(`/libros/${created.id}`);
   }
 

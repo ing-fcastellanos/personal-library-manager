@@ -132,6 +132,58 @@ export function normalizeGoogleVolume(
   };
 }
 
+/** Minimal shape of an Open Library `search.json` doc we consume. */
+export interface OpenLibrarySearchDoc {
+  title?: string;
+  author_name?: string[];
+  first_publish_year?: number;
+  isbn?: string[];
+  cover_i?: number;
+  publisher?: string[];
+  number_of_pages_median?: number;
+  language?: string[];
+}
+
+/**
+ * Normalizes an Open Library `search.json` doc into a `Candidate`. Used as the
+ * text-search fallback when Google Books returns nothing (#20). Covers come from
+ * `covers.openlibrary.org` via `cover_i`; subjects are not mapped to categories
+ * (design D3, consistent with the ISBN normalizer).
+ */
+export function normalizeOpenLibrarySearchDoc(
+  doc: OpenLibrarySearchDoc | undefined,
+): Candidate | null {
+  const title = doc?.title?.trim();
+  if (!title) return null;
+
+  const authors = (doc?.author_name ?? [])
+    .map((a) => a.trim())
+    .filter((a) => a.length > 0);
+  const cover = doc?.cover_i
+    ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg`
+    : null;
+
+  return {
+    title,
+    subtitle: null,
+    authors,
+    authorKeys: arraySlugs(authors),
+    publisher: doc?.publisher?.[0]?.trim() || null,
+    publishedYear: doc?.first_publish_year ?? null,
+    isbn13: toIsbn13(doc?.isbn?.[0]),
+    isbn10: null,
+    categories: [],
+    categoryKeys: [],
+    coverUrl: cover,
+    coverWidth: cover ? OL_COVER_WIDTHS.medium : null,
+    pageCount: doc?.number_of_pages_median ?? null,
+    language: doc?.language?.[0] ?? null,
+    description: null,
+    titleKey: slugify(title),
+    source: "open-library",
+  };
+}
+
 /** Minimal shape of an Open Library `jscmd=data` record we consume. */
 export interface OpenLibraryRecord {
   title?: string;

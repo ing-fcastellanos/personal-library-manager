@@ -1,4 +1,9 @@
-import { normalizeOpenLibrary, type OpenLibraryRecord } from "./normalize";
+import {
+  normalizeOpenLibrary,
+  normalizeOpenLibrarySearchDoc,
+  type OpenLibraryRecord,
+  type OpenLibrarySearchDoc,
+} from "./normalize";
 import type { Candidate } from "./types";
 
 /**
@@ -11,6 +16,8 @@ import type { Candidate } from "./types";
  */
 
 const OPEN_LIBRARY_BOOKS_URL = "https://openlibrary.org/api/books";
+const OPEN_LIBRARY_SEARCH_URL = "https://openlibrary.org/search.json";
+const SEARCH_MAX_RESULTS = 10;
 const DEFAULT_TIMEOUT_MS = 5000;
 
 export interface OpenLibraryOptions {
@@ -40,6 +47,42 @@ export async function openLibraryByIsbn(
     }
     const body = (await res.json()) as OpenLibraryBooksResponse;
     return normalizeOpenLibrary(body[bibkey]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+interface OpenLibrarySearchResponse {
+  docs?: OpenLibrarySearchDoc[];
+}
+
+/**
+ * Free-text search via `search.json`. Used as the text-search fallback when
+ * Google Books returns nothing (#20). Returns all normalizable candidates
+ * (unranked); the caller ranks and caps them.
+ */
+export async function openLibrarySearch(
+  query: string,
+  options: OpenLibraryOptions = {},
+): Promise<Candidate[]> {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  );
+  try {
+    const fields =
+      "title,author_name,first_publish_year,isbn,cover_i,publisher,number_of_pages_median,language";
+    const url = `${OPEN_LIBRARY_SEARCH_URL}?q=${encodeURIComponent(query)}&limit=${SEARCH_MAX_RESULTS}&fields=${fields}`;
+    const res = await fetchImpl(url, { signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(`Open Library responded ${res.status}`);
+    }
+    const body = (await res.json()) as OpenLibrarySearchResponse;
+    return (body.docs ?? [])
+      .map((doc) => normalizeOpenLibrarySearchDoc(doc))
+      .filter((c): c is Candidate => c != null);
   } finally {
     clearTimeout(timer);
   }
