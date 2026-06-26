@@ -8,19 +8,25 @@ import { completeSignInFromLink, exchangeForSession } from "@/lib/auth/client";
 export default function CallbackPage() {
   const router = useRouter();
   const [state, setState] = React.useState<"loading" | "error">("loading");
+  const ran = React.useRef(false);
 
   React.useEffect(() => {
-    let active = true;
+    // The magic-link `oobCode` is single-use. React StrictMode invokes effects
+    // twice in development, so without this guard `signInWithEmailLink` runs a
+    // second time with an already-consumed code and fails — surfacing a spurious
+    // "invalid link" even though the first run signed in. Run exactly once.
+    if (ran.current) return;
+    ran.current = true;
     (async () => {
       try {
         const idToken = await completeSignInFromLink();
         if (!idToken) {
-          if (active) setState("error");
+          setState("error");
           return;
         }
         const res = await exchangeForSession(idToken);
         if (!res.ok) {
-          if (active) setState("error");
+          setState("error");
           return;
         }
         const next = window.localStorage.getItem("plm:next") ?? "/";
@@ -28,12 +34,9 @@ export default function CallbackPage() {
         // Full navigation so the AuthProvider re-reads the new server session.
         window.location.assign(next);
       } catch {
-        if (active) setState("error");
+        setState("error");
       }
     })();
-    return () => {
-      active = false;
-    };
   }, []);
 
   return (
