@@ -1,5 +1,5 @@
 import { googleBooksByIsbn, googleBooksSearch } from "./google-books";
-import { openLibraryByIsbn } from "./open-library";
+import { openLibraryByIsbn, openLibrarySearch } from "./open-library";
 import { mergeCandidates } from "./merge";
 import { rankCandidates } from "./rank";
 import { toIsbn13 } from "./normalize";
@@ -20,7 +20,8 @@ import type { Candidate } from "./types";
  *
  * - `enrichByIsbn` — canonical lookup, Google Books primary + Open Library
  *   complement, merged into at most one candidate (design D1/D2).
- * - `searchByText` — Google Books free-text search, deterministically ranked to
+ * - `searchByText` — Google Books free-text search, falling back to Open Library
+ *   search when Google Books returns nothing (#20), deterministically ranked to
  *   the top 5 (design D1/D4).
  *
  * Both consult the cache first (design D5) and degrade gracefully: a failing
@@ -32,6 +33,7 @@ export interface EnrichDeps {
   googleByIsbn?: typeof googleBooksByIsbn;
   openByIsbn?: typeof openLibraryByIsbn;
   googleSearch?: typeof googleBooksSearch;
+  openSearch?: typeof openLibrarySearch;
 }
 
 const SEARCH_LIMIT = 5;
@@ -90,7 +92,13 @@ export async function searchByText(
   if (cached !== null) return cached;
 
   const googleSearch = deps.googleSearch ?? googleBooksSearch;
-  const found = (await safe(() => googleSearch(query))) ?? [];
+  let found = (await safe(() => googleSearch(query))) ?? [];
+  if (found.length === 0) {
+    // Google Books returned nothing (or failed) — fall back to Open Library
+    // search so a flaky/unavailable Google Books doesn't break text lookup (#20).
+    const openSearch = deps.openSearch ?? openLibrarySearch;
+    found = (await safe(() => openSearch(query))) ?? [];
+  }
   const ranked = rankCandidates(query, found, SEARCH_LIMIT);
 
   await writeCache(

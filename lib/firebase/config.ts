@@ -31,7 +31,15 @@ export function assertClientConfig(): void {
   }
 }
 
-/** Project id used by the Admin SDK (server side). */
+/**
+ * Project id used by the Admin SDK (server side).
+ *
+ * NOTE: the Admin SDK (`lib/firebase/admin.ts`) reads projectId and the Storage
+ * bucket from `process.env` lazily at init time, not from these module-level
+ * consts — the custom server loads `.env*` after these modules are imported, so
+ * a module-scope read here can be `undefined`. This export is for client/config
+ * consumers only.
+ */
 export const serverProjectId =
   process.env.GOOGLE_CLOUD_PROJECT ??
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;

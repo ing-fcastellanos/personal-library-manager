@@ -15,6 +15,7 @@ import intakeRouter from "./routes/intake";
 import coverRouter from "./routes/cover";
 import catalogRouter from "./routes/catalog";
 import aiSettingsRouter from "./routes/ai-settings";
+import aiIdentifyRouter from "./routes/ai-identify";
 
 config();
 
@@ -28,6 +29,8 @@ async function main() {
   // Cover uploads carry a base64 image (#15 D4): parse this path with a higher
   // limit first; the general parser then no-ops (express.json guards re-parsing).
   app.use("/api/books/:id/cover", express.json({ limit: "8mb" }));
+  // Photo identification (#20) also carries a base64 image — same elevated limit.
+  app.use("/api/ai/identify", express.json({ limit: "8mb" }));
   app.use("/api", express.json());
   app.use("/api", cookieParser());
   app.use("/api", healthRouter);
@@ -45,6 +48,7 @@ async function main() {
   app.use("/api", enrichRouter);
   app.use("/api", catalogRouter);
   app.use("/api", aiSettingsRouter);
+  app.use("/api", aiIdentifyRouter);
 
   // Web layer (Next.js SSR) — handles everything else.
   const handle = await createNextHandler(dev);

@@ -1,4 +1,5 @@
-import { getAdminStorage } from "../../lib/firebase/admin";
+import { randomUUID } from "node:crypto";
+import { getAdminStorage, storageObjectUrl } from "../../lib/firebase/admin";
 
 /**
  * User cover upload (#15, design D4). Validates and stores a reader-supplied cover
@@ -54,6 +55,11 @@ export async function uploadCover(
   const storage = deps.storage ?? getAdminStorage();
   const bucket = storage.bucket();
   const path = `${COVER_PREFIX}/${bookId}.${extensionFor(contentType)}`;
-  await bucket.file(path).save(buffer, { contentType, resumable: false });
-  return `https://storage.googleapis.com/${bucket.name}/${path}`;
+  const token = randomUUID();
+  await bucket.file(path).save(buffer, {
+    contentType,
+    resumable: false,
+    metadata: { metadata: { firebaseStorageDownloadTokens: token } },
+  });
+  return storageObjectUrl(bucket.name, path, token);
 }

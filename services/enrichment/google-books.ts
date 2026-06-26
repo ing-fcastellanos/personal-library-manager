@@ -34,7 +34,11 @@ async function fetchVolumes(
     options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   );
   try {
-    const url = `${GOOGLE_BOOKS_URL}?q=${encodeURIComponent(query)}&maxResults=${SEARCH_MAX_RESULTS}`;
+    // An optional API key lifts the strict anonymous quota and improves
+    // reliability (#20); the endpoint works without one when unset.
+    const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
+    const keyParam = apiKey ? `&key=${encodeURIComponent(apiKey)}` : "";
+    const url = `${GOOGLE_BOOKS_URL}?q=${encodeURIComponent(query)}&maxResults=${SEARCH_MAX_RESULTS}${keyParam}`;
     const res = await fetchImpl(url, { signal: controller.signal });
     if (!res.ok) {
       throw new Error(`Google Books responded ${res.status}`);

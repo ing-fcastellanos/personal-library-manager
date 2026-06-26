@@ -58,6 +58,22 @@ describe("enrichment service caching (emulator)", () => {
     expect(googleSearch).toHaveBeenCalledTimes(1);
   });
 
+  it("falls back to Open Library search when Google Books is empty", async () => {
+    const googleSearch = vi.fn().mockResolvedValue([]);
+    const openSearch = vi
+      .fn()
+      .mockResolvedValue([candidate("El Color de las Cosas Invisibles")]);
+
+    const result = await searchByText("color cosas invisibles longarela", {
+      googleSearch,
+      openSearch,
+    });
+
+    expect(googleSearch).toHaveBeenCalledTimes(1);
+    expect(openSearch).toHaveBeenCalledTimes(1);
+    expect(result[0]?.title).toBe("El Color de las Cosas Invisibles");
+  });
+
   it("degrades gracefully when one ISBN source throws", async () => {
     const googleByIsbn = vi.fn().mockRejectedValue(new Error("GB down"));
     const openByIsbn = vi.fn().mockResolvedValue(candidate("From OL"));
