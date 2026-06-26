@@ -34,4 +34,4 @@
 
 - [x] 5.1 Confirm no API key is ever sent to the client (review responses + UI)
 - [x] 5.2 Run lint, typecheck, and the test suite green
-- [ ] 5.3 Manual check: change engine + toggle persist to `settings/ai`; test connection reflects status
+- [x] 5.3 Manual check: change engine + toggle persist to `settings/ai`; test connection reflects status
