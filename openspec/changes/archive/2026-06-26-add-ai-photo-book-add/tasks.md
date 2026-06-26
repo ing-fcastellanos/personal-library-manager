@@ -39,4 +39,4 @@
 
 - [x] 6.1 Confirm no API key reaches the client; identify is auth-gated
 - [x] 6.2 Run lint, typecheck, and the test suite green
-- [ ] 6.3 Manual check: photo → candidate + alternatives → confirm saves the book with the photo as cover
+- [x] 6.3 Manual check: photo → candidate + alternatives → confirm saves the book with the photo as cover
