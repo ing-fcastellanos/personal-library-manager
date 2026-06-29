@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AddBookByShelf } from "./add-book-by-shelf";
 
 /**
@@ -52,6 +52,7 @@ let calls: Array<{ url: string; method: string; body: unknown }>;
 beforeEach(() => {
   calls = [];
   push.mockReset();
+  sessionStorage.clear();
   global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? "GET";
@@ -130,7 +131,8 @@ describe("AddBookByShelf", () => {
       await screen.findByRole("button", { name: /Agregar como copia/ }),
     );
 
-    await screen.findByText("¡Listo!");
+    // all buckets resolved → navigates to the shared import summary
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/agregar/resumen"));
 
     const intakes = calls.filter((c) => c.url.endsWith("/api/books/intake"));
     expect(
@@ -138,6 +140,14 @@ describe("AddBookByShelf", () => {
     ).toEqual(expect.arrayContaining(["Dune", "Blurry Book"]));
     const copies = calls.filter((c) => c.url.endsWith("/api/copies"));
     expect(copies[0]?.body).toMatchObject({ bookId: "d1" });
+
+    // the summary was persisted: added (Dune, Blurry Book) + a copy (Duplicado)
+    const saved = JSON.parse(
+      sessionStorage.getItem("plm:lastImport") ?? "[]",
+    ) as Array<{ title: string; result: string }>;
+    expect(saved.map((o) => o.result)).toEqual(
+      expect.arrayContaining(["added", "added", "added_as_copy"]),
+    );
   });
 
   function mockTwoAuto() {
@@ -203,7 +213,7 @@ describe("AddBookByShelf", () => {
       await screen.findByRole("button", { name: /Agregar los 1/ }),
     );
 
-    await screen.findByText("¡Listo!");
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/agregar/resumen"));
     const intakes = calls.filter((c) => c.url.endsWith("/api/books/intake"));
     expect(intakes).toHaveLength(1);
     expect((intakes[0].body as { book: { title: string } }).book.title).toBe(

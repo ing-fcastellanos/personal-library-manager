@@ -15,13 +15,13 @@ import {
   AlertTriangle,
   Pencil,
   Copy,
-  LayoutGrid,
   SearchX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { ShelfBookDialog } from "./shelf-book-dialog";
+import { saveImport, type ImportOutcome } from "./import-summary";
 import {
   candidateToBookData,
   prepareImage,
@@ -73,6 +73,9 @@ export function AddBookByShelf() {
   const [excluded, setExcluded] = React.useState<Set<number>>(new Set());
   // The candidate shown in the full-metadata detail dialog (null = closed).
   const [detail, setDetail] = React.useState<IdentifyCandidate | null>(null);
+  // Per-book outcomes accumulated across the batch, handed to the import summary.
+  const outcomesRef = React.useRef<ImportOutcome[]>([]);
+  const navigatedRef = React.useRef(false);
 
   React.useEffect(() => {
     fetch("/api/shelves")
@@ -83,15 +86,18 @@ export function AddBookByShelf() {
       .catch(() => setShelves([]));
   }, []);
 
-  const shelfName = shelves.find((s) => s.id === shelfId)?.name ?? null;
-
-  function reset() {
-    setPhase("capture");
-    setProgress({ done: 0, total: 0 });
-    setBuckets(null);
-    setSummary({ added: 0, skipped: 0 });
-    setExcluded(new Set());
-  }
+  // Once every bucket is resolved, persist the outcomes and show the summary.
+  React.useEffect(() => {
+    if (phase !== "results" || !buckets) return;
+    const remaining =
+      buckets.auto.length + buckets.queue.length + buckets.duplicates.length;
+    const handled = summary.added + summary.skipped > 0;
+    if (remaining === 0 && handled && !navigatedRef.current) {
+      navigatedRef.current = true;
+      saveImport(outcomesRef.current);
+      router.push("/agregar/resumen");
+    }
+  }, [phase, buckets, summary, router]);
 
   function toggleExcluded(i: number) {
     setExcluded((prev) => {
@@ -185,42 +191,68 @@ export function AddBookByShelf() {
     }
   }
 
-  /** Intake one book with the enrichment cover + the batch shelf. */
+  /** Intake one book; returns the created ids, or null on failure. */
   async function intake(
     book: BookData,
     coverUrl: string | null,
-  ): Promise<boolean> {
+  ): Promise<{ bookId: string; copyId?: string } | null> {
     try {
       const res = await fetch("/api/books/intake", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(shelfIntakePayload(book, shelfId, coverUrl)),
       });
-      return res.ok;
+      if (!res.ok) return null;
+      const { book: created, copy } = (await res.json()) as {
+        book: { id: string };
+        copy?: { id: string };
+      };
+      return { bookId: created.id, copyId: copy?.id };
     } catch {
-      return false;
+      return null;
     }
   }
 
   async function addAuto() {
     if (!buckets) return;
-    const picked = buckets.auto.filter((_, i) => !excluded.has(i));
+    const auto = buckets.auto;
     setPhase("processing");
-    setProgress({ done: 0, total: picked.length });
-    let added = 0;
-    for (let i = 0; i < picked.length; i++) {
-      const b = picked[i];
-      const ok = await intake(
-        candidateToBookData(b.best!),
-        b.best!.coverUrl ?? null,
-      );
-      if (ok) added++;
-      setProgress({ done: i + 1, total: picked.length });
+    setProgress({ done: 0, total: auto.length });
+    const out: ImportOutcome[] = [];
+    for (let i = 0; i < auto.length; i++) {
+      const b = auto[i];
+      const cover = b.best!.coverUrl ?? null;
+      const base = {
+        title: b.best!.title,
+        author: b.best!.authors?.[0],
+        coverUrl: cover,
+      };
+      if (excluded.has(i)) {
+        out.push({ ...base, result: "discarded" });
+      } else {
+        const book = candidateToBookData(b.best!);
+        const ids = await intake(book, cover);
+        out.push(
+          ids
+            ? {
+                ...base,
+                result: "added",
+                bookId: ids.bookId,
+                copyId: ids.copyId,
+              }
+            : {
+                ...base,
+                result: "failed",
+                retry: { payload: shelfIntakePayload(book, shelfId, cover) },
+              },
+        );
+      }
+      setProgress({ done: i + 1, total: auto.length });
     }
-    // Books the reader toggled out are skipped, not added.
+    outcomesRef.current.push(...out);
     setSummary((s) => ({
-      added: s.added + added,
-      skipped: s.skipped + excluded.size,
+      added: s.added + out.filter((o) => o.result === "added").length,
+      skipped: s.skipped + out.filter((o) => o.result !== "added").length,
     }));
     // Resolve the auto bucket and return to the hub so the reader can still
     // review the doubtful ones (and vice-versa) before finishing.
@@ -334,16 +366,20 @@ export function AddBookByShelf() {
     const reviewCount = buckets.queue.length + buckets.duplicates.length;
     const remaining = buckets.auto.length + reviewCount;
     if (remaining === 0) {
-      // Everything handled → done; nothing recognized at all → retake.
+      // Everything handled → the effect navigates to the summary; show a brief
+      // spinner. Nothing recognized at all → retake.
       if (summary.added + summary.skipped > 0) {
         return (
-          <DoneView
-            added={summary.added}
-            skipped={summary.skipped}
-            shelfName={shelfName}
-            onCatalog={() => router.push("/catalogo")}
-            onReset={reset}
-          />
+          <div
+            className="flex justify-center py-10"
+            role="status"
+            aria-live="polite"
+          >
+            <Loader2
+              className="size-6 animate-spin text-primary"
+              aria-hidden="true"
+            />
+          </div>
         );
       }
       return (
@@ -514,6 +550,7 @@ export function AddBookByShelf() {
         buckets={buckets}
         shelfId={shelfId}
         onIntake={intake}
+        onOutcome={(o) => outcomesRef.current.push(o)}
         onDone={(added, skipped) => {
           setSummary((s) => ({
             added: s.added + added,
@@ -530,66 +567,22 @@ export function AddBookByShelf() {
   return null;
 }
 
-// ───────────────────────── done ─────────────────────────
-
-function DoneView({
-  added,
-  skipped,
-  shelfName,
-  onCatalog,
-  onReset,
-}: {
-  added: number;
-  skipped: number;
-  shelfName: string | null;
-  onCatalog: () => void;
-  onReset: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center px-3 py-8 text-center">
-      <span className="grid size-[84px] animate-in place-items-center rounded-full bg-success-bg text-success zoom-in-95">
-        <Check className="size-10" strokeWidth={2.2} aria-hidden="true" />
-      </span>
-      <p className="mt-5 text-[22px] font-bold tracking-tight">¡Listo!</p>
-      <p className="mt-2.5 font-semibold">
-        {added} {added === 1 ? "agregado" : "agregados"} · {skipped}{" "}
-        {skipped === 1 ? "saltado" : "saltados"}
-      </p>
-      {shelfName && (
-        <p className="mt-1.5 max-w-[240px] text-xs leading-relaxed text-muted-foreground">
-          Fueron al estante «{shelfName}».
-        </p>
-      )}
-      <button
-        type="button"
-        onClick={onCatalog}
-        className="mt-6 inline-flex h-[50px] w-full max-w-[280px] items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground"
-      >
-        <LayoutGrid className="size-[18px]" aria-hidden="true" />
-        Ver catálogo
-      </button>
-      <button
-        type="button"
-        onClick={onReset}
-        className="mt-2.5 p-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
-      >
-        Otro estante
-      </button>
-    </div>
-  );
-}
-
 // ───────────────────────── review flow ─────────────────────────
 
 function ReviewFlow({
   buckets,
   shelfId,
   onIntake,
+  onOutcome,
   onDone,
 }: {
   buckets: ShelfBuckets;
   shelfId: string;
-  onIntake: (book: BookData, coverUrl: string | null) => Promise<boolean>;
+  onIntake: (
+    book: BookData,
+    coverUrl: string | null,
+  ) => Promise<{ bookId: string; copyId?: string } | null>;
+  onOutcome: (outcome: ImportOutcome) => void;
   onDone: (added: number, skipped: number) => void;
 }) {
   const { toast } = useToast();
@@ -612,21 +605,34 @@ function ReviewFlow({
 
   async function handleDuplicates(asCopy: boolean) {
     let added = 0;
-    if (asCopy) {
-      for (const d of buckets.duplicates) {
-        try {
-          const res = await fetch("/api/copies", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              bookId: d.duplicate!.id,
-              shelfId: shelfId || null,
-            }),
-          });
-          if (res.ok) added++;
-        } catch {
-          /* skip on failure */
+    for (const d of buckets.duplicates) {
+      const base = {
+        title: d.duplicate!.title,
+        author: d.duplicate!.authors[0],
+        coverUrl: d.best?.coverUrl ?? null,
+      };
+      if (!asCopy) {
+        onOutcome({ ...base, result: "skipped_duplicate" });
+        continue;
+      }
+      try {
+        const res = await fetch("/api/copies", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            bookId: d.duplicate!.id,
+            shelfId: shelfId || null,
+          }),
+        });
+        if (res.ok) {
+          const copy = (await res.json()) as { id?: string };
+          onOutcome({ ...base, result: "added_as_copy", copyId: copy.id });
+          added++;
+        } else {
+          onOutcome({ ...base, result: "skipped_duplicate" });
         }
+      } catch {
+        onOutcome({ ...base, result: "skipped_duplicate" });
       }
     }
     setDupsHandled(true);
@@ -645,14 +651,30 @@ function ReviewFlow({
         position={index + 1}
         total={queue.length}
         onConfirm={async (book, coverUrl) => {
-          const ok = await onIntake(book, coverUrl);
-          if (!ok) {
+          const ids = await onIntake(book, coverUrl);
+          if (!ids) {
             toast({ title: "No se pudo agregar", variant: "destructive" });
             return;
           }
+          onOutcome({
+            title: book.title,
+            author: book.authors[0],
+            coverUrl,
+            result: "added",
+            bookId: ids.bookId,
+            copyId: ids.copyId,
+          });
           advance(1, 0);
         }}
-        onDiscard={() => advance(0, 1)}
+        onDiscard={() => {
+          onOutcome({
+            title: item.best?.title ?? item.ai.title,
+            author: item.best?.authors?.[0] ?? item.ai.authors?.[0],
+            coverUrl: item.best?.coverUrl ?? null,
+            result: "discarded",
+          });
+          advance(0, 1);
+        }}
       />
     );
   }

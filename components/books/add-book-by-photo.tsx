@@ -21,6 +21,7 @@ import {
   type IdentifyCandidate,
   type IdentifyResponse,
 } from "./photo-add";
+import { saveImport } from "./import-summary";
 import type { BookData, ExistingBook, Shelf } from "./types";
 
 /**
@@ -146,7 +147,10 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
       body: JSON.stringify(intakePayload(book!, { shelfId })),
     });
     if (!res.ok) throw new Error("intake failed");
-    const { book: created } = (await res.json()) as { book: { id: string } };
+    const { book: created, copy } = (await res.json()) as {
+      book: { id: string };
+      copy?: { id: string };
+    };
     // Best-effort: the book is already saved; a failed cover upload shouldn't
     // block navigation, but warn so it isn't silently lost.
     const coverRes = await fetch(`/api/books/${created.id}/cover`, {
@@ -163,7 +167,17 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
         variant: "destructive",
       });
     }
-    router.push(`/libros/${created.id}`);
+    saveImport([
+      {
+        title: book!.title,
+        author: book!.authors[0],
+        coverUrl: photo?.dataUrl ?? null,
+        result: "added",
+        bookId: created.id,
+        copyId: copy?.id,
+      },
+    ]);
+    router.push("/agregar/resumen");
   }
 
   async function addAsCopy() {
@@ -179,7 +193,17 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
         }),
       });
       if (!res.ok) throw new Error("copy failed");
-      router.push(`/libros/${duplicate.id}`);
+      const created = (await res.json()) as { id?: string };
+      saveImport([
+        {
+          title: book?.title ?? duplicate.title,
+          author: book?.authors?.[0] ?? duplicate.authors?.[0],
+          coverUrl: photo?.dataUrl ?? null,
+          result: "added_as_copy",
+          copyId: created.id,
+        },
+      ]);
+      router.push("/agregar/resumen");
     } catch {
       toast({ title: "No se pudo agregar la copia", variant: "destructive" });
       setPhase("review");

@@ -91,6 +91,6 @@ describe("AddBookByPhoto", () => {
         calls.some((c) => c.url.match(/\/api\/books\/b1\/cover$/)),
       ).toBeTruthy();
     });
-    expect(push).toHaveBeenCalledWith("/libros/b1");
+    expect(push).toHaveBeenCalledWith("/agregar/resumen");
   });
 });
