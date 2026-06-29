@@ -44,4 +44,4 @@
 ## 7. Verify
 
 - [x] 7.1 Confirm no API key reaches the client; capture is write-gated
-- [ ] 7.2 Manual check: shelf photo → confident auto-added after preview + doubtful reviewed one-by-one, all on one shelf
+- [x] 7.2 Manual check: shelf photo → confident auto-added after preview + doubtful reviewed one-by-one, all on one shelf
