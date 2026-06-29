@@ -18,6 +18,7 @@
 - [x] 3.1 Results screen: single shelf selector (loads `/api/shelves`) applied to the whole batch
 - [x] 3.2 Auto summary list + "Agregar los N" → intake per book (enrichment cover, batch shelf); surface per-book failures without aborting
 - [x] 3.3 "Revisar →" entry showing the count of doubtful books
+- [x] 3.4 Cherry-pick: per-book include/exclude toggle + a detail dialog; "Agregar los N" reflects the selection and skips excluded books
 
 ## 4. Review queue
 

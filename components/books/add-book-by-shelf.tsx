@@ -6,6 +6,9 @@ import {
   Library,
   Loader2,
   Check,
+  CheckCircle2,
+  Circle,
+  Info,
   X,
   ChevronDown,
   ChevronRight,
@@ -18,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { ShelfBookDialog } from "./shelf-book-dialog";
 import {
   candidateToBookData,
   prepareImage,
@@ -69,6 +73,10 @@ export function AddBookByShelf() {
   const [shelves, setShelves] = React.useState<Shelf[]>([]);
   const [shelfId, setShelfId] = React.useState("");
   const [summary, setSummary] = React.useState({ added: 0, skipped: 0 });
+  // Cherry-pick: indices of `auto` books the reader has toggled OUT of the batch.
+  const [excluded, setExcluded] = React.useState<Set<number>>(new Set());
+  // The candidate shown in the full-metadata detail dialog (null = closed).
+  const [detail, setDetail] = React.useState<IdentifyCandidate | null>(null);
 
   React.useEffect(() => {
     fetch("/api/shelves")
@@ -86,6 +94,16 @@ export function AddBookByShelf() {
     setProgress({ done: 0, total: 0 });
     setBuckets(null);
     setSummary({ added: 0, skipped: 0 });
+    setExcluded(new Set());
+  }
+
+  function toggleExcluded(i: number) {
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
   }
 
   async function processBook(ai: ShelfAICandidate): Promise<ProcessedBook> {
@@ -190,19 +208,24 @@ export function AddBookByShelf() {
 
   async function addAuto() {
     if (!buckets) return;
+    const picked = buckets.auto.filter((_, i) => !excluded.has(i));
     setPhase("processing");
-    setProgress({ done: 0, total: buckets.auto.length });
+    setProgress({ done: 0, total: picked.length });
     let added = 0;
-    for (let i = 0; i < buckets.auto.length; i++) {
-      const b = buckets.auto[i];
+    for (let i = 0; i < picked.length; i++) {
+      const b = picked[i];
       const ok = await intake(
         candidateToBookData(b.best!),
         b.best!.coverUrl ?? null,
       );
       if (ok) added++;
-      setProgress({ done: i + 1, total: buckets.auto.length });
+      setProgress({ done: i + 1, total: picked.length });
     }
-    setSummary((s) => ({ ...s, added: s.added + added }));
+    // Books the reader toggled out are skipped, not added.
+    setSummary((s) => ({
+      added: s.added + added,
+      skipped: s.skipped + excluded.size,
+    }));
     setPhase(
       buckets.queue.length || buckets.duplicates.length ? "review" : "done",
     );
@@ -344,34 +367,68 @@ export function AddBookByShelf() {
               </span>
             </div>
             <ul className="max-h-52 overflow-y-auto p-1.5">
-              {buckets.auto.map((b, i) => (
-                <li key={i} className="flex items-center gap-3 p-2">
-                  <CoverThumb
-                    url={b.best!.coverUrl}
-                    className="h-11 w-[30px]"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-semibold">
-                      {b.best!.title}
-                    </p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {b.best!.authors?.[0] ?? ""}
-                    </p>
-                  </div>
-                  <Check
-                    className="size-4 shrink-0 text-success"
-                    aria-hidden="true"
-                  />
-                </li>
-              ))}
+              {buckets.auto.map((b, i) => {
+                const on = !excluded.has(i);
+                return (
+                  <li
+                    key={i}
+                    className={cn(
+                      "flex items-center gap-2 p-2 transition-opacity",
+                      !on && "opacity-45",
+                    )}
+                  >
+                    <CoverThumb
+                      url={b.best!.coverUrl}
+                      className="h-11 w-[30px]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-semibold">
+                        {b.best!.title}
+                      </p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {b.best!.authors?.[0] ?? ""}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDetail(b.best)}
+                      aria-label={`Ver datos de ${b.best!.title}`}
+                      className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      <Info className="size-[18px]" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={on}
+                      aria-label={`Incluir ${b.best!.title}`}
+                      onClick={() => toggleExcluded(i)}
+                      className="grid size-9 shrink-0 place-items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {on ? (
+                        <CheckCircle2
+                          className="size-[22px] text-success"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Circle
+                          className="size-[22px] text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
             <div className="border-t border-border p-3">
               <button
                 type="button"
                 onClick={addAuto}
-                className="h-12 w-full rounded-lg bg-primary font-bold text-primary-foreground"
+                disabled={buckets.auto.length - excluded.size === 0}
+                className="h-12 w-full rounded-lg bg-primary font-bold text-primary-foreground disabled:opacity-50"
               >
-                Agregar los {buckets.auto.length}
+                Agregar los {buckets.auto.length - excluded.size}
               </button>
             </div>
           </div>
@@ -416,6 +473,8 @@ export function AddBookByShelf() {
         <div className="flex justify-center">
           <RetakeButton onChange={onCapture} variant="text" />
         </div>
+
+        <ShelfBookDialog candidate={detail} onClose={() => setDetail(null)} />
       </div>
     );
   }

@@ -44,6 +44,29 @@ using its enrichment metadata and cover, assigned to the batch shelf.
 - **THEN** no book has been persisted until the reader confirms the auto summary or
   reviews an item
 
+### Requirement: Cherry-pick the auto books before adding
+
+The auto (ready-to-add) books SHALL be individually selectable: each book SHALL have
+a toggle to include or exclude it from the batch, and "add the N books" SHALL add only
+the selected ones (excluded books are skipped). Each book SHALL also offer a way to open
+its full metadata (cover, title, authors, publisher, year, ISBN, language, pages,
+categories, description) in a detail view before deciding.
+
+#### Scenario: Excluding a book skips it
+
+- **WHEN** a reader toggles a ready book off and confirms the add
+- **THEN** that book is not saved and the rest of the selected books are added
+
+#### Scenario: The add count reflects the selection
+
+- **WHEN** a reader toggles books in or out of the ready group
+- **THEN** the add action's count updates to the number currently selected
+
+#### Scenario: View a book's full metadata
+
+- **WHEN** a reader opens a ready book's detail
+- **THEN** its full enrichment metadata is shown without leaving the batch
+
 ### Requirement: One shelf for the whole batch
 
 The flow SHALL provide a single shelf selector that applies to every book saved from the

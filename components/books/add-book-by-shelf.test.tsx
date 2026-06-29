@@ -137,6 +137,86 @@ describe("AddBookByShelf", () => {
     expect(copies[0]?.body).toMatchObject({ bookId: "d1" });
   });
 
+  function mockTwoAuto() {
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      calls.push({ url, method, body });
+      if (url.endsWith("/api/shelves")) return json([]);
+      if (url.endsWith("/api/ai/identify-shelf"))
+        return json({
+          books: [
+            {
+              title: "Dune",
+              authors: ["Herbert"],
+              confidence: 0.95,
+              sourceProvider: "openai",
+            },
+            {
+              title: "Hyperion",
+              authors: ["Simmons"],
+              confidence: 0.95,
+              sourceProvider: "openai",
+            },
+          ],
+        });
+      if (url.includes("/api/enrich")) {
+        if (url.includes("Dune"))
+          return json({
+            candidates: [
+              {
+                title: "Dune",
+                authors: ["Herbert"],
+                description: "Epic desert saga.",
+              },
+            ],
+          });
+        if (url.includes("Hyperion"))
+          return json({
+            candidates: [{ title: "Hyperion", authors: ["Simmons"] }],
+          });
+        return json({ candidates: [] });
+      }
+      if (url.includes("/api/books/duplicates")) return json({ matches: [] });
+      if (url.endsWith("/api/books/intake"))
+        return json({ book: { id: "b1" } }, 201);
+      return json({});
+    }) as unknown as typeof fetch;
+  }
+
+  it("cherry-picks: toggling a book out excludes it from intake", async () => {
+    mockTwoAuto();
+    render(<AddBookByShelf />);
+    capture();
+    await screen.findByText("2 listos para agregar");
+    expect(
+      screen.getByRole("button", { name: /Agregar los 2/ }),
+    ).toBeInTheDocument();
+
+    // toggle Hyperion out of the selection
+    fireEvent.click(screen.getByRole("checkbox", { name: /Incluir Hyperion/ }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Agregar los 1/ }),
+    );
+
+    await screen.findByText("¡Listo!");
+    const intakes = calls.filter((c) => c.url.endsWith("/api/books/intake"));
+    expect(intakes).toHaveLength(1);
+    expect((intakes[0].body as { book: { title: string } }).book.title).toBe(
+      "Dune",
+    );
+  });
+
+  it("opens the full-detail dialog for a book", async () => {
+    mockTwoAuto();
+    render(<AddBookByShelf />);
+    capture();
+    await screen.findByText("2 listos para agregar");
+    fireEvent.click(screen.getByRole("button", { name: /Ver datos de Dune/ }));
+    expect(await screen.findByText("Epic desert saga.")).toBeInTheDocument();
+  });
+
   it("shows an empty state when no books are recognized", async () => {
     global.fetch = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
