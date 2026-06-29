@@ -82,24 +82,28 @@ export function fileToBase64(
   });
 }
 
-/** Longest edge (px) the captured photo is downscaled to before upload. */
+/** Longest edge (px) a single cover photo is downscaled to before upload. */
 export const MAX_IMAGE_EDGE = 1600;
+/** Larger edge for shelf photos (#21) so spine text stays legible. */
+export const MAX_SHELF_EDGE = 2048;
 const JPEG_QUALITY = 0.85;
 
 /**
  * Downscales the captured photo to a sane size as JPEG before upload so it stays
- * under the cover limit (5 MB, #15) and the AI call is cheaper/faster (#20).
- * Falls back to the raw bytes when the browser can't decode/resize (e.g. jsdom),
- * so callers always get usable base64.
+ * under the cover limit (5 MB, #15) and the AI call is cheaper/faster (#20). The
+ * max edge is configurable (#21 shelves use a larger one). Falls back to the raw
+ * bytes when the browser can't decode/resize (e.g. jsdom), so callers always get
+ * usable base64.
  */
 export async function prepareImage(
   file: File,
+  maxEdge: number = MAX_IMAGE_EDGE,
 ): Promise<{ base64: string; contentType: string }> {
   try {
     if (typeof createImageBitmap !== "function") return fileToBase64(file);
     const bitmap = await createImageBitmap(file);
     const longest = Math.max(bitmap.width, bitmap.height);
-    const scale = longest > MAX_IMAGE_EDGE ? MAX_IMAGE_EDGE / longest : 1;
+    const scale = longest > maxEdge ? maxEdge / longest : 1;
     const w = Math.round(bitmap.width * scale);
     const h = Math.round(bitmap.height * scale);
     const canvas = document.createElement("canvas");
