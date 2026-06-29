@@ -43,6 +43,7 @@ const config: Config = {
         success: {
           DEFAULT: color("--success"),
           foreground: color("--success-foreground"),
+          bg: color("--success-bg"),
         },
         warning: {
           DEFAULT: color("--warning"),

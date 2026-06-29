@@ -117,8 +117,9 @@ describe("AddBookByShelf", () => {
     // add the auto book → intake for Dune
     fireEvent.click(screen.getByRole("button", { name: /Agregar los 1/ }));
 
-    // review queue: the low-confidence book, pre-filled with its enrichment best
-    expect(await screen.findByDisplayValue("Blurry Book")).toBeInTheDocument();
+    // review queue: the low-confidence book — its enrichment best shows as the
+    // candidate card (edit is opt-in, so it is text, not an input).
+    expect(await screen.findByText("Blurry Book")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Confirmar/ }));
 
     // duplicates group → add all as copy
@@ -126,7 +127,7 @@ describe("AddBookByShelf", () => {
       await screen.findByRole("button", { name: /Agregar como copia/ }),
     );
 
-    await screen.findByText("Listo");
+    await screen.findByText("¡Listo!");
 
     const intakes = calls.filter((c) => c.url.endsWith("/api/books/intake"));
     expect(

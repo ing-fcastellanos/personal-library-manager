@@ -5,15 +5,18 @@ import { useRouter } from "next/navigation";
 import {
   Library,
   Loader2,
-  AlertCircle,
   Check,
   X,
   ChevronDown,
-  RotateCcw,
+  ChevronRight,
+  AlertTriangle,
+  Pencil,
+  Copy,
+  LayoutGrid,
+  SearchX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import {
   candidateToBookData,
@@ -34,13 +37,13 @@ import {
 import type { BookData, ExistingBook, Shelf } from "./types";
 
 /**
- * Add books from a whole-shelf photo (#21b). Captures a shelf photo, identifies
- * the books (`/api/ai/identify-shelf`, 21a), then per book enriches + dedupes +
- * classifies with a real "processing N/M" bar (reusing `/api/enrich` +
- * `/api/books/duplicates`). The confident books are added after a preview; the
- * doubtful ones go to a one-by-one review queue, with duplicates handled in bulk.
- * All books land on a single batch shelf. Functional baseline over the existing
- * primitives; the Claude Design handoff refines it.
+ * Add books from a whole-shelf photo (#21b, Claude Design handoff "Add by Shelf").
+ * Captures a shelf photo, identifies the books (`/api/ai/identify-shelf`, 21a),
+ * then per book enriches + dedupes + classifies with a real progress bar (reusing
+ * `/api/enrich` + `/api/books/duplicates`). Confident books are added after a
+ * preview; doubtful ones go to a one-by-one review queue; duplicates are handled
+ * in bulk. All books land on one batch shelf. Recreated from the design over the
+ * existing tokens.
  */
 type Phase =
   | "capture"
@@ -54,6 +57,8 @@ interface DupMatch {
   book: { id: string; title: string; authors: string[] };
   existingCopies: number;
 }
+
+const SHELF_SVG = "M3 7v13h18V7M3 7l3-4h12l3 4M3 7h18";
 
 export function AddBookByShelf() {
   const router = useRouter();
@@ -73,6 +78,8 @@ export function AddBookByShelf() {
       )
       .catch(() => setShelves([]));
   }, []);
+
+  const shelfName = shelves.find((s) => s.id === shelfId)?.name ?? null;
 
   function reset() {
     setPhase("capture");
@@ -184,6 +191,7 @@ export function AddBookByShelf() {
   async function addAuto() {
     if (!buckets) return;
     setPhase("processing");
+    setProgress({ done: 0, total: buckets.auto.length });
     let added = 0;
     for (let i = 0; i < buckets.auto.length; i++) {
       const b = buckets.auto[i];
@@ -200,86 +208,121 @@ export function AddBookByShelf() {
     );
   }
 
+  // ───────────────────────── capture ─────────────────────────
   if (phase === "capture") {
     return (
-      <Card className="rounded-2xl shadow-none">
-        <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
-          <span className="grid size-16 place-items-center rounded-full bg-accent text-accent-foreground">
-            <Library className="size-8" aria-hidden="true" />
+      <div className="flex flex-col items-center px-2 pt-2 text-center">
+        <div className="flex aspect-[4/3] w-full max-w-[300px] flex-col items-center justify-center gap-3.5 rounded-[20px] border-2 border-dashed border-border bg-card p-6">
+          <span className="grid size-[72px] place-items-center rounded-full bg-accent text-accent-foreground">
+            <Library className="size-9" strokeWidth={1.6} aria-hidden="true" />
           </span>
-          <div>
-            <p className="font-semibold">Sacá una foto del estante</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              La IA agrega los seguros y te deja revisar los dudosos.
-            </p>
-          </div>
-          <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl bg-primary px-5 font-bold text-primary-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-ring">
-            <Library className="size-4" aria-hidden="true" />
-            Tomar foto del estante
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={onCapture}
-            />
-          </label>
-        </CardContent>
-      </Card>
+          <p className="text-lg font-bold tracking-tight">
+            Sacá una foto del estante
+          </p>
+          <p className="max-w-[240px] text-sm leading-relaxed text-muted-foreground">
+            Capturá los lomos de toda una fila. La IA identifica varios libros
+            de una.
+          </p>
+        </div>
+        <label className="mt-6 inline-flex h-[54px] w-full max-w-[300px] cursor-pointer items-center justify-center gap-2.5 rounded-2xl bg-primary text-base font-bold text-primary-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background">
+          <Library className="size-5" aria-hidden="true" />
+          Tomar foto del estante
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="sr-only"
+            onChange={onCapture}
+          />
+        </label>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Se abre la cámara del dispositivo.
+        </p>
+      </div>
     );
   }
 
+  // ───────────────────────── analyzing / processing ─────────────────────────
   if (phase === "analyzing" || phase === "processing") {
     const pct =
       progress.total > 0
         ? Math.round((progress.done / progress.total) * 100)
         : 0;
     return (
-      <Card className="rounded-2xl shadow-none">
-        <CardContent
-          className="flex flex-col items-center gap-4 p-8 text-center"
-          role="status"
-          aria-live="polite"
-        >
-          <Loader2
-            className="size-7 animate-spin text-primary"
-            aria-hidden="true"
-          />
-          <p className="font-semibold">
-            {phase === "analyzing"
-              ? "Analizando el estante…"
-              : `Procesando ${progress.done}/${progress.total}`}
-          </p>
-          {phase === "processing" && (
-            <div className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{ width: `${pct}%` }}
+      <div className="flex flex-col items-center px-2 py-10 text-center">
+        <span className="mb-5 grid size-16 place-items-center rounded-2xl bg-accent text-accent-foreground">
+          <Library className="size-7" strokeWidth={1.8} aria-hidden="true" />
+        </span>
+        {phase === "analyzing" ? (
+          <>
+            <div
+              className="flex items-center gap-2.5"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2
+                className="size-5 animate-spin text-primary"
+                aria-hidden="true"
               />
+              <span className="text-base font-semibold">
+                Analizando el estante…
+              </span>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Detectando los lomos de los libros.
+            </p>
+          </>
+        ) : (
+          <>
+            <p
+              className="text-[17px] font-bold"
+              role="status"
+              aria-live="polite"
+            >
+              Procesando {progress.done}/{progress.total}
+            </p>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Identificando y verificando duplicados de cada libro.
+            </p>
+            <div className="mt-5 w-full max-w-xs">
+              <div
+                role="progressbar"
+                aria-valuenow={progress.done}
+                aria-valuemin={0}
+                aria-valuemax={progress.total}
+                aria-label="Progreso del lote"
+                className="h-3 overflow-hidden rounded-full bg-muted"
+              >
+                <div
+                  className="h-full rounded-full bg-primary transition-all"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="mt-2 text-right text-xs text-muted-foreground">
+                {pct}%
+              </p>
+            </div>
+          </>
+        )}
+      </div>
     );
   }
 
+  // ───────────────────────── results ─────────────────────────
   if (phase === "results" && buckets) {
-    const total =
-      buckets.auto.length + buckets.queue.length + buckets.duplicates.length;
-    if (total === 0) {
+    const reviewCount = buckets.queue.length + buckets.duplicates.length;
+    if (buckets.auto.length + reviewCount === 0) {
       return (
-        <Card className="rounded-2xl shadow-none">
-          <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-            <span className="grid size-14 place-items-center rounded-full bg-muted text-muted-foreground">
-              <AlertCircle className="size-7" aria-hidden="true" />
-            </span>
-            <p className="font-semibold">No se reconocieron libros</p>
-            <p className="text-sm text-muted-foreground">
-              Probá con más luz o enfocando los lomos.
-            </p>
-            <RetakeButton onChange={onCapture} />
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center px-3 py-8 text-center">
+          <span className="grid size-14 place-items-center rounded-full bg-muted text-muted-foreground">
+            <SearchX className="size-7" aria-hidden="true" />
+          </span>
+          <p className="mt-4 font-semibold">No se reconocieron libros</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Probá con más luz o enfocando los lomos.
+          </p>
+          <RetakeButton onChange={onCapture} className="mt-5" />
+        </div>
       );
     }
     return (
@@ -287,53 +330,87 @@ export function AddBookByShelf() {
         <ShelfPicker shelves={shelves} value={shelfId} onChange={setShelfId} />
 
         {buckets.auto.length > 0 && (
-          <Card className="rounded-2xl shadow-none">
-            <CardContent className="space-y-3 p-4">
-              <p className="flex items-center gap-2 text-sm font-bold">
-                <Check className="size-4 text-success" aria-hidden="true" />
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="flex items-center gap-2.5 border-b border-border bg-success-bg p-3.5">
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-success text-success-foreground">
+                <Check
+                  className="size-3.5"
+                  strokeWidth={3}
+                  aria-hidden="true"
+                />
+              </span>
+              <span className="text-sm font-bold">
                 {buckets.auto.length} listos para agregar
-              </p>
-              <ul className="space-y-1.5">
-                {buckets.auto.map((b, i) => (
-                  <li key={i} className="truncate text-sm">
-                    {b.best!.title}
-                    <span className="text-muted-foreground">
-                      {b.best!.authors?.length
-                        ? ` · ${b.best!.authors[0]}`
-                        : ""}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              </span>
+            </div>
+            <ul className="max-h-52 overflow-y-auto p-1.5">
+              {buckets.auto.map((b, i) => (
+                <li key={i} className="flex items-center gap-3 p-2">
+                  <CoverThumb
+                    url={b.best!.coverUrl}
+                    className="h-11 w-[30px]"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-semibold">
+                      {b.best!.title}
+                    </p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {b.best!.authors?.[0] ?? ""}
+                    </p>
+                  </div>
+                  <Check
+                    className="size-4 shrink-0 text-success"
+                    aria-hidden="true"
+                  />
+                </li>
+              ))}
+            </ul>
+            <div className="border-t border-border p-3">
               <button
                 type="button"
                 onClick={addAuto}
-                className="h-11 w-full rounded-2xl bg-primary font-bold text-primary-foreground"
+                className="h-12 w-full rounded-lg bg-primary font-bold text-primary-foreground"
               >
                 Agregar los {buckets.auto.length}
               </button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
-        {(buckets.queue.length > 0 || buckets.duplicates.length > 0) && (
-          <Card className="rounded-2xl shadow-none">
-            <CardContent className="flex items-center justify-between gap-3 p-4">
-              <p className="text-sm">
-                <span className="font-bold">
-                  {buckets.queue.length + buckets.duplicates.length}
-                </span>{" "}
-                para revisar
-              </p>
-              <button
-                type="button"
-                onClick={() => setPhase("review")}
-                className="h-10 rounded-xl border px-4 text-sm font-semibold hover:bg-accent"
-              >
-                Revisar →
-              </button>
-            </CardContent>
-          </Card>
+        {reviewCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setPhase("review")}
+            className="flex w-full items-center gap-3 rounded-2xl border border-warning/40 bg-warning-bg p-3.5 text-left hover:border-warning"
+          >
+            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-warning/20 text-warning">
+              <AlertTriangle className="size-[18px]" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold">
+                {reviewCount} para revisar
+              </span>
+              <span className="block text-[11.5px] text-muted-foreground">
+                Baja confianza o sin metadata.
+              </span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1 text-sm font-bold text-warning">
+              Revisar <ChevronRight className="size-4" aria-hidden="true" />
+            </span>
+          </button>
+        )}
+
+        {buckets.duplicates.length > 0 && (
+          <div className="flex items-center gap-2 rounded-xl border border-dashed border-border p-3">
+            <Copy
+              className="size-4 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {buckets.duplicates.length} duplicados se manejan al final de la
+              revisión.
+            </p>
+          </div>
         )}
 
         <div className="flex justify-center">
@@ -343,6 +420,7 @@ export function AddBookByShelf() {
     );
   }
 
+  // ───────────────────────── review ─────────────────────────
   if (phase === "review" && buckets) {
     return (
       <ReviewFlow
@@ -360,37 +438,38 @@ export function AddBookByShelf() {
     );
   }
 
-  // done
+  // ───────────────────────── done ─────────────────────────
   return (
-    <Card className="rounded-2xl shadow-none">
-      <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-        <span className="grid size-14 place-items-center rounded-full bg-success/15 text-success">
-          <Check className="size-7" aria-hidden="true" />
-        </span>
-        <p className="font-semibold">Listo</p>
-        <p className="text-sm text-muted-foreground">
-          {summary.added} {summary.added === 1 ? "agregado" : "agregados"} ·{" "}
-          {summary.skipped} {summary.skipped === 1 ? "saltado" : "saltados"}
+    <div className="flex flex-col items-center px-3 py-8 text-center">
+      <span className="grid size-[84px] animate-in place-items-center rounded-full bg-success-bg text-success zoom-in-95">
+        <Check className="size-10" strokeWidth={2.2} aria-hidden="true" />
+      </span>
+      <p className="mt-5 text-[22px] font-bold tracking-tight">¡Listo!</p>
+      <p className="mt-2.5 font-semibold">
+        {summary.added} {summary.added === 1 ? "agregado" : "agregados"} ·{" "}
+        {summary.skipped} {summary.skipped === 1 ? "saltado" : "saltados"}
+      </p>
+      {shelfName && (
+        <p className="mt-1.5 max-w-[240px] text-xs leading-relaxed text-muted-foreground">
+          Todos fueron al estante «{shelfName}».
         </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => router.push("/catalogo")}
-            className="h-11 rounded-2xl bg-primary px-5 font-bold text-primary-foreground"
-          >
-            Ver catálogo
-          </button>
-          <button
-            type="button"
-            onClick={reset}
-            className="inline-flex h-11 items-center gap-1.5 rounded-2xl border px-4 font-semibold hover:bg-accent"
-          >
-            <RotateCcw className="size-4" aria-hidden="true" />
-            Otro estante
-          </button>
-        </div>
-      </CardContent>
-    </Card>
+      )}
+      <button
+        type="button"
+        onClick={() => router.push("/catalogo")}
+        className="mt-6 inline-flex h-[50px] w-full max-w-[280px] items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground"
+      >
+        <LayoutGrid className="size-[18px]" aria-hidden="true" />
+        Ver catálogo
+      </button>
+      <button
+        type="button"
+        onClick={reset}
+        className="mt-2.5 p-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
+      >
+        Otro estante
+      </button>
+    </div>
   );
 }
 
@@ -420,13 +499,9 @@ function ReviewFlow({
   function advance(addedDelta: number, skippedDelta: number) {
     tally.current.added += addedDelta;
     tally.current.skipped += skippedDelta;
-    if (index + 1 < queue.length) {
-      setIndex(index + 1);
-    } else if (!dupsHandled) {
-      setIndex(queue.length); // move to the duplicates block
-    } else {
-      onDone(tally.current.added, tally.current.skipped);
-    }
+    if (index + 1 < queue.length) setIndex(index + 1);
+    else if (!dupsHandled) setIndex(queue.length);
+    else onDone(tally.current.added, tally.current.skipped);
   }
 
   async function handleDuplicates(asCopy: boolean) {
@@ -461,7 +536,8 @@ function ReviewFlow({
       <ReviewItem
         key={index}
         item={item}
-        position={`${index + 1} de ${queue.length}`}
+        position={index + 1}
+        total={queue.length}
         onConfirm={async (book, coverUrl) => {
           const ok = await onIntake(book, coverUrl);
           if (!ok) {
@@ -475,166 +551,245 @@ function ReviewFlow({
     );
   }
 
-  // duplicates group
   return (
-    <Card className="rounded-2xl shadow-none">
-      <CardContent className="space-y-3 p-4">
+    <div className="space-y-4">
+      <div
+        role="alert"
+        className="flex items-center gap-2.5 rounded-2xl border border-primary/30 bg-accent p-3.5"
+      >
+        <Copy className="size-5 shrink-0 text-primary" aria-hidden="true" />
         <p className="text-sm font-bold">
-          {buckets.duplicates.length}{" "}
-          {buckets.duplicates.length === 1 ? "duplicado" : "duplicados"} ya en
-          tu biblioteca
+          {buckets.duplicates.length} duplicados ya en tu biblioteca
         </p>
-        <ul className="space-y-1.5">
-          {buckets.duplicates.map((d, i) => (
-            <li key={i} className="truncate text-sm">
-              «{d.duplicate!.title}» ({d.duplicate!.copies})
-            </li>
-          ))}
-        </ul>
-        <div className="flex gap-2.5">
-          <button
-            type="button"
-            onClick={() => handleDuplicates(false)}
-            className="h-11 flex-1 rounded-xl border font-semibold hover:bg-accent"
+      </div>
+      <div className="flex flex-col gap-2.5">
+        {buckets.duplicates.map((d, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 rounded-2xl border border-border bg-card p-2.5"
           >
-            Saltar todos
-          </button>
-          <button
-            type="button"
-            onClick={() => handleDuplicates(true)}
-            className="h-11 flex-1 rounded-xl bg-primary font-semibold text-primary-foreground"
-          >
-            Agregar como copia
-          </button>
-        </div>
-      </CardContent>
-    </Card>
+            <CoverThumb
+              url={d.best?.coverUrl ?? null}
+              className="h-[58px] w-10"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13.5px] font-semibold">
+                {d.duplicate!.title}
+              </p>
+              <p className="truncate text-[11.5px] text-muted-foreground">
+                {d.duplicate!.authors[0] ?? ""}
+              </p>
+              <p className="mt-1 text-[11px] font-semibold text-primary">
+                Ya tenés {d.duplicate!.copies}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          onClick={() => handleDuplicates(false)}
+          className="h-12 flex-1 rounded-lg border bg-card font-semibold hover:bg-accent"
+        >
+          Saltar todos
+        </button>
+        <button
+          type="button"
+          onClick={() => handleDuplicates(true)}
+          className="h-12 flex-1 rounded-lg bg-primary font-bold text-primary-foreground"
+        >
+          Agregar como copia
+        </button>
+      </div>
+    </div>
   );
 }
 
 function ReviewItem({
   item,
   position,
+  total,
   onConfirm,
   onDiscard,
 }: {
   item: ProcessedBook;
-  position: string;
+  position: number;
+  total: number;
   onConfirm: (book: BookData, coverUrl: string | null) => void;
   onDiscard: () => void;
 }) {
+  const lowConf = item.classification.reason === "low_confidence";
   const initial: IdentifyCandidate = item.best ?? {
     title: item.ai.title,
     authors: item.ai.authors ?? [],
   };
-  const [picked, setPicked] = React.useState<IdentifyCandidate>(initial);
   const [book, setBook] = React.useState<BookData>(
     candidateToBookData(initial),
   );
-  const lowConf = item.classification.reason === "low_confidence";
+  const [cover, setCover] = React.useState<string | null>(
+    initial.coverUrl ?? null,
+  );
+  const [activeAlt, setActiveAlt] = React.useState<number | null>(null);
+  const [editOpen, setEditOpen] = React.useState(!lowConf); // no_match shows the form
 
-  function pick(c: IdentifyCandidate) {
-    setPicked(c);
+  function pick(c: IdentifyCandidate, i: number) {
     setBook(candidateToBookData(c));
+    setCover(c.coverUrl ?? null);
+    setActiveAlt(i);
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold">Revisar · {position}</p>
+    <div className="space-y-4 pb-2">
+      {/* counter + badge */}
+      <div className="flex items-center gap-2.5">
+        <span className="text-[13px] font-bold text-muted-foreground">
+          {position} de {total}
+        </span>
+        <span className="h-[5px] flex-1 overflow-hidden rounded-full bg-muted">
+          <span
+            className="block h-full rounded-full bg-primary transition-all"
+            style={{ width: `${Math.round((position / total) * 100)}%` }}
+          />
+        </span>
         <span
           className={cn(
-            "rounded-full px-2 py-0.5 text-[10.5px] font-semibold",
+            "inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold",
             lowConf
               ? "bg-warning-bg text-warning"
               : "bg-muted text-muted-foreground",
           )}
         >
+          {lowConf ? (
+            <AlertTriangle className="size-3" aria-hidden="true" />
+          ) : (
+            <SearchX className="size-3" aria-hidden="true" />
+          )}
           {lowConf ? "Baja confianza" : "Sin metadata"}
         </span>
       </div>
 
-      <Card className="rounded-2xl shadow-none">
-        <CardContent className="space-y-3 p-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="rv-title">Título</Label>
-            <input
-              id="rv-title"
-              value={book.title}
-              onChange={(e) => setBook({ ...book, title: e.target.value })}
-              className="h-11 w-full rounded-lg border border-input bg-card px-3 text-[15px] outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rv-authors">Autor(es)</Label>
-            <input
-              id="rv-authors"
-              value={book.authors.join(", ")}
-              placeholder="Separados por coma"
-              onChange={(e) =>
-                setBook({
-                  ...book,
-                  authors: e.target.value
-                    .split(",")
-                    .map((a) => a.trim())
-                    .filter(Boolean),
-                })
-              }
-              className="h-11 w-full rounded-lg border border-input bg-card px-3 text-[15px] outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {lowConf && (
+        <>
+          <Card className="rounded-2xl border-[1.5px] border-primary shadow-none">
+            <CardContent className="flex items-center gap-3 p-3.5">
+              <CoverThumb url={cover} className="h-16 w-11" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Mejor candidato
+                </p>
+                <p className="mt-0.5 text-[15px] font-bold leading-tight">
+                  {book.title}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {book.authors[0] ?? ""}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-      {item.alternatives.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-            ¿O alguno de estos?
-          </p>
-          {item.alternatives.map((c, i) => (
+          {item.alternatives.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[13px] font-bold">¿Es alguno de estos?</p>
+              {item.alternatives.map((c, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-pressed={activeAlt === i}
+                  onClick={() => pick(c, i)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl border-[1.5px] p-2.5 text-left transition-colors hover:border-ring",
+                    activeAlt === i
+                      ? "border-primary bg-accent"
+                      : "border-border bg-card",
+                  )}
+                >
+                  <CoverThumb url={c.coverUrl} className="h-[50px] w-[34px]" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12.5px] font-semibold">
+                      {c.title}
+                    </span>
+                    <span className="block truncate text-[11px] text-muted-foreground">
+                      {(c.authors ?? []).join(", ")}
+                      {c.publishedYear ? ` · ${c.publishedYear}` : ""}
+                    </span>
+                  </span>
+                  {activeAlt === i && (
+                    <Check
+                      className="size-[17px] shrink-0 text-primary"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {!editOpen && (
             <button
-              key={i}
               type="button"
-              aria-pressed={picked === c}
-              onClick={() => pick(c)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-xl border p-2.5 text-left transition-colors hover:bg-accent",
-                picked === c ? "border-primary bg-accent" : "border-border",
-              )}
+              onClick={() => setEditOpen(true)}
+              className="inline-flex items-center gap-1.5 p-1 text-[12.5px] font-semibold text-primary"
             >
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold">
-                  {c.title}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {(c.authors ?? []).join(", ")}
-                  {c.publishedYear ? ` · ${c.publishedYear}` : ""}
-                </span>
-              </span>
-              {picked === c && (
-                <Check
-                  className="size-4 shrink-0 text-primary"
-                  aria-hidden="true"
-                />
-              )}
+              <Pencil className="size-3.5" aria-hidden="true" />
+              Editar título / autores
             </button>
-          ))}
+          )}
+        </>
+      )}
+
+      {editOpen && (
+        <div className="space-y-3">
+          {!lowConf && (
+            <div className="flex items-center gap-3">
+              <span className="grid h-16 w-11 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+                <Library className="size-5" aria-hidden="true" />
+              </span>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                No encontramos metadata. Completá los datos a mano para
+                agregarlo.
+              </p>
+            </div>
+          )}
+          <Field
+            id="rv-title"
+            label="Título"
+            value={book.title}
+            placeholder="Título del libro"
+            onChange={(v) => setBook({ ...book, title: v })}
+          />
+          <Field
+            id="rv-authors"
+            label="Autor(es)"
+            value={book.authors.join(", ")}
+            placeholder="Separados por coma"
+            onChange={(v) =>
+              setBook({
+                ...book,
+                authors: v
+                  .split(",")
+                  .map((a) => a.trim())
+                  .filter(Boolean),
+              })
+            }
+          />
         </div>
       )}
 
+      {/* actions */}
       <div className="flex gap-2.5 border-t pt-3">
         <button
           type="button"
           onClick={onDiscard}
-          className="inline-flex h-11 items-center gap-1.5 rounded-2xl border px-4 font-semibold hover:bg-accent"
+          className="inline-flex h-[50px] items-center gap-1.5 rounded-2xl border px-4 font-semibold hover:bg-accent"
         >
           <X className="size-4" aria-hidden="true" />
           Descartar
         </button>
         <button
           type="button"
-          onClick={() => onConfirm(book, picked.coverUrl ?? null)}
-          className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground"
+          onClick={() => onConfirm(book, cover)}
+          className="inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground"
         >
           <Check className="size-4" aria-hidden="true" />
           Confirmar
@@ -645,6 +800,58 @@ function ReviewItem({
 }
 
 // ───────────────────────── small pieces ─────────────────────────
+
+function CoverThumb({
+  url,
+  className,
+}: {
+  url?: string | null;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "relative shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-primary to-accent shadow",
+        className,
+      )}
+    >
+      {url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt="" className="size-full object-cover" />
+      )}
+      <span className="absolute inset-y-0 left-0 w-[2px] bg-black/15" />
+    </span>
+  );
+}
+
+function Field({
+  id,
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="block text-[13px] font-medium">
+        {label}
+      </label>
+      <input
+        id={id}
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-[46px] w-full rounded-lg border border-input bg-card px-3 text-[15px] outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      />
+    </div>
+  );
+}
 
 function ShelfPicker({
   shelves,
@@ -657,13 +864,27 @@ function ShelfPicker({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="shelf-batch">Estante para todo el lote</Label>
+      <label htmlFor="shelf-batch" className="block text-[13px] font-semibold">
+        Estante para todo el lote
+      </label>
       <div className="relative">
+        <svg
+          className="pointer-events-none absolute left-3 top-1/2 size-[17px] -translate-y-1/2 text-muted-foreground"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d={SHELF_SVG} />
+        </svg>
         <select
           id="shelf-batch"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 w-full appearance-none rounded-lg border border-input bg-card px-3 pr-10 text-[15px] outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-12 w-full appearance-none rounded-lg border border-input bg-card pl-10 pr-10 text-[15px] font-medium outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
         >
           <option value="">Sin estante</option>
           {shelves.map((s) => (
@@ -684,9 +905,11 @@ function ShelfPicker({
 function RetakeButton({
   onChange,
   variant = "solid",
+  className,
 }: {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   variant?: "solid" | "text";
+  className?: string;
 }) {
   return (
     <label
@@ -695,9 +918,10 @@ function RetakeButton({
         variant === "solid"
           ? "h-11 rounded-2xl bg-primary px-5 text-primary-foreground"
           : "text-sm text-muted-foreground hover:text-foreground",
+        className,
       )}
     >
-      <RotateCcw className="size-4" aria-hidden="true" />
+      <Library className="size-4" aria-hidden="true" />
       Otra foto
       <input
         type="file"

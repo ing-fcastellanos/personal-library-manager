@@ -36,6 +36,7 @@
 
     --success: 63 125 78;
     --success-foreground: 255 255 255;
+    --success-bg: 223 238 222; /* #dfeede */
 
     --warning: 154 107 21; /* #9a6b15 */
     --warning-bg: 246 233 207; /* #f6e9cf */
@@ -74,6 +75,7 @@
 
     --success: 103 185 122;
     --success-foreground: 28 42 32;
+    --success-bg: 35 49 31; /* #23311f */
 
     --warning: 224 178 87; /* #e0b257 */
     --warning-bg: 55 48 31; /* #37301f */
