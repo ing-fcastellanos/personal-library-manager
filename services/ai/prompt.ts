@@ -22,10 +22,11 @@ Return: { "book": <book> | null } where null means no book is legible.`;
 
 /** Instruction for a shelf photo containing multiple books. */
 export const IDENTIFY_MULTI_INSTRUCTION = `You are identifying every book visible in a photo of a shelf.
-For each legible spine/cover read the title and author(s) exactly as printed.
-Do not invent ISBNs. Skip items you cannot read.
+List EVERY spine or cover you can see — do not skip any. For each, read the title and author(s) exactly as printed.
+If a spine is hard to read, still include it with your best-guess reading and a LOW confidence value; never omit a book just because it is unclear.
+Do not invent ISBNs.
 ${JSON_CONTRACT}
-Return: { "books": [ <book>, ... ] } (empty array if none legible).`;
+Return: { "books": [ <book>, ... ] } (empty array only if the photo shows no books at all).`;
 
 interface RawBookJson {
   title?: unknown;

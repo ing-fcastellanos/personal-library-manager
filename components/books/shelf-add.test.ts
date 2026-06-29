@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   shelfEnrichUrl,
+  shelfEnrichTitleUrl,
   duplicatesUrl,
   classifyProcessed,
+  titleAgrees,
   splitBuckets,
   shelfIntakePayload,
   type ProcessedBook,
@@ -28,6 +30,17 @@ describe("shelfEnrichUrl", () => {
   });
 });
 
+describe("shelfEnrichTitleUrl", () => {
+  it("queries the title only, dropping the authors", () => {
+    expect(shelfEnrichTitleUrl(ai())).toBe("/api/enrich?q=Dune");
+  });
+  it("trims and encodes the title", () => {
+    expect(shelfEnrichTitleUrl(ai({ title: "  Territorio Comanche " }))).toBe(
+      "/api/enrich?q=Territorio%20Comanche",
+    );
+  });
+});
+
 describe("duplicatesUrl", () => {
   it("includes isbn, title and repeated authors", () => {
     const url = duplicatesUrl({
@@ -42,8 +55,27 @@ describe("duplicatesUrl", () => {
   });
 });
 
+describe("titleAgrees", () => {
+  it("agrees on an exact title", () => {
+    expect(titleAgrees("Matar a un ruiseñor", "Matar a un ruiseñor")).toBe(
+      true,
+    );
+  });
+  it("agrees when one side carries a subtitle", () => {
+    expect(titleAgrees("Sapiens", "Sapiens. De animales a dioses")).toBe(true);
+  });
+  it("disagrees on an unrelated edition (the swap case)", () => {
+    expect(
+      titleAgrees("Entre visillos", "Un lugar llamado Carmen Martín Gaite"),
+    ).toBe(false);
+  });
+  it("disagrees when either title has no slug tokens", () => {
+    expect(titleAgrees("", "Dune")).toBe(false);
+  });
+});
+
 describe("classifyProcessed", () => {
-  it("auto when confident, enriched, and not a duplicate", () => {
+  it("auto when confident, corroborated, and not a duplicate", () => {
     expect(
       classifyProcessed({ ai: ai(), best: { title: "Dune" }, duplicate: null })
         .bucket,
@@ -62,6 +94,24 @@ describe("classifyProcessed", () => {
         duplicate: null,
       }).reason,
     ).toBe("low_confidence");
+  });
+  it("review:low_confidence when the match does not corroborate the title", () => {
+    expect(
+      classifyProcessed({
+        ai: ai({ title: "Entre visillos", authors: ["Carmen Martín Gaite"] }),
+        best: { title: "Un lugar llamado Carmen Martín Gaite" },
+        duplicate: null,
+      }).reason,
+    ).toBe("low_confidence");
+  });
+  it("trusts an ISBN match even when the AI mis-read the title", () => {
+    expect(
+      classifyProcessed({
+        ai: ai({ title: "Mis-read title", isbn13: "9780441172719" }),
+        best: { title: "Dune" },
+        duplicate: null,
+      }).bucket,
+    ).toBe("auto");
   });
 });
 

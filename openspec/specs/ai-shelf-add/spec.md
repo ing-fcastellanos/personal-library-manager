@@ -12,14 +12,24 @@ The system SHALL expose `POST /api/ai/identify-shelf`, restricted to authenticat
 readers, accepting a base64-encoded shelf photo and its content type (bounded to the
 same size limit as the single-photo identify endpoint). It SHALL run the AI vision
 layer's multi-book identification and respond with the identified books and the engine
-that answered. Per-book enrichment and duplicate detection are NOT performed by this
-endpoint — the client drives those. An unauthenticated request SHALL be rejected.
+that answered. The identification SHALL aim to return **every** visible spine: a spine
+whose text is hard to read SHALL be returned with the model's best-guess reading and a
+**low confidence** value rather than omitted, so uncertain spines reach the review queue
+instead of disappearing from the batch. Per-book enrichment and duplicate detection are
+NOT performed by this endpoint — the client drives those. An unauthenticated request
+SHALL be rejected.
 
 #### Scenario: Authenticated reader identifies a shelf
 
 - **WHEN** an authenticated reader POSTs a legible shelf photo to `/api/ai/identify-shelf`
 - **THEN** the system responds `200` with a list of identified books (each carrying a
   title, authors, confidence, and any ISBN read) and the producing engine
+
+#### Scenario: Hard-to-read spine is included with low confidence
+
+- **WHEN** the photo contains a spine the model can only partially read
+- **THEN** that spine is still returned in the book list with a best-guess reading and a
+  low confidence value (so the client routes it to review), rather than being skipped
 
 #### Scenario: No books recognized
 
@@ -46,15 +56,31 @@ endpoint — the client drives those. An unauthenticated request SHALL be reject
 The system SHALL provide a pure classification rule that assigns each identified book to
 an **auto** bucket or a **review** bucket. A book SHALL be classified **auto** only when
 its AI confidence meets the high-confidence threshold AND enrichment found a canonical
-match AND it is not a duplicate of an existing book. Every other book SHALL be classified
-**review**, carrying a reason of `low_confidence`, `no_match`, or `duplicate`. The rule
-SHALL be deterministic and free of I/O so it is unit-testable.
+match AND that match **corroborates the AI-read title** AND it is not a duplicate of an
+existing book. A match corroborates the read when it came from an ISBN lookup (ISBN is
+authoritative) OR when the title-agreement between the AI-read title and the matched
+candidate's title meets a minimum similarity. Every other book SHALL be classified
+**review**, carrying a reason of `low_confidence`, `no_match`, or `duplicate`; an enriched
+but unconfirmed match SHALL be `low_confidence` so the candidate is offered as a pickable
+alternative. The rule SHALL be deterministic and free of I/O so it is unit-testable.
 
-#### Scenario: Confident, matched, non-duplicate book is auto
+#### Scenario: Confident, corroborated, non-duplicate book is auto
 
-- **WHEN** a book has AI confidence at or above the threshold, an enrichment match, and is
-  not a duplicate
+- **WHEN** a book has AI confidence at or above the threshold, an enrichment match whose
+  title corroborates the AI-read title, and is not a duplicate
 - **THEN** it is classified `auto`
+
+#### Scenario: Confident match that does not corroborate the title goes to review
+
+- **WHEN** a confident book has an enrichment match whose title does not agree with the
+  AI-read title (e.g. a misread spine matched an unrelated edition)
+- **THEN** it is classified `review` with reason `low_confidence`, offering the candidate
+  as an alternative, rather than `auto`
+
+#### Scenario: ISBN match is trusted without title agreement
+
+- **WHEN** a confident book's enrichment match came from an ISBN lookup
+- **THEN** the title-agreement gate is bypassed and the book may be classified `auto`
 
 #### Scenario: Low confidence goes to review
 
@@ -85,6 +111,14 @@ showing per-book progress. The per-book processing SHALL be resilient: a failed
 enrichment or duplicate check SHALL place that book in the review bucket rather than
 aborting the batch.
 
+When a book has no ISBN and its text enrichment query (built from the AI-read title and
+authors) returns zero candidates, the processing SHALL retry enrichment once with a
+**title-only** query before treating the book as having no enrichment match. If the
+title-only retry yields candidates, the first SHALL become the book's best match and the
+rest its alternatives (so a misread author no longer forces a `no_match`). The retry SHALL
+only run when the author-included query returned nothing, leaving books that already matched
+unaffected.
+
 #### Scenario: Capture and process a shelf
 
 - **WHEN** a reader takes a shelf photo from the "Por estante" entry point
@@ -96,6 +130,25 @@ aborting the batch.
 - **WHEN** enrichment or the duplicate check fails for one book
 - **THEN** that book is placed in the review bucket (reason `no_match`) and the rest of
   the batch continues
+
+#### Scenario: Title-only fallback recovers a misread author
+
+- **WHEN** a book has no ISBN and the title-plus-authors enrichment query returns zero
+  candidates, but a title-only query would match
+- **THEN** the processing retries enrichment with the title only, adopts the returned
+  candidates as the book's best match and alternatives, and the book is classified
+  `low_confidence` (offering the recovered book as a pickable alternative) rather than
+  `no_match`
+
+#### Scenario: Title-only fallback only runs when needed
+
+- **WHEN** the title-plus-authors enrichment query already returned at least one candidate
+- **THEN** no title-only retry is performed and the book keeps its original match
+
+#### Scenario: Title-only fallback still finds nothing
+
+- **WHEN** both the title-plus-authors query and the title-only retry return zero candidates
+- **THEN** the book is classified `no_match` and reviewed via the manual form, as before
 
 #### Scenario: No books recognized
 
