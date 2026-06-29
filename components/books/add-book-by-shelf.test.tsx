@@ -114,8 +114,11 @@ describe("AddBookByShelf", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/2/)).toBeInTheDocument();
 
-    // add the auto book → intake for Dune
+    // add the auto book → intake for Dune, then back to the hub (not done)
     fireEvent.click(screen.getByRole("button", { name: /Agregar los 1/ }));
+
+    // the hub now shows only the review entry — enter it
+    fireEvent.click(await screen.findByRole("button", { name: /Revisar/ }));
 
     // review queue: the low-confidence book — its enrichment best shows as the
     // candidate card (edit is opt-in, so it is text, not an input).

@@ -49,13 +49,9 @@ import type { BookData, ExistingBook, Shelf } from "./types";
  * in bulk. All books land on one batch shelf. Recreated from the design over the
  * existing tokens.
  */
-type Phase =
-  | "capture"
-  | "analyzing"
-  | "processing"
-  | "results"
-  | "review"
-  | "done";
+// `results` doubles as the hub and the final "done" view (when every bucket is
+// resolved) so the reader can complete both auto-add and review in any order.
+type Phase = "capture" | "analyzing" | "processing" | "results" | "review";
 
 interface DupMatch {
   book: { id: string; title: string; authors: string[] };
@@ -226,9 +222,11 @@ export function AddBookByShelf() {
       added: s.added + added,
       skipped: s.skipped + excluded.size,
     }));
-    setPhase(
-      buckets.queue.length || buckets.duplicates.length ? "review" : "done",
-    );
+    // Resolve the auto bucket and return to the hub so the reader can still
+    // review the doubtful ones (and vice-versa) before finishing.
+    setBuckets((b) => (b ? { ...b, auto: [] } : b));
+    setExcluded(new Set());
+    setPhase("results");
   }
 
   // ───────────────────────── capture ─────────────────────────
@@ -331,10 +329,23 @@ export function AddBookByShelf() {
     );
   }
 
-  // ───────────────────────── results ─────────────────────────
+  // ───────────────────────── results (the hub) ─────────────────────────
   if (phase === "results" && buckets) {
     const reviewCount = buckets.queue.length + buckets.duplicates.length;
-    if (buckets.auto.length + reviewCount === 0) {
+    const remaining = buckets.auto.length + reviewCount;
+    if (remaining === 0) {
+      // Everything handled → done; nothing recognized at all → retake.
+      if (summary.added + summary.skipped > 0) {
+        return (
+          <DoneView
+            added={summary.added}
+            skipped={summary.skipped}
+            shelfName={shelfName}
+            onCatalog={() => router.push("/catalogo")}
+            onReset={reset}
+          />
+        );
+      }
       return (
         <div className="flex flex-col items-center px-3 py-8 text-center">
           <span className="grid size-14 place-items-center rounded-full bg-muted text-muted-foreground">
@@ -348,9 +359,26 @@ export function AddBookByShelf() {
         </div>
       );
     }
+    const progressedNote = summary.added + summary.skipped > 0;
     return (
       <div className="space-y-4">
         <ShelfPicker shelves={shelves} value={shelfId} onChange={setShelfId} />
+
+        {progressedNote && (
+          <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success-bg px-3 py-2.5 text-sm">
+            <Check
+              className="size-4 shrink-0 text-success"
+              aria-hidden="true"
+            />
+            <span className="font-semibold">
+              {summary.added} {summary.added === 1 ? "agregado" : "agregados"}
+            </span>
+            <span className="text-muted-foreground">
+              · falta{" "}
+              {reviewCount > 0 ? "revisar los dudosos" : "agregar los listos"}
+            </span>
+          </div>
+        )}
 
         {buckets.auto.length > 0 && (
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -491,13 +519,32 @@ export function AddBookByShelf() {
             added: s.added + added,
             skipped: s.skipped + skipped,
           }));
-          setPhase("done");
+          // Resolve the review buckets and return to the hub.
+          setBuckets((b) => (b ? { ...b, queue: [], duplicates: [] } : b));
+          setPhase("results");
         }}
       />
     );
   }
 
-  // ───────────────────────── done ─────────────────────────
+  return null;
+}
+
+// ───────────────────────── done ─────────────────────────
+
+function DoneView({
+  added,
+  skipped,
+  shelfName,
+  onCatalog,
+  onReset,
+}: {
+  added: number;
+  skipped: number;
+  shelfName: string | null;
+  onCatalog: () => void;
+  onReset: () => void;
+}) {
   return (
     <div className="flex flex-col items-center px-3 py-8 text-center">
       <span className="grid size-[84px] animate-in place-items-center rounded-full bg-success-bg text-success zoom-in-95">
@@ -505,17 +552,17 @@ export function AddBookByShelf() {
       </span>
       <p className="mt-5 text-[22px] font-bold tracking-tight">¡Listo!</p>
       <p className="mt-2.5 font-semibold">
-        {summary.added} {summary.added === 1 ? "agregado" : "agregados"} ·{" "}
-        {summary.skipped} {summary.skipped === 1 ? "saltado" : "saltados"}
+        {added} {added === 1 ? "agregado" : "agregados"} · {skipped}{" "}
+        {skipped === 1 ? "saltado" : "saltados"}
       </p>
       {shelfName && (
         <p className="mt-1.5 max-w-[240px] text-xs leading-relaxed text-muted-foreground">
-          Todos fueron al estante «{shelfName}».
+          Fueron al estante «{shelfName}».
         </p>
       )}
       <button
         type="button"
-        onClick={() => router.push("/catalogo")}
+        onClick={onCatalog}
         className="mt-6 inline-flex h-[50px] w-full max-w-[280px] items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground"
       >
         <LayoutGrid className="size-[18px]" aria-hidden="true" />
@@ -523,7 +570,7 @@ export function AddBookByShelf() {
       </button>
       <button
         type="button"
-        onClick={reset}
+        onClick={onReset}
         className="mt-2.5 p-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
       >
         Otro estante
