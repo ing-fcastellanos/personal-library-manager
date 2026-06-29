@@ -346,4 +346,51 @@ describe("AddBookByShelf", () => {
     const enrich = calls.filter((c) => c.url.includes("/api/enrich"));
     expect(enrich).toHaveLength(2); // tried combined + title-only
   });
+
+  // A confident book whose enrichment match is a different edition: the title
+  // does not corroborate the read, so it must land in review, not auto.
+  it("sends an enriched-but-uncorroborated match to review, not auto", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      calls.push({ url, method, body });
+      if (url.endsWith("/api/shelves")) return json([]);
+      if (url.endsWith("/api/ai/identify-shelf"))
+        return json({
+          books: [
+            {
+              title: "Entre visillos",
+              authors: ["Carmen Martín Gaite"],
+              confidence: 0.95,
+              sourceProvider: "openai",
+            },
+          ],
+        });
+      if (url.includes("/api/enrich"))
+        return json({
+          candidates: [
+            {
+              title: "Un lugar llamado Carmen Martín Gaite",
+              authors: ["José Teruel"],
+            },
+          ],
+        });
+      if (url.includes("/api/books/duplicates")) return json({ matches: [] });
+      return json({});
+    }) as unknown as typeof fetch;
+    render(<AddBookByShelf />);
+    capture();
+
+    // not auto-added: the review entry appears, not a "listos para agregar" list
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Revisar/ }, { timeout: 4000 }),
+    );
+    expect(screen.queryByText(/listos para agregar/)).not.toBeInTheDocument();
+    expect(await screen.findByText("Baja confianza")).toBeInTheDocument();
+    // the mismatched edition is offered as the candidate to confirm or replace
+    expect(
+      screen.getByText("Un lugar llamado Carmen Martín Gaite"),
+    ).toBeInTheDocument();
+  });
 });

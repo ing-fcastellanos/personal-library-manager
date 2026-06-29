@@ -1,4 +1,6 @@
 import { classifyShelfBook, type Classification } from "@/services/ai/shelf";
+import { slugify } from "@/lib/text/slug";
+import { tokenize, countOverlap } from "@/lib/text/similarity";
 import type { IdentifyCandidate } from "./photo-add";
 import type { BookData, ExistingBook } from "./types";
 
@@ -61,18 +63,50 @@ export function duplicatesUrl(c: {
 }
 
 /**
+ * Title agreement below this token-coverage fraction is treated as the
+ * enrichment match NOT corroborating the AI-read title. Tunable against the QA
+ * fixtures — a wrong edition scores ≈0, a true match (even with a longer
+ * subtitle on one side) scores high.
+ */
+export const TITLE_AGREEMENT_MIN = 0.5;
+
+/**
+ * Whether an enrichment candidate's title corroborates the AI-read title. Uses
+ * the max of the two directional token-coverage fractions (slug tokens of one
+ * title found in the other), so a subtitle on either side does not sink a real
+ * match. Returns false when either title has no slug tokens.
+ */
+export function titleAgrees(aiTitle: string, candidateTitle: string): boolean {
+  const a = tokenize(slugify(aiTitle));
+  const b = tokenize(slugify(candidateTitle));
+  if (a.length === 0 || b.length === 0) return false;
+  const coverage = Math.max(
+    countOverlap(a, new Set(b)) / a.length,
+    countOverlap(b, new Set(a)) / b.length,
+  );
+  return coverage >= TITLE_AGREEMENT_MIN;
+}
+
+/**
  * Classifies a processed book from its parts. `enriched` is whether enrichment
- * found a `best`; `duplicate` is whether a match exists. Thin wrapper over the
- * 21a rule so the container doesn't repeat the input shaping.
+ * found a `best`; `confirmed` is whether that match corroborates the AI-read
+ * title (trusted outright for an ISBN match); `duplicate` is whether a match
+ * exists. Thin wrapper over the 21a rule so the container doesn't repeat the
+ * input shaping.
  */
 export function classifyProcessed(input: {
   ai: ShelfAICandidate;
   best: IdentifyCandidate | null;
   duplicate: ExistingBook | null;
 }): Classification {
+  const isbnMatch = Boolean(input.ai.isbn13?.trim());
+  const confirmed =
+    input.best !== null &&
+    (isbnMatch || titleAgrees(input.ai.title, input.best.title));
   return classifyShelfBook({
     aiConfidence: input.ai.confidence,
     enriched: input.best !== null,
+    confirmed,
     duplicate: input.duplicate !== null,
   });
 }

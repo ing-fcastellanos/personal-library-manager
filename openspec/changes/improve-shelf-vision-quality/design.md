@@ -50,14 +50,18 @@ as-is. This is the cheapest high-impact recall lever; resolution/tiling stay out
 
 ### D3 — Precision via a title-agreement signal in `classifyProcessed`
 
-`classifyProcessed` already receives `ai` and `best`. It computes title agreement as the
-token Jaccard of the slugified titles —
-`jaccard(tokenize(slugify(ai.title)), tokenize(slugify(best.title)))` — reusing
-`lib/text/slug` and `lib/text/similarity` (the same primitives `rank` and the duplicate
-matcher use). Agreement ≥ a threshold ⇒ the match corroborates the read. The threshold is a
-named constant tuned against the QA fixtures (starting around 0.3–0.5; a wrong edition like
-"Un lugar llamado Carmen Martín Gaite" vs "Entre visillos" scores ~0, a true match scores
-high).
+`classifyProcessed` already receives `ai` and `best`. It computes title agreement from the
+slugified titles, reusing `lib/text/slug` + `lib/text/similarity` (the same primitives
+`rank` and the duplicate matcher use). Agreement ≥ `TITLE_AGREEMENT_MIN` (0.5) ⇒ the match
+corroborates the read.
+
+The metric is the **max of the two directional token-coverage fractions** —
+`max(overlap(aiTokens in bestTokens)/|ai|, overlap(bestTokens in aiTokens)/|best|)` — not a
+plain symmetric Jaccard. Jaccard was the first idea but it punishes a correct match when one
+side adds a subtitle: "Sapiens" vs "Sapiens. De animales a dioses" is Jaccard 0.2 (would be
+demoted) but coverage 1.0 (correctly confirmed). Max-coverage stays ~1 for a true match on
+either side and ~0 for an unrelated edition ("Entre visillos" vs "Un lugar llamado Carmen
+Martín Gaite" → 0). The threshold is a named constant, tuned against the QA fixtures.
 
 ### D4 — ISBN matches are trusted and bypass the gate
 

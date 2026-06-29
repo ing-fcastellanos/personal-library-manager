@@ -35,11 +35,27 @@ describe("classifyShelfBook", () => {
     });
   });
 
-  it("checks reasons in order: confidence → match → duplicate", () => {
+  it("review:low_confidence when the match does not corroborate the read", () => {
+    expect(classifyShelfBook({ ...ok, confirmed: false })).toEqual({
+      bucket: "review",
+      reason: "low_confidence",
+    });
+  });
+
+  it("defaults confirmed to true (auto when the flag is absent)", () => {
+    expect(classifyShelfBook(ok).bucket).toBe("auto");
+  });
+
+  it("checks reasons in order: confidence → match → confirmed → duplicate", () => {
     // Low confidence AND a duplicate → confidence wins (reported first).
     expect(
       classifyShelfBook({ aiConfidence: 0.1, enriched: false, duplicate: true })
         .reason,
+    ).toBe("low_confidence");
+    // Unconfirmed AND a duplicate → unconfirmed wins (the duplicate was found
+    // against an unreliable candidate).
+    expect(
+      classifyShelfBook({ ...ok, confirmed: false, duplicate: true }).reason,
     ).toBe("low_confidence");
   });
 
