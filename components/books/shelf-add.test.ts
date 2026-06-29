@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   shelfEnrichUrl,
+  shelfEnrichTitleUrl,
   duplicatesUrl,
   classifyProcessed,
   splitBuckets,
@@ -25,6 +26,17 @@ describe("shelfEnrichUrl", () => {
   });
   it("uses a text query of title + authors otherwise", () => {
     expect(shelfEnrichUrl(ai())).toBe("/api/enrich?q=Dune%20Frank%20Herbert");
+  });
+});
+
+describe("shelfEnrichTitleUrl", () => {
+  it("queries the title only, dropping the authors", () => {
+    expect(shelfEnrichTitleUrl(ai())).toBe("/api/enrich?q=Dune");
+  });
+  it("trims and encodes the title", () => {
+    expect(shelfEnrichTitleUrl(ai({ title: "  Territorio Comanche " }))).toBe(
+      "/api/enrich?q=Territorio%20Comanche",
+    );
   });
 });
 

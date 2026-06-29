@@ -30,6 +30,7 @@ import {
 } from "./photo-add";
 import {
   shelfEnrichUrl,
+  shelfEnrichTitleUrl,
   duplicatesUrl,
   classifyProcessed,
   splitBuckets,
@@ -113,6 +114,7 @@ export function AddBookByShelf() {
       const enrich = await fetch(shelfEnrichUrl(ai)).then((r) => r.json());
       let best: IdentifyCandidate | null;
       let alternatives: IdentifyCandidate[];
+      let recovered = false;
       if (ai.isbn13) {
         best = (enrich.candidate as IdentifyCandidate | null) ?? null;
         alternatives = [];
@@ -120,6 +122,20 @@ export function AddBookByShelf() {
         const cands = (enrich.candidates as IdentifyCandidate[]) ?? [];
         best = cands[0] ?? null;
         alternatives = cands.slice(1);
+        // Title-only fallback: a misread author can poison the title+authors
+        // query into zero results. Retry with the title alone so the real book
+        // is offered as a review alternative instead of forcing a `no_match`.
+        if (!best && (ai.authors?.length ?? 0) > 0) {
+          const retry = await fetch(shelfEnrichTitleUrl(ai)).then((r) =>
+            r.json(),
+          );
+          const titleCands = (retry.candidates as IdentifyCandidate[]) ?? [];
+          if (titleCands.length) {
+            best = titleCands[0];
+            alternatives = titleCands.slice(1);
+            recovered = true;
+          }
+        }
       }
       const idFor = best ?? {
         title: ai.title,
@@ -136,13 +152,15 @@ export function AddBookByShelf() {
             copies: m.existingCopies,
           }
         : null;
-      return {
-        ai,
-        best,
-        alternatives,
-        duplicate,
-        classification: classifyProcessed({ ai, best, duplicate }),
-      };
+      const base = classifyProcessed({ ai, best, duplicate });
+      // A book recovered only by dropping its (misread) author is never
+      // auto-added — route it to low-confidence review so the reader confirms
+      // or picks an alternative. A recovered duplicate still groups as one.
+      const classification =
+        recovered && base.bucket === "auto"
+          ? ({ bucket: "review", reason: "low_confidence" } as const)
+          : base;
+      return { ai, best, alternatives, duplicate, classification };
     } catch {
       return {
         ai,

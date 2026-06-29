@@ -243,4 +243,107 @@ describe("AddBookByShelf", () => {
       await screen.findByText("No se reconocieron libros"),
     ).toBeInTheDocument();
   });
+
+  // ── title-only enrichment fallback ────────────────────────────────────────
+  // One confident book whose author the AI misread: the title+author query
+  // (contains "Wrong") returns nothing; the title-only retry optionally finds
+  // the real book.
+  function mockMisreadAuthor({ titleOnly }: { titleOnly: boolean }) {
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      calls.push({ url, method, body });
+      if (url.endsWith("/api/shelves")) return json([]);
+      if (url.endsWith("/api/ai/identify-shelf"))
+        return json({
+          books: [
+            {
+              title: "Territorio Comanche",
+              authors: ["Wrong Author"],
+              confidence: 0.95,
+              sourceProvider: "openai",
+            },
+          ],
+        });
+      if (url.includes("/api/enrich")) {
+        if (url.includes("Wrong")) return json({ candidates: [] }); // combined
+        // title-only retry
+        return json({
+          candidates: titleOnly
+            ? [
+                {
+                  title: "Territorio Comanche",
+                  authors: ["Arturo Pérez-Reverte"],
+                },
+              ]
+            : [],
+        });
+      }
+      if (url.includes("/api/books/duplicates")) return json({ matches: [] });
+      return json({});
+    }) as unknown as typeof fetch;
+  }
+
+  it("title-only fallback recovers a misread author into low-confidence review", async () => {
+    mockMisreadAuthor({ titleOnly: true });
+    render(<AddBookByShelf />);
+    capture();
+
+    // recovered → review queue (not auto-added, not the no_match form)
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Revisar/ }, { timeout: 4000 }),
+    );
+    expect(await screen.findByText("Baja confianza")).toBeInTheDocument();
+    expect(screen.queryByText("Sin metadata")).not.toBeInTheDocument();
+    // the real book recovered by title alone is offered as the candidate
+    expect(screen.getByText("Arturo Pérez-Reverte")).toBeInTheDocument();
+
+    // two enrich calls: combined (with author) then title-only (without)
+    const enrich = calls.filter((c) => c.url.includes("/api/enrich"));
+    expect(enrich).toHaveLength(2);
+    expect(enrich[1].url).not.toContain("Wrong");
+  });
+
+  it("does not retry title-only when the combined query already matched", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      calls.push({ url, method, body });
+      if (url.endsWith("/api/shelves")) return json([]);
+      if (url.endsWith("/api/ai/identify-shelf"))
+        return json({
+          books: [
+            {
+              title: "Dune",
+              authors: ["Herbert"],
+              confidence: 0.95,
+              sourceProvider: "openai",
+            },
+          ],
+        });
+      if (url.includes("/api/enrich"))
+        return json({ candidates: [{ title: "Dune", authors: ["Herbert"] }] });
+      if (url.includes("/api/books/duplicates")) return json({ matches: [] });
+      return json({});
+    }) as unknown as typeof fetch;
+    render(<AddBookByShelf />);
+    capture();
+    await screen.findByText("1 listos para agregar", {}, { timeout: 4000 });
+    const enrich = calls.filter((c) => c.url.includes("/api/enrich"));
+    expect(enrich).toHaveLength(1); // no title-only retry
+  });
+
+  it("stays no_match when the title-only retry also finds nothing", async () => {
+    mockMisreadAuthor({ titleOnly: false });
+    render(<AddBookByShelf />);
+    capture();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Revisar/ }, { timeout: 4000 }),
+    );
+    expect(await screen.findByText("Sin metadata")).toBeInTheDocument();
+    const enrich = calls.filter((c) => c.url.includes("/api/enrich"));
+    expect(enrich).toHaveLength(2); // tried combined + title-only
+  });
 });

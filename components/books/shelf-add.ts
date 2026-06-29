@@ -38,6 +38,15 @@ export function shelfEnrichUrl(ai: ShelfAICandidate): string {
   return `/api/enrich?q=${encodeURIComponent(q)}`;
 }
 
+/**
+ * Builds the title-only `/api/enrich` URL for a shelf book — the fallback used
+ * when the title+authors query found nothing, so a misread author no longer
+ * forces a `no_match` (#22 follow-up).
+ */
+export function shelfEnrichTitleUrl(ai: ShelfAICandidate): string {
+  return `/api/enrich?q=${encodeURIComponent(ai.title.trim())}`;
+}
+
 /** Builds the `/api/books/duplicates` URL from a candidate's identity. */
 export function duplicatesUrl(c: {
   isbn13?: string | null;
