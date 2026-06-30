@@ -195,6 +195,31 @@ Start-Process $URL                       # the app loads in the browser
 Acceptance (issue #3): a push to `main` auto-deploys and the public URL serves the app;
 `GET /api/health` returns `200`.
 
+## 9. Seed the allowed readers (access allowlist)
+
+Access is an **allowlist by email**: login (verified email magic-link) only succeeds if a
+`readers` document with that email already exists — an unknown email gets `403 "not a
+member"`. A fresh prod database has none, so seed the household readers once. Edit the
+`READERS` list in `scripts/seed-readers.ts` if the emails differ.
+
+```powershell
+# One-time: give your local machine Application Default Credentials for the project.
+gcloud auth application-default login
+gcloud auth application-default set-quota-project $PROJECT_ID
+
+# Seed PROD (SEED_TARGET=prod skips the emulator and targets the real Firestore).
+$env:SEED_TARGET = "prod"
+$env:GOOGLE_CLOUD_PROJECT = $PROJECT_ID
+npx tsx scripts/seed-readers.ts
+Remove-Item Env:\SEED_TARGET, Env:\GOOGLE_CLOUD_PROJECT
+```
+
+Verify (after seeding, `/api/readers` lists them):
+
+```powershell
+Invoke-RestMethod "$($URL)/api/readers"
+```
+
 ## Notes & troubleshooting
 
 - **`--startup-probe` rejected by an older gcloud**: drop that line from the deploy step —
