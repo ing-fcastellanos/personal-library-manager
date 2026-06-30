@@ -153,12 +153,12 @@ gh variable set GCP_RUNTIME_SA    --body "$RUNTIME_SA"
 gh variable set GCP_WIF_PROVIDER  --body "projects/$($PROJECT_NUMBER)/locations/global/workloadIdentityPools/github/providers/github-provider"
 
 # Public Firebase web config (from the Firebase console → Project settings → Your apps)
-gh variable set NEXT_PUBLIC_FIREBASE_API_KEY             --body "..."
+gh variable set NEXT_PUBLIC_FIREBASE_API_KEY             --body "AIzaSyDT4RvbcC43_AD3yOQC2kICrcw0Q1Iw9CQ"
 gh variable set NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN         --body "$($PROJECT_ID).firebaseapp.com"
 gh variable set NEXT_PUBLIC_FIREBASE_PROJECT_ID          --body "$PROJECT_ID"
 gh variable set NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET      --body "$($PROJECT_ID).firebasestorage.app"
-gh variable set NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID --body "..."
-gh variable set NEXT_PUBLIC_FIREBASE_APP_ID              --body "..."
+gh variable set NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID --body "633756061013"
+gh variable set NEXT_PUBLIC_FIREBASE_APP_ID              --body "1:633756061013:web:dad9cba93983caa71d33dc"
 ```
 
 ## 8. First deploy & verify
