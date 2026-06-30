@@ -78,6 +78,20 @@ gcloud firestore databases list --format="value(name)"
 
 A fresh database is empty — seed any initial data (e.g. readers) separately.
 
+## 2c. Firebase Authentication — enable email-link sign-in
+
+Login is a passwordless **email link** (Firebase Auth). Two console settings are required,
+or `sendOobCode` fails with `400 OPERATION_NOT_ALLOWED` / `unauthorized-continue-uri`:
+
+1. **Authentication → Sign-in method**: enable the **Email/Password** provider and turn on
+   **Email link (passwordless sign-in)**.
+2. **Authentication → Settings → Authorized domains**: add the Cloud Run domain
+   (e.g. `personal-library-manager-a7kaufa4ua-uc.a.run.app`) so the magic link's continue
+   URL is allowed. (`localhost` and `<project>.firebaseapp.com` are there by default.)
+
+These are console-only toggles. Access itself is still gated by the reader allowlist
+(section 9) — enabling the provider does not let unknown emails in.
+
 ## 3. Runtime service account (used BY the Cloud Run service)
 
 Holds only what the running app needs: Firestore, Storage, and read access to the secrets.
