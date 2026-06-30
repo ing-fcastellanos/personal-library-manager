@@ -23,5 +23,5 @@
 ## 4. Verify
 
 - [x] 4.1 Lint/typecheck/test still green; the workflow YAML is valid
-- [ ] 4.2 First real deploy from `main`: pipeline goes green, the public Cloud Run URL serves the app, and `GET /api/health` returns 200
-- [ ] 4.3 Smoke-check a Firestore-backed path (e.g. catalog) works in prod (ADC) and an AI path sees its key from Secret Manager
+- [x] 4.2 First real deploy from `main`: pipeline goes green, the public Cloud Run URL serves the app, and `GET /api/health` returns 200
+- [x] 4.3 Smoke-check a Firestore-backed path (e.g. catalog) works in prod (ADC) and an AI path sees its key from Secret Manager

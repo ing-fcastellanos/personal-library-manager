@@ -57,6 +57,27 @@ gcloud artifacts repositories create $REPO `
   --description="Container images for $SERVICE"
 ```
 
+## 2b. Firestore database — must be `(default)`
+
+The app stores everything in Firestore. The Admin SDK (and the local emulator) target the
+standard **`(default)`** database — note the parentheses. A database with any other name
+(e.g. a literal `default`) is a _different_ database the SDK will not use; the symptom is
+`500 {"error":"internal"}` on every read in prod while local (emulator) works fine. Create
+the `(default)` database once (omit `--database` so it is the default):
+
+```powershell
+gcloud firestore databases create --location=$REGION
+```
+
+Verify the name shows parentheses:
+
+```powershell
+gcloud firestore databases list --format="value(name)"
+# → projects/<project>/databases/(default)
+```
+
+A fresh database is empty — seed any initial data (e.g. readers) separately.
+
 ## 3. Runtime service account (used BY the Cloud Run service)
 
 Holds only what the running app needs: Firestore, Storage, and read access to the secrets.
