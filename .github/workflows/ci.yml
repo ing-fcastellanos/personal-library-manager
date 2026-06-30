@@ -35,3 +35,74 @@ jobs:
 
       - name: Test
         run: npm run test
+
+  # Build the container and deploy it to Cloud Run. Runs only after `quality`
+  # passes, and only on a push to `main` (never on PRs or other branches).
+  # All GCP identifiers come from repo *variables*; the only secrets (AI keys)
+  # live in Secret Manager and are bound at deploy time, never in this workflow.
+  # One-time GCP setup (WIF, service accounts, Artifact Registry, secrets) is in
+  # docs/deploy.md.
+  deploy:
+    name: Deploy to Cloud Run
+    needs: quality
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for Workload Identity Federation (OIDC)
+    env:
+      IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/app:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Keyless auth: exchange the GitHub OIDC token for short-lived GCP creds.
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # NEXT_PUBLIC_* are PUBLIC and inlined at build time, so they are build
+      # args sourced from repo variables (not secrets).
+      - name: Build image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="${{ vars.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="${{ vars.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}" \
+            --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}" \
+            -t "$IMAGE" .
+
+      - name: Push image
+        run: docker push "$IMAGE"
+
+      # Runtime SA provides ADC (Firestore/Storage/Auth); AI keys bind from
+      # Secret Manager; startup probe hits /api/health (liveness, no Firestore)
+      # so a Firestore hiccup can't fail the rollout.
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${{ vars.CLOUD_RUN_SERVICE }}" \
+            --image "$IMAGE" \
+            --region "${{ vars.GCP_REGION }}" \
+            --service-account "${{ vars.GCP_RUNTIME_SA }}" \
+            --set-env-vars "GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},NODE_ENV=production" \
+            --set-secrets "OPENAI_API_KEY=OPENAI_API_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,GOOGLE_BOOKS_API_KEY=GOOGLE_BOOKS_API_KEY:latest" \
+            --min-instances 0 \
+            --max-instances 2 \
+            --memory 512Mi \
+            --port 8080 \
+            --startup-probe "httpGet.path=/api/health,initialDelaySeconds=5,timeoutSeconds=3,periodSeconds=10,failureThreshold=3" \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Show service URL
+        run: |
+          gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE }}" \
+            --region "${{ vars.GCP_REGION }}" --format 'value(status.url)'

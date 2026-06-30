@@ -1,0 +1,175 @@
+# Deploy — Cloud Run + GitHub Actions
+
+The app deploys automatically to **Google Cloud Run** on every push to `main`
+(`.github/workflows/ci.yml` → `deploy` job, gated on the `quality` job). This page is the
+**one-time setup** for the GCP target the workflow assumes. Everything here is created by
+hand once; after that, pushes deploy themselves.
+
+The workflow is keyless: GitHub authenticates to GCP via **Workload Identity Federation**
+(OIDC) — no service-account JSON key is ever stored in the repo or in GitHub secrets.
+
+## Config model
+
+| Plane             | What                                                       | Where it enters                                                                                            |
+| ----------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Public web config | `NEXT_PUBLIC_FIREBASE_*` (6)                               | **Build args**, from GitHub Actions **variables** (public, inlined into the client bundle at `next build`) |
+| Runtime secrets   | `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_BOOKS_API_KEY` | **Secret Manager** → Cloud Run `--set-secrets` (never in the image)                                        |
+| Admin credentials | Firestore / Storage / Auth                                 | **ADC** from the runtime service account — nothing to inject                                               |
+| Non-secret env    | `GOOGLE_CLOUD_PROJECT`, `NODE_ENV`                         | Cloud Run `--set-env-vars`                                                                                 |
+
+## Prerequisites
+
+- `gcloud` CLI authenticated as a project owner/editor.
+- A GCP project with billing enabled.
+- Admin access to the GitHub repo (to set Actions variables).
+
+Fill these in and `export` them for the commands below:
+
+```bash
+export PROJECT_ID="personal-library-manager-frank"
+export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+export REGION="us-central1"
+export REPO="app"                       # Artifact Registry repository
+export SERVICE="personal-library-manager"  # Cloud Run service
+export GH_REPO="ing-fcastellanos/personal-library-manager"  # owner/repo
+gcloud config set project "$PROJECT_ID"
+```
+
+## 1. Enable APIs
+
+```bash
+gcloud services enable \
+  run.googleapis.com \
+  artifactregistry.googleapis.com \
+  secretmanager.googleapis.com \
+  iamcredentials.googleapis.com \
+  iam.googleapis.com
+```
+
+## 2. Artifact Registry repository
+
+```bash
+gcloud artifacts repositories create "$REPO" \
+  --repository-format=docker --location="$REGION" \
+  --description="Container images for $SERVICE"
+```
+
+## 3. Runtime service account (used BY the Cloud Run service)
+
+Holds only what the running app needs: Firestore, Storage, and read access to the secrets.
+
+```bash
+gcloud iam service-accounts create plm-runtime --display-name="PLM Cloud Run runtime"
+export RUNTIME_SA="plm-runtime@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${RUNTIME_SA}" --role="roles/datastore.user"
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${RUNTIME_SA}" --role="roles/storage.objectAdmin"
+```
+
+## 4. Deployer service account (impersonated BY GitHub Actions)
+
+Holds only what the pipeline needs: push images, deploy Cloud Run, and act as the runtime SA.
+
+```bash
+gcloud iam service-accounts create plm-deployer --display-name="PLM CI deployer"
+export DEPLOYER_SA="plm-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${DEPLOYER_SA}" --role="roles/artifactregistry.writer"
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${DEPLOYER_SA}" --role="roles/run.admin"
+# Required so the deploy can set the service to run as the runtime SA.
+gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SA" \
+  --member="serviceAccount:${DEPLOYER_SA}" --role="roles/iam.serviceAccountUser"
+```
+
+## 5. Workload Identity Federation (keyless GitHub → GCP)
+
+```bash
+# Pool
+gcloud iam workload-identity-pools create github \
+  --location=global --display-name="GitHub Actions"
+
+# OIDC provider, restricted to THIS repo
+gcloud iam workload-identity-pools providers create-oidc github-provider \
+  --location=global --workload-identity-pool=github \
+  --display-name="GitHub provider" \
+  --issuer-uri="https://token.actions.githubusercontent.com" \
+  --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+  --attribute-condition="assertion.repository=='${GH_REPO}'"
+
+# Let the deployer SA be impersonated from this repo's workflows
+gcloud iam service-accounts add-iam-policy-binding "$DEPLOYER_SA" \
+  --role="roles/iam.workloadIdentityUser" \
+  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github/attribute.repository/${GH_REPO}"
+
+# The value the workflow needs as GCP_WIF_PROVIDER:
+echo "projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github/providers/github-provider"
+```
+
+## 6. Secret Manager secrets
+
+Create the three runtime secrets and grant the runtime SA read access. (Set an empty/`-`
+value for any AI key you are not using; an engine with no key just reports "not configured".)
+
+```bash
+for S in OPENAI_API_KEY GEMINI_API_KEY GOOGLE_BOOKS_API_KEY; do
+  printf '%s' "REPLACE_WITH_REAL_VALUE_OR_DASH" | \
+    gcloud secrets create "$S" --replication-policy=automatic --data-file=-
+  gcloud secrets add-iam-policy-binding "$S" \
+    --member="serviceAccount:${RUNTIME_SA}" --role="roles/secretmanager.secretAccessor"
+done
+```
+
+To rotate a key later: `printf '%s' "$NEW" | gcloud secrets versions add OPENAI_API_KEY --data-file=-`
+(the workflow always binds `:latest`).
+
+## 7. GitHub Actions variables
+
+Set these as **repository variables** (Settings → Secrets and variables → Actions →
+_Variables_). None are secret. CLI:
+
+```bash
+gh variable set GCP_PROJECT_ID    --body "$PROJECT_ID"
+gh variable set GCP_REGION        --body "$REGION"
+gh variable set GAR_REPOSITORY    --body "$REPO"
+gh variable set CLOUD_RUN_SERVICE --body "$SERVICE"
+gh variable set GCP_DEPLOYER_SA   --body "$DEPLOYER_SA"
+gh variable set GCP_RUNTIME_SA    --body "$RUNTIME_SA"
+gh variable set GCP_WIF_PROVIDER  --body "projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/github/providers/github-provider"
+
+# Public Firebase web config (from the Firebase console → Project settings → Your apps)
+gh variable set NEXT_PUBLIC_FIREBASE_API_KEY             --body "..."
+gh variable set NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN         --body "${PROJECT_ID}.firebaseapp.com"
+gh variable set NEXT_PUBLIC_FIREBASE_PROJECT_ID          --body "$PROJECT_ID"
+gh variable set NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET      --body "${PROJECT_ID}.firebasestorage.app"
+gh variable set NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID --body "..."
+gh variable set NEXT_PUBLIC_FIREBASE_APP_ID              --body "..."
+```
+
+## 8. First deploy & verify
+
+Push to `main` (or re-run the workflow). After it goes green:
+
+```bash
+URL="$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')"
+curl -s "$URL/api/health"      # → {"status":"ok"}
+open "$URL"                    # the app loads
+```
+
+Acceptance (issue #3): a push to `main` auto-deploys and the public URL serves the app;
+`GET /api/health` returns `200`.
+
+## Notes & troubleshooting
+
+- **`--startup-probe` rejected by an older gcloud**: drop that line from the deploy step —
+  Cloud Run falls back to a TCP probe on the container port, which is also Firestore-
+  independent. (Keep `gcloud` reasonably current to use the HTTP probe.)
+- **512Mi OOM** (Next 15 + React 19 SSR): bump `--memory 1Gi` in the deploy step.
+- **Cold starts**: `--min-instances 0` scales to zero (free-tier friendly); set `1` for an
+  always-warm instance at a small cost.
+- **Image size** (~1.5 GB): full prod `node_modules`. Slimming via Next `output: 'standalone'`
+  is a tracked follow-up, not required for M0.
+- Firebase Admin needs **no** credentials here — it uses the runtime SA's ADC.

@@ -1,0 +1,37 @@
+# Rebuilt inside the image
+node_modules
+.next
+dist
+
+# VCS / CI / editor
+.git
+.github
+.gitignore
+.vscode
+
+# Secrets and local env — never copy into the build context
+.env
+.env.*
+
+# Local Firebase emulator data + config not needed at build
+.emulator-data
+firebase.json
+.firebaserc
+firestore.rules
+storage.rules
+firestore.indexes.json
+
+# Tests, coverage, and planning docs (not needed to build or run)
+**/*.test.ts
+**/*.test.tsx
+coverage
+vitest.config.ts
+openspec
+docs
+
+# Misc
+README.md
+*.log
+.DS_Store
+Dockerfile
+.dockerignore
