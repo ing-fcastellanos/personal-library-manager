@@ -57,9 +57,47 @@ gcloud artifacts repositories create $REPO `
   --description="Container images for $SERVICE"
 ```
 
+## 2b. Firestore database — must be `(default)`
+
+The app stores everything in Firestore. The Admin SDK (and the local emulator) target the
+standard **`(default)`** database — note the parentheses. A database with any other name
+(e.g. a literal `default`) is a _different_ database the SDK will not use; the symptom is
+`500 {"error":"internal"}` on every read in prod while local (emulator) works fine. Create
+the `(default)` database once (omit `--database` so it is the default):
+
+```powershell
+gcloud firestore databases create --location=$REGION
+```
+
+Verify the name shows parentheses:
+
+```powershell
+gcloud firestore databases list --format="value(name)"
+# → projects/<project>/databases/(default)
+```
+
+A fresh database is empty — seed any initial data (e.g. readers) separately.
+
+## 2c. Firebase Authentication — enable email-link sign-in
+
+Login is a passwordless **email link** (Firebase Auth). Two console settings are required,
+or `sendOobCode` fails with `400 OPERATION_NOT_ALLOWED` / `unauthorized-continue-uri`:
+
+1. **Authentication → Sign-in method**: enable the **Email/Password** provider and turn on
+   **Email link (passwordless sign-in)**.
+2. **Authentication → Settings → Authorized domains**: add the Cloud Run domain
+   (e.g. `personal-library-manager-a7kaufa4ua-uc.a.run.app`) so the magic link's continue
+   URL is allowed. (`localhost` and `<project>.firebaseapp.com` are there by default.)
+
+These are console-only toggles. Access itself is still gated by the reader allowlist
+(section 9) — enabling the provider does not let unknown emails in.
+
 ## 3. Runtime service account (used BY the Cloud Run service)
 
-Holds only what the running app needs: Firestore, Storage, and read access to the secrets.
+Holds only what the running app needs: Firestore, Storage, read access to the secrets, and
+**Firebase Auth admin** (the session exchange calls `setCustomUserClaims` +
+`createSessionCookie`; without it, `POST /api/auth/session` fails with `401` even though the
+client signed in).
 
 ```powershell
 gcloud iam service-accounts create plm-runtime --display-name="PLM Cloud Run runtime"
@@ -69,6 +107,8 @@ gcloud projects add-iam-policy-binding $PROJECT_ID `
   --member="serviceAccount:$RUNTIME_SA" --role="roles/datastore.user"
 gcloud projects add-iam-policy-binding $PROJECT_ID `
   --member="serviceAccount:$RUNTIME_SA" --role="roles/storage.objectAdmin"
+gcloud projects add-iam-policy-binding $PROJECT_ID `
+  --member="serviceAccount:$RUNTIME_SA" --role="roles/firebaseauth.admin"
 ```
 
 ## 4. Deployer service account (impersonated BY GitHub Actions)
@@ -173,6 +213,31 @@ Start-Process $URL                       # the app loads in the browser
 
 Acceptance (issue #3): a push to `main` auto-deploys and the public URL serves the app;
 `GET /api/health` returns `200`.
+
+## 9. Seed the allowed readers (access allowlist)
+
+Access is an **allowlist by email**: login (verified email magic-link) only succeeds if a
+`readers` document with that email already exists — an unknown email gets `403 "not a
+member"`. A fresh prod database has none, so seed the household readers once. Edit the
+`READERS` list in `scripts/seed-readers.ts` if the emails differ.
+
+```powershell
+# One-time: give your local machine Application Default Credentials for the project.
+gcloud auth application-default login
+gcloud auth application-default set-quota-project $PROJECT_ID
+
+# Seed PROD (SEED_TARGET=prod skips the emulator and targets the real Firestore).
+$env:SEED_TARGET = "prod"
+$env:GOOGLE_CLOUD_PROJECT = $PROJECT_ID
+npx tsx scripts/seed-readers.ts
+Remove-Item Env:\SEED_TARGET, Env:\GOOGLE_CLOUD_PROJECT
+```
+
+Verify (after seeding, `/api/readers` lists them):
+
+```powershell
+Invoke-RestMethod "$($URL)/api/readers"
+```
 
 ## Notes & troubleshooting
 
