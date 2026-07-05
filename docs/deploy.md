@@ -94,7 +94,10 @@ These are console-only toggles. Access itself is still gated by the reader allow
 
 ## 3. Runtime service account (used BY the Cloud Run service)
 
-Holds only what the running app needs: Firestore, Storage, and read access to the secrets.
+Holds only what the running app needs: Firestore, Storage, read access to the secrets, and
+**Firebase Auth admin** (the session exchange calls `setCustomUserClaims` +
+`createSessionCookie`; without it, `POST /api/auth/session` fails with `401` even though the
+client signed in).
 
 ```powershell
 gcloud iam service-accounts create plm-runtime --display-name="PLM Cloud Run runtime"
@@ -104,6 +107,8 @@ gcloud projects add-iam-policy-binding $PROJECT_ID `
   --member="serviceAccount:$RUNTIME_SA" --role="roles/datastore.user"
 gcloud projects add-iam-policy-binding $PROJECT_ID `
   --member="serviceAccount:$RUNTIME_SA" --role="roles/storage.objectAdmin"
+gcloud projects add-iam-policy-binding $PROJECT_ID `
+  --member="serviceAccount:$RUNTIME_SA" --role="roles/firebaseauth.admin"
 ```
 
 ## 4. Deployer service account (impersonated BY GitHub Actions)
