@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CoverPreview } from "@/components/books/enrich-skeleton";
+import { useAuth } from "@/components/auth/auth-provider";
+import { ConfirmReadingSheet } from "@/components/reading/confirm-reading-sheet";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
@@ -35,11 +37,13 @@ function statusClasses(s?: ReadingStatus): string {
 }
 
 export function BookDetail({ bookId }: { bookId: string }) {
+  const { reader } = useAuth();
   const [loading, setLoading] = React.useState(true);
   const [book, setBook] = React.useState<Book | null>(null);
   const [copies, setCopies] = React.useState<Copy[]>([]);
   const [events, setEvents] = React.useState<ReadingEvent[]>([]);
   const [readers, setReaders] = React.useState<Reader[]>([]);
+  const [markOpen, setMarkOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -229,6 +233,9 @@ export function BookDetail({ bookId }: { bookId: string }) {
         <div className="overflow-hidden rounded-xl border bg-card">
           {readers.map((r, i) => {
             const s = statusByReader.get(r.id);
+            const isActive = reader?.id === r.id;
+            // The active reader can mark this book when they haven't finished it.
+            const canMark = isActive && s !== "finished";
             return (
               <div
                 key={r.id}
@@ -242,40 +249,63 @@ export function BookDetail({ bookId }: { bookId: string }) {
                     {r.name.slice(0, 1).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="flex-1 text-sm font-semibold">{r.name}</span>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold",
-                    statusClasses(s),
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{r.name}</p>
+                  {isActive && (
+                    <p className="text-xs text-muted-foreground">
+                      Lector activo
+                    </p>
                   )}
-                >
-                  {s === "finished" ? (
-                    <Check className="size-3" />
-                  ) : (
-                    <Minus className="size-3" />
-                  )}
-                  {s ? STATUS_LABEL[s] : "Sin empezar"}
-                </span>
+                </div>
+                {canMark ? (
+                  <Button
+                    size="sm"
+                    onClick={() => setMarkOpen(true)}
+                    className="shrink-0 gap-1.5"
+                  >
+                    <Check className="size-3.5" />
+                    Marcar leído
+                  </Button>
+                ) : (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold",
+                      statusClasses(s),
+                    )}
+                  >
+                    {s === "finished" ? (
+                      <Check className="size-3" />
+                    ) : (
+                      <Minus className="size-3" />
+                    )}
+                    {s ? STATUS_LABEL[s] : "Sin empezar"}
+                  </span>
+                )}
               </div>
             );
           })}
-          <div className="flex items-center gap-2.5 bg-background p-3">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled
-              title="Próximamente"
-              className="flex-1 gap-1.5 border-dashed"
-            >
-              <Check className="size-3.5" />
-              Marcar como leído
-            </Button>
-            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-              Pronto
-            </span>
-          </div>
         </div>
       </section>
+
+      {markOpen && (
+        <ConfirmReadingSheet
+          target={{
+            id: book.id,
+            title: book.title,
+            authors: book.authors,
+            coverUrl: book.coverUrl ?? null,
+            isbn13: book.isbn13 ?? null,
+          }}
+          reader={reader}
+          onClose={() => setMarkOpen(false)}
+          onDone={(event) => {
+            // Optimistically surface the new "Leído" status without a full reload
+            // (and without depending on the reading-events index, #24 resilience).
+            // The sheet stays open showing its success state until the reader acts.
+            setEvents((prev) => [event, ...prev]);
+          }}
+        />
+      )}
     </div>
   );
 }
