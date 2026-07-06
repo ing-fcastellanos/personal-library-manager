@@ -36,6 +36,27 @@ export function toIsbn13(raw?: string | null): string | null {
   return null;
 }
 
+/** EAN-13 check digit for the first 12 digits of a numeric string. */
+function ean13CheckDigit(digits12: string): number {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    sum += (i % 2 === 0 ? 1 : 3) * Number(digits12[i]);
+  }
+  return (10 - (sum % 10)) % 10;
+}
+
+/**
+ * Whether `code` is a book ISBN barcode: a 13-digit EAN with a `978`/`979`
+ * ("Bookland") prefix and a valid EAN-13 checksum. Used to filter live barcode
+ * scans — rejects EAN-5 price supplements, product EANs, and mis-reads before an
+ * enrichment lookup is attempted. Pure; separators are ignored.
+ */
+export function isValidBookIsbn13(code: string): boolean {
+  const cleaned = code.replace(/[\s-]/g, "");
+  if (!/^(978|979)[0-9]{10}$/.test(cleaned)) return false;
+  return ean13CheckDigit(cleaned.slice(0, 12)) === Number(cleaned[12]);
+}
+
 /**
  * Splits Google Books BISAC category strings on `/` into trimmed display levels
  * and normalized slug keys (design D3). E.g. `"Fiction / Science Fiction"` →

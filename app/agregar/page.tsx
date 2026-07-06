@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookPlus, Camera, Pencil, Library } from "lucide-react";
+import { BookPlus, Camera, Pencil, Library, Barcode } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WriteCta } from "@/components/auth/write-cta";
@@ -9,8 +9,9 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { AddBook } from "@/components/books/add-book";
 import { AddBookByPhoto } from "@/components/books/add-book-by-photo";
 import { AddBookByShelf } from "@/components/books/add-book-by-shelf";
+import { AddBookByCode } from "@/components/books/add-book-by-code";
 
-type Mode = "photo" | "shelf" | "manual";
+type Mode = "photo" | "shelf" | "code" | "manual";
 
 /**
  * Book add (#14 manual, #20 by photo, #21 by shelf). Write-gated (ADR-0006): a
@@ -26,10 +27,11 @@ export default function AddPage() {
       <h1 className="text-2xl font-bold tracking-tight">Agregar libro</h1>
       {loading ? null : reader ? (
         <>
+          {/* 2×2 while there are four modes; final layout comes from the #23 design handoff. */}
           <div
             role="tablist"
             aria-label="Cómo agregar"
-            className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1"
+            className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1"
           >
             <ModeTab
               active={mode === "photo"}
@@ -44,6 +46,12 @@ export default function AddPage() {
               label="Por estante"
             />
             <ModeTab
+              active={mode === "code"}
+              onClick={() => setMode("code")}
+              icon={<Barcode className="size-4" aria-hidden="true" />}
+              label="Por código"
+            />
+            <ModeTab
               active={mode === "manual"}
               onClick={() => setMode("manual")}
               icon={<Pencil className="size-4" aria-hidden="true" />}
@@ -54,6 +62,7 @@ export default function AddPage() {
             <AddBookByPhoto onManual={() => setMode("manual")} />
           )}
           {mode === "shelf" && <AddBookByShelf />}
+          {mode === "code" && <AddBookByCode />}
           {mode === "manual" && <AddBook />}
         </>
       ) : (
