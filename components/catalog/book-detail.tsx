@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CoverPreview } from "@/components/books/enrich-skeleton";
+import { useAuth } from "@/components/auth/auth-provider";
+import { ConfirmReadingSheet } from "@/components/reading/confirm-reading-sheet";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
@@ -35,11 +37,13 @@ function statusClasses(s?: ReadingStatus): string {
 }
 
 export function BookDetail({ bookId }: { bookId: string }) {
+  const { reader } = useAuth();
   const [loading, setLoading] = React.useState(true);
   const [book, setBook] = React.useState<Book | null>(null);
   const [copies, setCopies] = React.useState<Copy[]>([]);
   const [events, setEvents] = React.useState<ReadingEvent[]>([]);
   const [readers, setReaders] = React.useState<Reader[]>([]);
+  const [markOpen, setMarkOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -259,23 +263,38 @@ export function BookDetail({ bookId }: { bookId: string }) {
               </div>
             );
           })}
-          <div className="flex items-center gap-2.5 bg-background p-3">
+          <div className="bg-background p-3">
             <Button
-              variant="outline"
               size="sm"
-              disabled
-              title="Próximamente"
-              className="flex-1 gap-1.5 border-dashed"
+              onClick={() => setMarkOpen(true)}
+              className="w-full gap-1.5"
             >
               <Check className="size-3.5" />
               Marcar como leído
             </Button>
-            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-              Pronto
-            </span>
           </div>
         </div>
       </section>
+
+      {markOpen && (
+        <ConfirmReadingSheet
+          target={{
+            id: book.id,
+            title: book.title,
+            authors: book.authors,
+            coverUrl: book.coverUrl ?? null,
+            isbn13: book.isbn13 ?? null,
+          }}
+          reader={reader}
+          onClose={() => setMarkOpen(false)}
+          onDone={(event) => {
+            // Optimistically surface the new "Leído" status without a full reload
+            // (and without depending on the reading-events index, #24 resilience).
+            setEvents((prev) => [event, ...prev]);
+            setMarkOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

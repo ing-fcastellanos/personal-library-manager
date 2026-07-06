@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { BookDetail } from "./book-detail";
 
 /**
  * Component tests for the book detail scaffold (#17). `fetch` and `next/link`
  * are mocked so the composed load (book + copies + events + readers) renders in
- * jsdom.
+ * jsdom. Auth/toast/CTA are mocked for the "marcar como leído" action (#24).
  */
 
 vi.mock("next/link", () => ({
@@ -21,6 +21,15 @@ vi.mock("next/link", () => ({
       {children}
     </a>
   ),
+}));
+vi.mock("@/components/auth/auth-provider", () => ({
+  useAuth: () => ({ reader: { id: "r1", name: "Frank" }, loading: false }),
+}));
+vi.mock("@/components/ui/use-toast", () => ({
+  useToast: () => ({ toast: vi.fn() }),
+}));
+vi.mock("@/components/auth/write-cta", () => ({
+  WriteCta: () => <button type="button">Iniciar sesión</button>,
 }));
 
 function jsonResponse(body: unknown, ok = true) {
@@ -108,5 +117,50 @@ describe("BookDetail", () => {
     expect(screen.getByText(/Ejemplares · 0/)).toBeInTheDocument();
     expect(screen.getByText("Sin ejemplares.")).toBeInTheDocument();
     expect(screen.getAllByText("Sin empezar")).toHaveLength(2); // both readers
+  });
+
+  it("enables the 'Marcar como leído' action", async () => {
+    render(<BookDetail bookId="b1" />);
+    const btn = await screen.findByRole("button", {
+      name: /Marcar como leído/,
+    });
+    expect(btn).toBeEnabled();
+  });
+
+  it("marking a reading updates the reader's status to Leído", async () => {
+    // Start with no events so the reader shows "Sin empezar".
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse([]);
+      if (url.endsWith("/reading-events") && method === "GET")
+        return jsonResponse([]);
+      if (url.endsWith("/api/readers")) return jsonResponse([readers[0]]);
+      if (url.endsWith("/api/reading-events") && method === "POST")
+        return jsonResponse({
+          id: "e9",
+          readerId: "r1",
+          bookId: "b1",
+          status: "finished",
+          bookTitle: book.title,
+          bookAuthors: book.authors,
+          createdAt: "",
+          updatedAt: "",
+        });
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    expect(await screen.findByText("Frank")).toBeInTheDocument();
+    expect(screen.getByText("Sin empezar")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Marcar como leído/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /Marcar como leído/ }),
+    );
+
+    expect(await screen.findByText("Leído")).toBeInTheDocument();
   });
 });
