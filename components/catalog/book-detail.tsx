@@ -43,18 +43,24 @@ export function BookDetail({ bookId }: { bookId: string }) {
 
   React.useEffect(() => {
     let alive = true;
+    // A failed fetch (e.g. a 500 returning `{"error":"internal"}`) must not crash
+    // the page: only accept ok responses, and coerce list endpoints to arrays so
+    // the book still renders while copies/events/readers degrade to empty.
+    const okJson = (r: Response) => (r.ok ? r.json() : null);
+    const asArray = <T,>(v: unknown): T[] =>
+      Array.isArray(v) ? (v as T[]) : [];
     Promise.all([
-      fetch(`/api/books/${bookId}`).then((r) => (r.ok ? r.json() : null)),
-      fetch(`/api/books/${bookId}/copies`).then((r) => r.json()),
-      fetch(`/api/books/${bookId}/reading-events`).then((r) => r.json()),
-      fetch(`/api/readers`).then((r) => r.json()),
+      fetch(`/api/books/${bookId}`).then(okJson),
+      fetch(`/api/books/${bookId}/copies`).then(okJson),
+      fetch(`/api/books/${bookId}/reading-events`).then(okJson),
+      fetch(`/api/readers`).then(okJson),
     ])
       .then(([b, c, e, rd]) => {
         if (!alive) return;
-        setBook(b);
-        setCopies(c ?? []);
-        setEvents(e ?? []);
-        setReaders(rd ?? []);
+        setBook((b as Book | null) ?? null);
+        setCopies(asArray<Copy>(c));
+        setEvents(asArray<ReadingEvent>(e));
+        setReaders(asArray<Reader>(rd));
       })
       .catch(() => {})
       .finally(() => alive && setLoading(false));
