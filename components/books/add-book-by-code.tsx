@@ -3,15 +3,19 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  Barcode,
   Keyboard,
   Check,
   Copy,
   X,
+  Plus,
   Loader2,
   CameraOff,
   ChevronDown,
+  RotateCcw,
+  Search,
+  SearchX,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { createIsbnScanner } from "@/lib/barcode/isbn-scanner";
 import { toIsbn13 } from "@/services/enrichment/normalize";
@@ -247,102 +251,144 @@ export function AddBookByCode() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3.5">
       <ShelfPicker shelves={shelves} value={shelfId} onChange={setShelfId} />
 
-      {/* camera viewport */}
-      <div className="relative overflow-hidden rounded-2xl border bg-black">
+      {/* camera viewport (3:4) */}
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-[#14110d] shadow-lg">
         <video
           ref={videoRef}
           muted
           playsInline
-          className="aspect-[3/4] w-full object-cover"
+          className="size-full object-cover"
         />
-        {cam === "live" && !detail && (
-          <div
-            className="pointer-events-none absolute inset-0 flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <div className="h-24 w-[70%] rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
-          </div>
-        )}
+
         {cam === "starting" && (
-          <div className="absolute inset-0 grid place-items-center text-white/80">
+          <div className="absolute inset-0 grid place-items-center text-white/70">
             <Loader2 className="size-8 animate-spin" aria-hidden="true" />
           </div>
         )}
-        {cam === "denied" && (
-          <div className="absolute inset-0 grid place-items-center px-6 text-center text-white/85">
-            <div>
-              <CameraOff className="mx-auto size-8" aria-hidden="true" />
-              <p className="mt-2 text-sm">
-                Sin acceso a la cámara. Ingresá el ISBN a mano.
-              </p>
-              <button
-                type="button"
-                onClick={() => setRetryKey((k) => k + 1)}
-                className="mt-3 rounded-lg border border-white/40 px-3 py-1.5 text-[13px] font-semibold hover:bg-white/10"
+
+        {cam === "live" && (
+          <>
+            {/* running counter */}
+            {count > 0 && (
+              <div className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1.5 text-xs font-bold text-white backdrop-blur">
+                <span className="grid size-4 place-items-center rounded-full bg-success text-[9px] font-extrabold text-white">
+                  {count}
+                </span>
+                agregados
+              </div>
+            )}
+
+            {/* aim guide (decorative) */}
+            {!detail && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-x-[12%] top-[40%] h-[110px] -translate-y-1/2 rounded-2xl shadow-[0_0_0_9999px_rgba(10,8,5,0.28)]"
               >
-                Reintentar cámara
-              </button>
-            </div>
-          </div>
+                <div className="absolute inset-0 rounded-2xl border-2 border-white/85" />
+                <span className="absolute -left-0.5 -top-0.5 size-[22px] rounded-tl-2xl border-l-4 border-t-4 border-white" />
+                <span className="absolute -right-0.5 -top-0.5 size-[22px] rounded-tr-2xl border-r-4 border-t-4 border-white" />
+                <span className="absolute -bottom-0.5 -left-0.5 size-[22px] rounded-bl-2xl border-b-4 border-l-4 border-white" />
+                <span className="absolute -bottom-0.5 -right-0.5 size-[22px] rounded-br-2xl border-b-4 border-r-4 border-white" />
+                <div className="absolute inset-x-2 h-0.5 animate-scanline rounded-full bg-gradient-to-r from-transparent via-warning to-transparent shadow-[0_0_10px_1px_rgba(244,181,107,0.7)]" />
+              </div>
+            )}
+
+            {/* hint */}
+            {!detail && (
+              <div className="absolute inset-x-0 bottom-4 text-center">
+                <span className="inline-block rounded-full bg-black/60 px-3.5 py-1.5 text-[13px] font-semibold text-white backdrop-blur">
+                  Apuntá al código de barras
+                </span>
+              </div>
+            )}
+
+            {/* confirm bottom sheet */}
+            {detail && (
+              <ConfirmSheet
+                detail={detail}
+                busy={busy}
+                onAdd={add}
+                onAddCopy={addCopy}
+                onDiscard={discard}
+              />
+            )}
+          </>
         )}
-        {cam === "live" && !detail && (
-          <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 text-center text-[13px] font-medium text-white">
-            Apuntá al código de barras
-          </p>
+
+        {cam === "denied" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#211d18] px-6 text-center text-white/90">
+            <span className="grid size-16 place-items-center rounded-full bg-white/10">
+              <CameraOff className="size-[30px]" aria-hidden="true" />
+            </span>
+            <p className="mt-4 max-w-[250px] text-[15px] font-bold leading-snug">
+              Sin acceso a la cámara. Ingresá el ISBN a mano.
+            </p>
+            <button
+              type="button"
+              onClick={() => setRetryKey((k) => k + 1)}
+              className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl border border-white/30 px-4 text-[13.5px] font-semibold hover:bg-white/10"
+            >
+              <RotateCcw className="size-4" aria-hidden="true" />
+              Reintentar cámara
+            </button>
+          </div>
         )}
       </div>
 
       {/* manual ISBN entry (also the camera fallback) */}
-      <form onSubmit={submitManual} className="flex gap-2">
-        <div className="relative flex-1">
-          <Keyboard
-            className="pointer-events-none absolute left-3 top-1/2 size-[17px] -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <input
-            inputMode="numeric"
-            value={manual}
-            onChange={(e) => setManual(e.target.value)}
-            placeholder="ISBN a mano"
-            aria-label="ISBN a mano"
-            className="h-11 w-full rounded-lg border border-input bg-card pl-10 pr-3 text-[15px] outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-          />
+      <form onSubmit={submitManual} className="space-y-1.5">
+        <label htmlFor="code-isbn" className="block text-[13px] font-semibold">
+          ISBN a mano
+        </label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Keyboard
+              className="pointer-events-none absolute left-3 top-1/2 size-[17px] -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <input
+              id="code-isbn"
+              inputMode="numeric"
+              autoComplete="off"
+              value={manual}
+              onChange={(e) => setManual(e.target.value)}
+              placeholder="978…"
+              className="h-12 w-full rounded-lg border border-input bg-card pl-10 pr-3 text-[15px] tabular-nums outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+          <button
+            type="submit"
+            className="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-lg bg-secondary px-4 text-[14.5px] font-bold text-secondary-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            <Search className="size-4" aria-hidden="true" />
+            Buscar
+          </button>
         </div>
-        <button
-          type="submit"
-          className="h-11 shrink-0 rounded-lg border bg-card px-4 text-sm font-semibold hover:bg-accent"
-        >
-          Buscar
-        </button>
+        {cam === "denied" && (
+          <p className="text-xs leading-snug text-muted-foreground">
+            Con la cámara sin permiso, esta es la vía para seguir cargando.
+          </p>
+        )}
       </form>
 
-      {/* running count + finish */}
+      {/* finish → import summary */}
       <button
         type="button"
         onClick={finish}
-        className="inline-flex h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground"
+        className="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary font-bold text-primary-foreground"
       >
-        <Barcode className="size-[18px]" aria-hidden="true" />
+        <Check className="size-[18px]" strokeWidth={2.4} aria-hidden="true" />
         {count > 0 ? `Terminar · ${count} agregados` : "Terminar"}
       </button>
-
-      {detail && (
-        <ConfirmCard
-          detail={detail}
-          busy={busy}
-          onAdd={add}
-          onAddCopy={addCopy}
-          onDiscard={discard}
-        />
-      )}
     </div>
   );
 }
 
-function ConfirmCard({
+/** Bottom sheet inside the viewport: detected / duplicate / not-found. */
+function ConfirmSheet({
   detail,
   busy,
   onAdd,
@@ -360,31 +406,58 @@ function ConfirmCard({
     <div
       role="dialog"
       aria-label="Confirmar libro"
-      className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md rounded-t-2xl border-t bg-card p-4 shadow-2xl animate-in slide-in-from-bottom"
+      className="absolute inset-x-0 bottom-0 rounded-t-[20px] bg-card p-4 text-card-foreground shadow-2xl animate-in slide-in-from-bottom"
     >
+      <span
+        className="mx-auto mb-3.5 block h-1 w-9 rounded-full bg-border"
+        aria-hidden="true"
+      />
+
       {candidate ? (
-        <div className="flex items-center gap-3">
-          <CoverThumb url={candidate.coverUrl} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-bold leading-tight">
-              {candidate.title}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">
-              {candidate.authors?.[0] ?? ""}
-            </p>
-            {duplicate && (
-              <p className="mt-1 text-[11px] font-semibold text-primary">
-                Ya lo tenés · {duplicate.copies}{" "}
-                {duplicate.copies === 1 ? "copia" : "copias"}
+        <>
+          {duplicate && (
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-warning-bg px-2.5 py-1 text-[11.5px] font-bold text-warning">
+              <Copy className="size-3" aria-hidden="true" />
+              Ya lo tenés · {duplicate.copies}{" "}
+              {duplicate.copies === 1 ? "copia" : "copias"}
+            </span>
+          )}
+          <div className="flex items-center gap-3">
+            <CoverThumb url={candidate.coverUrl} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-base font-bold leading-tight">
+                {candidate.title}
               </p>
-            )}
+              <p className="truncate text-[13px] text-muted-foreground">
+                {candidate.authors?.[0] ?? ""}
+              </p>
+              <p className="mt-1.5 text-[11.5px] tabular-nums text-muted-foreground">
+                ISBN {detail.isbn}
+              </p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="flex items-start gap-3">
+          <span className="grid size-12 shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
+            <SearchX className="size-[22px]" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-bold leading-snug">
+              No encontramos metadata para el ISBN
+            </p>
+            <p className="mt-1 text-[12.5px] tabular-nums text-muted-foreground">
+              {detail.isbn}
+            </p>
           </div>
         </div>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          No encontramos metadata para el ISBN{" "}
-          <span className="font-semibold text-foreground">{detail.isbn}</span>.
-          Cargalo desde «Manual».
+      )}
+
+      {!candidate && (
+        <p className="mt-3 rounded-xl border border-dashed border-border p-3 text-[12.5px] leading-relaxed text-muted-foreground">
+          Podés cargarlo a mano desde{" "}
+          <span className="font-semibold text-foreground">«Manual»</span> con
+          título y autores.
         </p>
       )}
 
@@ -393,7 +466,10 @@ function ConfirmCard({
           type="button"
           onClick={onDiscard}
           disabled={busy}
-          className="inline-flex h-12 flex-1 items-center justify-center gap-1.5 rounded-lg border bg-card font-semibold hover:bg-accent disabled:opacity-50"
+          className={cn(
+            "inline-flex h-[50px] items-center justify-center gap-1.5 rounded-[14px] border font-semibold hover:bg-accent disabled:opacity-50",
+            candidate ? "px-5" : "flex-1",
+          )}
         >
           <X className="size-4" aria-hidden="true" />
           Descartar
@@ -404,7 +480,7 @@ function ConfirmCard({
               type="button"
               onClick={onAddCopy}
               disabled={busy}
-              className="inline-flex h-12 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary font-bold text-primary-foreground disabled:opacity-50"
+              className="inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[14px] bg-primary font-bold text-primary-foreground disabled:opacity-50"
             >
               {busy ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -418,12 +494,12 @@ function ConfirmCard({
               type="button"
               onClick={onAdd}
               disabled={busy}
-              className="inline-flex h-12 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary font-bold text-primary-foreground disabled:opacity-50"
+              className="inline-flex h-[50px] flex-1 items-center justify-center gap-2 rounded-[14px] bg-primary font-bold text-primary-foreground disabled:opacity-50"
             >
               {busy ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : (
-                <Check className="size-4" aria-hidden="true" />
+                <Plus className="size-4" strokeWidth={2.4} aria-hidden="true" />
               )}
               Agregar
             </button>
