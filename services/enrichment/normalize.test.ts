@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   toIsbn13,
+  isValidBookIsbn13,
   splitBisacCategories,
   normalizeGoogleVolume,
   normalizeOpenLibrary,
@@ -19,6 +20,31 @@ describe("toIsbn13", () => {
     expect(toIsbn13("12345")).toBeNull();
     expect(toIsbn13(undefined)).toBeNull();
     expect(toIsbn13(null)).toBeNull();
+  });
+});
+
+describe("isValidBookIsbn13", () => {
+  it("accepts a valid 978 ISBN (separators ignored)", () => {
+    expect(isValidBookIsbn13("9780307474728")).toBe(true);
+    expect(isValidBookIsbn13("978-0-307-47472-8")).toBe(true);
+  });
+
+  it("accepts a valid 979 ISBN", () => {
+    expect(isValidBookIsbn13("9791234567896")).toBe(true);
+  });
+
+  it("rejects a wrong checksum", () => {
+    expect(isValidBookIsbn13("9780307474729")).toBe(false);
+  });
+
+  it("rejects non-978/979 EAN-13 (product barcode)", () => {
+    // valid EAN-13 checksum but not a Bookland prefix
+    expect(isValidBookIsbn13("4006381333931")).toBe(false);
+  });
+
+  it("rejects EAN-5 supplements and wrong lengths", () => {
+    expect(isValidBookIsbn13("51299")).toBe(false);
+    expect(isValidBookIsbn13("0307474720")).toBe(false); // ISBN-10
   });
 });
 

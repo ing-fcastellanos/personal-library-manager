@@ -77,12 +77,17 @@ const config: Config = {
           "0%": { transform: "translateY(-100%)" },
           "100%": { transform: "translateY(800%)" },
         },
+        scanline: {
+          "0%, 100%": { top: "8%" },
+          "50%": { top: "88%" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shake: "shake 0.5s",
         scan: "scan 1.6s ease-in-out infinite",
+        scanline: "scanline 2.2s ease-in-out infinite",
       },
     },
   },
