@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  :root {
+    --background:#f7f3ec; --foreground:#2b2620;
+    --card:#fffdf8; --card-foreground:#2b2620;
+    --popover:#fffdf8; --popover-foreground:#2b2620;
+    --primary:#6f5436; --primary-foreground:#faf6ef;
+    --secondary:#ece4d6; --secondary-foreground:#3a3228;
+    --muted:#efe8db; --muted-foreground:#756c5d;
+    --accent:#e8dcc6; --accent-foreground:#5c4a30;
+    --destructive:#b3261e; --destructive-foreground:#ffffff; --destructive-bg:#f6e0dd;
+    --success:#3f7d4e; --success-foreground:#ffffff; --success-bg:#dfeede;
+    --warning:#9a6b15; --warning-bg:#f6e9cf;
+    --border:#e2d9c8; --input:#e2d9c8; --ring:#6f5436;
+    --radius:0.625rem;
+  }
+  [data-theme="dark"] {
+    --background:#211d18; --foreground:#ece5d8;
+    --card:#2a251f; --card-foreground:#ece5d8;
+    --popover:#2a251f; --popover-foreground:#ece5d8;
+    --primary:#c9a87c; --primary-foreground:#26211b;
+    --secondary:#36302a; --secondary-foreground:#ece5d8;
+    --muted:#332e28; --muted-foreground:#a89e8d;
+    --accent:#3d352c; --accent-foreground:#ece5d8;
+    --destructive:#e5484d; --destructive-foreground:#ffffff; --destructive-bg:#3a221f;
+    --success:#67b97a; --success-foreground:#1c2a20; --success-bg:#23311f;
+    --warning:#e0b257; --warning-bg:#37301f;
+    --border:#3a342c; --input:#3a342c; --ring:#c9a87c;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; }
+  a { color:var(--primary); text-decoration:none; }
+  a:hover { color:var(--accent-foreground); text-decoration:underline; }
+  @keyframes dsspin { to { transform:rotate(360deg); } }
+  @keyframes dssheet { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes dspop { from { transform:scale(.9); opacity:0; } to { transform:scale(1); opacity:1; } }
+  @keyframes dsskel { 0%{ opacity:.55; } 50%{ opacity:1; } 100%{ opacity:.55; } }
+  @keyframes dstoast { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+  .ds-sb::-webkit-scrollbar { width:7px; }
+  .ds-sb::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+</style>
+</helmet>
+<div data-theme="{{ themeAttr }}" style="font-family:system-ui,-apple-system,sans-serif;background:var(--background);color:var(--foreground);min-height:100vh;-webkit-font-smoothing:antialiased;">
+
+  <!-- top header -->
+  <div style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;padding:14px 22px;background:color-mix(in srgb, var(--background) 86%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:34px;height:34px;border-radius:calc(var(--radius) - 2px);background:var(--primary);color:var(--primary-foreground);display:grid;place-items:center;flex:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path><path d="m9 10 1.5 1.5L14 8"></path></svg>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:650;letter-spacing:-.01em;">Leído · Marcar como leído</div>
+        <div style="font-size:11px;color:var(--muted-foreground);">/leido · selector + 10 estados + entrada desde detalle</div>
+      </div>
+    </div>
+    <button aria-label="Cambiar tema" onClick="{{ toggleTheme }}" style="margin-left:auto;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--foreground);border-radius:var(--radius);transition:all .15s;" style-hover="background:var(--accent);">
+      <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if>
+      <sc-if value="{{ notDark }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path></svg></sc-if>
+    </button>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:24px 22px 110px;">
+
+    <!-- ================= PART A ================= -->
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);">Parte A</div>
+      <div style="font-size:16px;font-weight:750;letter-spacing:-.01em;">Selector de método</div>
+    </div>
+    <div style="font-size:13px;color:var(--muted-foreground);line-height:1.55;max-width:640px;margin-bottom:20px;">Encontrá el libro para marcarlo. Espeja la grilla 2×2 de «Agregar», acá con dos celdas: <strong style="color:var(--foreground);">Buscar</strong> (activo) y <strong style="color:var(--foreground);">Por foto</strong>. Misma celda: activo = <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">border-primary bg-accent</code>.</div>
+
+    <div style="width:360px;max-width:100%;border:1px solid var(--border);border-radius:18px;background:var(--card);padding:14px;margin-bottom:44px;">
+      <div role="radiogroup" aria-label="Método para encontrar el libro" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button role="radio" aria-checked="{{ searchActiveAria }}" onClick="{{ goSearch }}" style="cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:84px;padding:12px;border:1.5px solid {{ searchCellBorder }};border-radius:13px;background:{{ searchCellBg }};color:{{ searchCellFg }};transition:all .15s;">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <span style="font-size:13.5px;font-weight:{{ searchCellWeight }};">Buscar</span>
+        </button>
+        <button role="radio" aria-checked="{{ photoActiveAria }}" onClick="{{ goPhoto }}" style="cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:84px;padding:12px;border:1.5px solid {{ photoCellBorder }};border-radius:13px;background:{{ photoCellBg }};color:{{ photoCellFg }};transition:all .15s;">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+          <span style="font-size:13.5px;font-weight:{{ photoCellWeight }};">Por foto</span>
+        </button>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin-bottom:30px;"></div>
+
+    <!-- ================= PART B ================= -->
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);">Parte B · C</div>
+      <div style="font-size:16px;font-weight:750;letter-spacing:-.01em;">Estados de pantalla</div>
+    </div>
+
+    <!-- state pills grouped -->
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:26px;">
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground);margin-bottom:8px;">{{ g.label }}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <sc-for list="{{ g.items }}" as="s" hint-placeholder-count="3">
+              <button aria-selected="{{ s.active }}" onClick="{{ s.go }}" style="cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;border:1.5px solid {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};transition:all .15s;display:flex;align-items:center;gap:7px;">
+                <span style="width:18px;height:18px;border-radius:999px;background:{{ s.numBg }};color:{{ s.numFg }};display:grid;place-items:center;font-size:10px;font-weight:700;">{{ s.num }}</span>
+                {{ s.label }}
+              </button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:30px;align-items:flex-start;">
+
+      <!-- PHONE FRAME -->
+      <div style="position:relative;">
+        <div style="font-size:12px;font-weight:600;color:var(--muted-foreground);margin-bottom:10px;">Mobile · ~360px</div>
+        <div style="width:360px;max-width:100%;height:760px;border:9px solid var(--foreground);border-radius:42px;background:var(--background);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 52px -18px rgba(0,0,0,.42);position:relative;">
+
+          <!-- ====== DETAIL ENTRY (Part C) ====== -->
+          <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+            <div class="ds-sb" style="flex:1;overflow-y:auto;">
+              <!-- top bar -->
+              <div style="display:flex;align-items:center;gap:10px;padding:15px 16px 0;">
+                <button aria-label="Volver" style="width:34px;height:34px;display:grid;place-items:center;border:0;background:transparent;color:var(--foreground);border-radius:var(--radius);cursor:pointer;" style-hover="background:var(--accent);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+                <div style="font-size:15px;font-weight:650;flex:1;">Detalle del libro</div>
+              </div>
+              <!-- book header -->
+              <div style="display:flex;gap:14px;padding:16px;">
+                <div style="position:relative;width:82px;height:120px;flex:none;border-radius:10px;overflow:hidden;background:linear-gradient(155deg,var(--primary),var(--accent));box-shadow:0 10px 22px -10px rgba(0,0,0,.5);"><div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(0,0,0,.16);"></div></div>
+                <div style="flex:1;min-width:0;padding-top:4px;">
+                  <div style="font-size:18px;font-weight:760;line-height:1.2;letter-spacing:-.01em;">La ciudad y los perros</div>
+                  <div style="font-size:13.5px;color:var(--muted-foreground);margin-top:4px;">Mario Vargas Llosa</div>
+                  <div style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;padding:4px 9px;border-radius:999px;background:var(--secondary);color:var(--secondary-foreground);margin-top:10px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v13h18V7M3 7l3-4h12l3 4M3 7h18"></path></svg>Living · pared norte
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lectura section -->
+              <div style="padding:0 16px;">
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground);margin-bottom:10px;">Lectura</div>
+                <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);overflow:hidden;">
+                  <!-- active reader row -->
+                  <div style="display:flex;align-items:center;gap:11px;padding:14px;">
+                    <div style="width:36px;height:36px;flex:none;border-radius:999px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-size:13px;font-weight:750;">SF</div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:14px;font-weight:650;">Sofía</div>
+                      <div style="font-size:12px;color:var(--muted-foreground);">Lector activo</div>
+                    </div>
+                    <!-- Leído badge after success -->
+                    <sc-if value="{{ detailMarked }}" hint-placeholder-val="{{ false }}">
+                      <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:6px 11px;border-radius:999px;background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success);animation:dspop .3s ease;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Leído
+                      </span>
+                    </sc-if>
+                    <!-- enabled button before success -->
+                    <sc-if value="{{ detailNotMarked }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ openSheetFromDetail }}" style="cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;height:40px;padding:0 14px;border:0;border-radius:11px;background:var(--primary);color:var(--primary-foreground);display:inline-flex;align-items:center;gap:6px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Marcar leído
+                      </button>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ detailMarked }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:0 14px 14px 61px;font-size:12px;color:var(--muted-foreground);">Finalizado el 6 jul 2026</div>
+                  </sc-if>
+                </div>
+                <div style="font-size:12px;color:var(--muted-foreground);line-height:1.5;margin-top:10px;">La calificación y la reseña llegan más adelante.</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ====== FLOW (Part A + B) ====== -->
+          <sc-if value="{{ isFlow }}" hint-placeholder-val="{{ true }}">
+            <!-- top bar -->
+            <div style="flex:none;display:flex;align-items:center;gap:10px;padding:15px 16px 0;background:var(--background);">
+              <button aria-label="Volver" style="width:34px;height:34px;display:grid;place-items:center;border:0;background:transparent;color:var(--foreground);border-radius:var(--radius);cursor:pointer;" style-hover="background:var(--accent);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+              <div style="font-size:19px;font-weight:750;letter-spacing:-.015em;flex:1;">Marcar leído</div>
+            </div>
+
+            <!-- method selector (2 cells) -->
+            <div role="radiogroup" aria-label="Método" style="flex:none;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 16px 4px;">
+              <button role="radio" aria-checked="{{ searchActiveAria }}" onClick="{{ goSearch }}" style="cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border:1.5px solid {{ searchCellBorder }};border-radius:13px;background:{{ searchCellBg }};color:{{ searchCellFg }};transition:all .15s;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                <span style="font-size:14px;font-weight:{{ searchCellWeight }};">Buscar</span>
+              </button>
+              <button role="radio" aria-checked="{{ photoActiveAria }}" onClick="{{ goPhoto }}" style="cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border:1.5px solid {{ photoCellBorder }};border-radius:13px;background:{{ photoCellBg }};color:{{ photoCellFg }};transition:all .15s;">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                <span style="font-size:14px;font-weight:{{ photoCellWeight }};">Por foto</span>
+              </button>
+            </div>
+
+            <div class="ds-sb" style="flex:1;overflow-y:auto;padding:14px 16px 16px;display:flex;flex-direction:column;">
+
+              <!-- ===== SEARCH method ===== -->
+              <sc-if value="{{ isSearchMethod }}" hint-placeholder-val="{{ true }}">
+                <!-- search input -->
+                <div style="position:relative;margin-bottom:14px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                  <label for="ds-search" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Buscá por título o autor</label>
+                  <input id="ds-search" value="{{ searchInputValue }}" placeholder="Buscá por título o autor" style="width:100%;font-family:inherit;font-size:15px;height:48px;padding:0 14px 0 40px;border:1px solid var(--input);border-radius:var(--radius);background:var(--card);color:var(--foreground);outline:none;" style-focus="border-color:var(--ring);outline:2px solid var(--ring);outline-offset:2px;" />
+                </div>
+
+                <!-- LOADING -->
+                <sc-if value="{{ isSearchLoading }}" hint-placeholder-val="{{ false }}">
+                  <div role="status" style="display:flex;align-items:center;gap:10px;padding:10px 2px;color:var(--muted-foreground);font-size:13.5px;font-weight:600;">
+                    <span aria-hidden="true" style="width:18px;height:18px;border-radius:999px;border:2.4px solid var(--border);border-top-color:var(--primary);display:inline-block;animation:dsspin .7s linear infinite;"></span>Buscando…
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px;">
+                    <div style="display:flex;gap:12px;align-items:center;padding:8px;">
+                      <div style="width:40px;height:58px;border-radius:6px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+                      <div style="flex:1;"><div style="height:13px;width:70%;border-radius:6px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div><div style="height:11px;width:45%;border-radius:6px;background:var(--muted);margin-top:8px;animation:dsskel 1.4s ease-in-out infinite;"></div></div>
+                    </div>
+                    <div style="display:flex;gap:12px;align-items:center;padding:8px;">
+                      <div style="width:40px;height:58px;border-radius:6px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+                      <div style="flex:1;"><div style="height:13px;width:60%;border-radius:6px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div><div style="height:11px;width:40%;border-radius:6px;background:var(--muted);margin-top:8px;animation:dsskel 1.4s ease-in-out infinite;"></div></div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <!-- EMPTY -->
+                <sc-if value="{{ isSearchEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;">
+                    <div style="width:56px;height:56px;border-radius:16px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3M8 11h6"></path></svg></div>
+                    <div style="font-size:14px;font-weight:650;margin-top:16px;line-height:1.5;max-width:250px;">No encontramos libros en tu biblioteca para esa búsqueda.</div>
+                  </div>
+                </sc-if>
+
+                <!-- RESULTS -->
+                <sc-if value="{{ isSearchResults }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;">
+                    <sc-for list="{{ results }}" as="r" hint-placeholder-count="4">
+                      <button onClick="{{ openSheetFromSearch }}" style="cursor:pointer;font-family:inherit;text-align:left;display:flex;gap:12px;align-items:center;padding:10px 8px;min-height:44px;border:0;border-radius:12px;background:transparent;transition:all .15s;" style-hover="background:var(--accent);">
+                        <div style="position:relative;width:40px;height:58px;flex:none;border-radius:6px;overflow:hidden;background:{{ r.cover }};box-shadow:0 4px 10px -5px rgba(0,0,0,.5);"><div style="position:absolute;left:0;top:0;bottom:0;width:2.5px;background:rgba(0,0,0,.16);"></div></div>
+                        <div style="flex:1;min-width:0;">
+                          <div style="font-size:14.5px;font-weight:650;line-height:1.25;color:var(--foreground);">{{ r.title }}</div>
+                          <div style="font-size:12.5px;color:var(--muted-foreground);margin-top:3px;">{{ r.author }}</div>
+                        </div>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="m9 18 6-6-6-6"></path></svg>
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </sc-if>
+
+              <!-- ===== PHOTO method ===== -->
+              <sc-if value="{{ isPhotoMethod }}" hint-placeholder-val="{{ false }}">
+
+                <!-- CAPTURE -->
+                <sc-if value="{{ isCapture }}" hint-placeholder-val="{{ true }}">
+                  <button style="cursor:pointer;font-family:inherit;width:100%;border:2px dashed var(--border);border-radius:20px;background:var(--card);padding:34px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .15s;" style-hover="border-color:var(--primary);background:var(--accent);">
+                    <div style="width:68px;height:68px;border-radius:999px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    </div>
+                    <div style="font-size:16px;font-weight:750;margin-top:6px;">Tomar foto</div>
+                    <div style="font-size:12.5px;color:var(--muted-foreground);text-align:center;line-height:1.5;max-width:230px;">La IA lo identifica y lo busca en tu biblioteca.</div>
+                  </button>
+                  <button onClick="{{ goIdentifying }}" style="margin-top:14px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:650;height:46px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--foreground);width:100%;" style-hover="background:var(--accent);">Simular captura →</button>
+                </sc-if>
+
+                <!-- IDENTIFYING -->
+                <sc-if value="{{ isIdentifying }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:100%;border:1px solid var(--border);border-radius:20px;background:var(--card);padding:26px 20px;display:flex;flex-direction:column;align-items:center;">
+                    <div style="position:relative;width:120px;height:150px;border-radius:12px;overflow:hidden;background:linear-gradient(155deg,#4a4033,#2b2418);">
+                      <div style="position:absolute;left:12%;right:12%;top:12%;bottom:12%;border-radius:5px;background:linear-gradient(160deg,#e9e2d2,#cfc5ae);"></div>
+                    </div>
+                    <div role="status" style="display:flex;align-items:center;gap:10px;margin-top:20px;color:var(--foreground);font-size:14.5px;font-weight:650;">
+                      <span aria-hidden="true" style="width:19px;height:19px;border-radius:999px;border:2.6px solid var(--border);border-top-color:var(--primary);display:inline-block;animation:dsspin .7s linear infinite;"></span>Identificando el libro…
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:8px;margin-top:14px;">
+                    <button onClick="{{ goResults }}" style="flex:1;cursor:pointer;font-family:inherit;font-size:13px;font-weight:650;height:44px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--foreground);" style-hover="background:var(--accent);">→ En biblioteca</button>
+                    <button onClick="{{ goNotInLib }}" style="flex:1;cursor:pointer;font-family:inherit;font-size:13px;font-weight:650;height:44px;border:1px solid var(--border);border-radius:12px;background:var(--card);color:var(--foreground);" style-hover="background:var(--accent);">→ No está</button>
+                  </div>
+                </sc-if>
+
+                <!-- NOT IN LIBRARY -->
+                <sc-if value="{{ isNotInLib }}" hint-placeholder-val="{{ false }}">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 18px;">
+                    <div style="width:60px;height:60px;border-radius:16px;background:var(--warning-bg);color:var(--warning);display:grid;place-items:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path><path d="M15 8h4M13 12h6"></path></svg></div>
+                    <div style="font-size:17px;font-weight:760;margin-top:18px;">No está en tu biblioteca</div>
+                    <div style="font-size:13px;color:var(--muted-foreground);line-height:1.55;margin-top:8px;max-width:260px;">Solo podés marcar como leídos libros que ya tenés cargados.</div>
+                    <button style="margin-top:22px;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;height:50px;width:100%;max-width:280px;border:0;border-radius:14px;background:var(--primary);color:var(--primary-foreground);display:inline-flex;align-items:center;justify-content:center;gap:8px;">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Agregar libro
+                    </button>
+                    <button onClick="{{ goCapture }}" style="margin-top:11px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;color:var(--muted-foreground);background:transparent;border:0;padding:8px;">Otra foto</button>
+                  </div>
+                </sc-if>
+              </sc-if>
+
+            </div>
+          </sc-if>
+
+          <!-- ============ CONFIRM SHEET OVERLAY (states 7–10) ============ -->
+          <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;justify-content:flex-end;">
+              <!-- scrim -->
+              <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(20,16,11,.42);animation:dspop .2s ease;"></div>
+
+              <!-- toast on success -->
+              <sc-if value="{{ isSuccess }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:14px;left:14px;right:14px;z-index:2;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--success-bg);color:var(--success);border:1px solid color-mix(in srgb,var(--success) 30%,transparent);box-shadow:0 10px 26px -12px rgba(0,0,0,.4);animation:dstoast .3s ease;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M20 6 9 17l-5-5"></path></svg>
+                  <span style="font-size:13.5px;font-weight:700;">¡Lectura registrada!</span>
+                </div>
+              </sc-if>
+
+              <!-- sheet -->
+              <div role="dialog" aria-labelledby="ds-sheet-title" aria-modal="true" style="position:relative;z-index:1;background:var(--popover);color:var(--popover-foreground);border-top-left-radius:22px;border-top-right-radius:22px;padding:14px 18px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -18px 40px -18px rgba(0,0,0,.5);animation:dssheet .3s ease;max-height:88%;overflow-y:auto;" class="ds-sb">
+                <div aria-hidden="true" style="width:38px;height:4px;border-radius:999px;background:var(--border);margin:0 auto 14px;"></div>
+
+                <!-- ===== SUCCESS ===== -->
+                <sc-if value="{{ isSuccess }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 6px 4px;">
+                    <div style="width:72px;height:72px;border-radius:999px;background:var(--success-bg);color:var(--success);display:grid;place-items:center;animation:dspop .35s ease;">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                    </div>
+                    <div style="font-size:20px;font-weight:760;margin-top:18px;letter-spacing:-.01em;">¡Lectura registrada!</div>
+                    <div style="font-size:13.5px;color:var(--muted-foreground);margin-top:8px;line-height:1.5;">«{{ bookTitle }}» quedó marcado como leído.</div>
+                    <div style="display:flex;gap:10px;margin-top:22px;width:100%;">
+                      <button onClick="{{ markAnother }}" style="flex:1;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:700;height:50px;border:1px solid var(--border);border-radius:14px;background:var(--card);color:var(--foreground);" style-hover="background:var(--accent);">Marcar otro</button>
+                      <button onClick="{{ closeSheet }}" style="flex:1;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:700;height:50px;border:0;border-radius:14px;background:var(--primary);color:var(--primary-foreground);">Ver libro</button>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <!-- ===== FORM (7) / ERROR (8) / NO READER (9) ===== -->
+                <sc-if value="{{ sheetFormLike }}" hint-placeholder-val="{{ true }}">
+                  <!-- header -->
+                  <div style="display:flex;gap:13px;align-items:center;">
+                    <div style="position:relative;width:48px;height:70px;flex:none;border-radius:8px;overflow:hidden;background:linear-gradient(155deg,var(--primary),var(--accent));box-shadow:0 5px 12px -6px rgba(0,0,0,.55);"><div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(0,0,0,.16);"></div></div>
+                    <div style="flex:1;min-width:0;">
+                      <div id="ds-sheet-title" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);">Marcar como leído</div>
+                      <div style="font-size:16px;font-weight:750;line-height:1.2;margin-top:3px;">{{ bookTitle }}</div>
+                      <div style="font-size:12.5px;color:var(--muted-foreground);margin-top:2px;">{{ bookAuthor }}</div>
+                    </div>
+                    <button aria-label="Cancelar" onClick="{{ closeSheet }}" style="flex:none;width:36px;height:36px;display:grid;place-items:center;border:0;background:var(--muted);color:var(--muted-foreground);border-radius:999px;cursor:pointer;" style-hover="background:var(--accent);color:var(--accent-foreground);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+                  </div>
+
+                  <!-- ===== NO ACTIVE READER (9) ===== -->
+                  <sc-if value="{{ isNoReader }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top:18px;border:1px dashed var(--border);border-radius:16px;background:var(--card);padding:22px 18px;display:flex;flex-direction:column;align-items:center;text-align:center;">
+                      <div style="width:52px;height:52px;border-radius:999px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg></div>
+                      <div style="font-size:14.5px;font-weight:650;margin-top:14px;line-height:1.5;max-width:240px;">Iniciá sesión para registrar la lectura.</div>
+                      <button style="margin-top:18px;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;height:50px;width:100%;border:0;border-radius:14px;background:var(--primary);color:var(--primary-foreground);display:inline-flex;align-items:center;justify-content:center;gap:8px;">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5M15 12H3"></path></svg>Iniciar sesión
+                      </button>
+                    </div>
+                  </sc-if>
+
+                  <!-- ===== FORM (7 + 8 error) ===== -->
+                  <sc-if value="{{ isFormFields }}" hint-placeholder-val="{{ true }}">
+                    <!-- attributed reader -->
+                    <div style="display:flex;align-items:center;gap:9px;margin-top:16px;padding:9px 12px;border-radius:12px;background:var(--muted);">
+                      <div style="width:28px;height:28px;flex:none;border-radius:999px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-size:11px;font-weight:750;">SF</div>
+                      <div style="font-size:12.5px;color:var(--muted-foreground);">Se registra para <strong style="color:var(--foreground);">Sofía</strong></div>
+                    </div>
+
+                    <!-- Fecha de fin -->
+                    <div style="margin-top:16px;">
+                      <label for="ds-end" style="font-size:13px;font-weight:650;display:block;margin-bottom:7px;">Fecha de fin</label>
+                      <input id="ds-end" type="date" value="2026-07-06" max="2026-07-06" style="width:100%;font-family:inherit;font-size:15px;height:48px;padding:0 13px;border:1px solid var(--input);border-radius:var(--radius);background:var(--card);color:var(--foreground);outline:none;" style-focus="border-color:var(--ring);outline:2px solid var(--ring);outline-offset:2px;" />
+                    </div>
+
+                    <!-- Fecha de inicio (opcional) -->
+                    <div style="margin-top:14px;">
+                      <label for="ds-start" style="font-size:13px;font-weight:650;display:block;margin-bottom:7px;">Fecha de inicio (opcional)</label>
+                      <input id="ds-start" type="date" max="2026-07-06" style="width:100%;font-family:inherit;font-size:15px;height:48px;padding:0 13px;border:1px solid var(--input);border-radius:var(--radius);background:var(--card);color:var(--muted-foreground);outline:none;" style-focus="border-color:var(--ring);outline:2px solid var(--ring);outline-offset:2px;" />
+                    </div>
+
+                    <!-- Ejemplar (only when copies) -->
+                    <sc-if value="{{ hasCopies }}" hint-placeholder-val="{{ true }}">
+                      <div style="margin-top:14px;">
+                        <label for="ds-copy" style="font-size:13px;font-weight:650;display:block;margin-bottom:7px;">Ejemplar</label>
+                        <div style="position:relative;">
+                          <select id="ds-copy" style="width:100%;appearance:none;font-family:inherit;font-size:15px;height:48px;padding:0 40px 0 13px;border:1px solid var(--input);border-radius:var(--radius);background:var(--card);color:var(--foreground);cursor:pointer;outline:none;" style-focus="border-color:var(--ring);outline:2px solid var(--ring);outline-offset:2px;">
+                            <option>Ejemplar 1 · Living · pared norte</option>
+                            <option>Ejemplar 2 · Estudio · escritorio</option>
+                          </select>
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:13px;top:50%;transform:translateY(-50%);pointer-events:none;"><path d="m6 9 6 6 6-6"></path></svg>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <!-- inline ERROR (8) -->
+                    <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}">
+                      <div role="alert" style="display:flex;align-items:flex-start;gap:9px;margin-top:14px;padding:11px 13px;border-radius:12px;background:var(--destructive-bg);border:1px solid color-mix(in srgb,var(--destructive) 30%,transparent);color:var(--destructive);">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v5M12 16.5v.01"></path></svg>
+                        <span style="font-size:13px;font-weight:600;line-height:1.4;">No se pudo registrar la lectura. Probá de nuevo.</span>
+                      </div>
+                    </sc-if>
+
+                    <!-- primary action -->
+                    <button onClick="{{ submitMark }}" style="margin-top:18px;width:100%;cursor:pointer;font-family:inherit;font-size:15.5px;font-weight:700;height:52px;border:0;border-radius:14px;background:var(--primary);color:var(--primary-foreground);display:inline-flex;align-items:center;justify-content:center;gap:9px;opacity:{{ submitOpacity }};">
+                      <sc-if value="{{ isSubmitting }}" hint-placeholder-val="{{ false }}">
+                        <span aria-hidden="true" style="width:18px;height:18px;border-radius:999px;border:2.4px solid color-mix(in srgb,var(--primary-foreground) 40%,transparent);border-top-color:var(--primary-foreground);display:inline-block;animation:dsspin .7s linear infinite;"></span>Registrando…
+                      </sc-if>
+                      <sc-if value="{{ notSubmitting }}" hint-placeholder-val="{{ true }}">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Marcar como leído
+                      </sc-if>
+                    </button>
+                  </sc-if>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+
+      <!-- SIDE NOTES -->
+      <div style="flex:1;min-width:290px;max-width:430px;display:flex;flex-direction:column;gap:18px;">
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:8px;">{{ stateNum }} · {{ stateTitle }}</div>
+          <div style="font-size:13.5px;line-height:1.6;color:var(--muted-foreground);">{{ stateDesc }}</div>
+        </div>
+
+        <!-- flow model -->
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:12px;">Modelo del flujo</div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-size:12.5px;font-weight:650;">
+            <span style="padding:5px 11px;border-radius:999px;background:var(--accent);color:var(--accent-foreground);">Encontrar</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+            <span style="padding:5px 11px;border-radius:999px;background:var(--accent);color:var(--accent-foreground);">Confirmar</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg>
+            <span style="padding:5px 11px;border-radius:999px;background:var(--success-bg);color:var(--success);">Registrado</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--muted-foreground);line-height:1.55;margin-top:12px;">Buscar o Por foto encuentran el libro; la ficha se confirma (fin, inicio opcional, ejemplar) atribuida al lector activo. Solo libros ya cargados: una foto de un libro ausente enruta a «Agregar». Sin calificación ni reseña.</div>
+        </div>
+
+        <!-- a11y note -->
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">A11y &amp; copy</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--muted-foreground);">Selector = <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">radiogroup</code> con <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">aria-checked</code>. La ficha es un <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">role="dialog"</code> etiquetado; fechas y ejemplar con <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">label</code> real. El estado «Leído» es texto + ícono (nunca solo color). El spinner de identificación es <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">role="status"</code>. Foco visible; toques ≥44px.</div>
+      </div>
+
+        <!-- out of scope -->
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">Fuera de alcance</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--muted-foreground);">Calificación + reseña, historial / timeline y filtros, re-lecturas, y el formulario de «libro no cargado → crear acá» (eso es «Agregar»).</div>
+        </div>
+
+        <!-- reused -->
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">Anclaje · components/ui</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <sc-for list="{{ reused }}" as="p" hint-placeholder-count="8">
+              <span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--secondary);color:var(--secondary-foreground);">{{ p }}</span>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:1240}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light",
+    view: "results",      // results | empty | loading | capture | identifying | notlib | detail
+    method: "search",     // search | photo
+    sheet: "closed",      // closed | form | error | noreader | success | submitting
+    detailMarked: false
+  };
+
+  componentDidMount() {
+    try {
+      const saved = localStorage.getItem("markread_theme");
+      if (saved === "dark" || saved === "light") this.setState({ theme: saved });
+    } catch (e) {}
+  }
+
+  toggleTheme = () => {
+    const t = this.state.theme === "dark" ? "light" : "dark";
+    this.setState({ theme: t });
+    try { localStorage.setItem("markread_theme", t); } catch (e) {}
+  };
+
+  goSearch = () => this.setState({ method: "search", view: "results" });
+  goPhoto = () => this.setState({ method: "photo", view: "capture" });
+  goCapture = () => this.setState({ view: "capture" });
+  goIdentifying = () => this.setState({ view: "identifying" });
+  goResults = () => this.setState({ method: "search", view: "results" });
+  goNotInLib = () => this.setState({ view: "notlib" });
+
+  openSheetFromSearch = () => this.setState({ sheet: "form" });
+  openSheetFromDetail = () => this.setState({ sheet: "form" });
+  closeSheet = () => this.setState((s) => ({
+    sheet: "closed",
+    detailMarked: s.sheet === "success" && s.view === "detail" ? true : s.detailMarked
+  }));
+  markAnother = () => this.setState({ sheet: "closed", method: "search", view: "results" });
+
+  submitMark = () => {
+    this.setState({ sheet: "submitting" });
+    setTimeout(() => {
+      this.setState((s) => ({
+        sheet: "success",
+        detailMarked: s.view === "detail" ? true : s.detailMarked
+      }));
+    }, 1100);
+  };
+
+  renderVals() {
+    const S = this.state;
+    const isDark = S.theme === "dark";
+
+    // pill groups
+    const def = (id, num, label) => {
+      const active = S.pillId === id || false;
+      return { id, num, label };
+    };
+    const currentPill = this._currentPill();
+    const mk = (id, num, label, apply) => {
+      const active = currentPill === id;
+      return {
+        id, num, label, active,
+        go: apply,
+        bg: active ? "var(--primary)" : "var(--card)",
+        fg: active ? "var(--primary-foreground)" : "var(--foreground)",
+        border: active ? "var(--primary)" : "var(--border)",
+        numBg: active ? "color-mix(in srgb,var(--primary-foreground) 22%,transparent)" : "var(--muted)",
+        numFg: active ? "var(--primary-foreground)" : "var(--muted-foreground)"
+      };
+    };
+
+    const groups = [
+      { label: "Buscar", items: [
+        mk("results", "01", "Búsqueda", () => this.setState({ view: "results", method: "search", sheet: "closed" })),
+        mk("empty", "02", "Sin resultados", () => this.setState({ view: "empty", method: "search", sheet: "closed" })),
+        mk("loading", "03", "Buscando…", () => this.setState({ view: "loading", method: "search", sheet: "closed" }))
+      ]},
+      { label: "Por foto", items: [
+        mk("capture", "04", "Capturar", () => this.setState({ view: "capture", method: "photo", sheet: "closed" })),
+        mk("identifying", "05", "Identificando", () => this.setState({ view: "identifying", method: "photo", sheet: "closed" })),
+        mk("notlib", "06", "No está", () => this.setState({ view: "notlib", method: "photo", sheet: "closed" }))
+      ]},
+      { label: "Confirmar (compartido) · Detalle", items: [
+        mk("form", "07", "Ficha", () => this.setState({ view: "results", method: "search", sheet: "form" })),
+        mk("error", "08", "Error", () => this.setState({ view: "results", method: "search", sheet: "error" })),
+        mk("noreader", "09", "Sin lector", () => this.setState({ view: "results", method: "search", sheet: "noreader" })),
+        mk("success", "10", "Registrado", () => this.setState({ view: "results", method: "search", sheet: "success" })),
+        mk("detail", "C", "Detalle", () => this.setState({ view: "detail", sheet: "closed", detailMarked: false }))
+      ]}
+    ];
+
+    // view flags
+    const isDetail = S.view === "detail";
+    const isFlow = !isDetail;
+    const isSearchMethod = S.method === "search";
+    const isPhotoMethod = S.method === "photo";
+    const isSearchResults = S.view === "results";
+    const isSearchEmpty = S.view === "empty";
+    const isSearchLoading = S.view === "loading";
+    const isCapture = S.view === "capture";
+    const isIdentifying = S.view === "identifying";
+    const isNotInLib = S.view === "notlib";
+
+    // sheet flags
+    const sheetOpen = S.sheet !== "closed";
+    const isSuccess = S.sheet === "success";
+    const isError = S.sheet === "error";
+    const isNoReader = S.sheet === "noreader";
+    const isSubmitting = S.sheet === "submitting";
+    const sheetFormLike = S.sheet === "form" || S.sheet === "error" || S.sheet === "noreader" || S.sheet === "submitting";
+    const isFormFields = sheetFormLike && !isNoReader;
+
+    // method cell styling
+    const cell = (on) => ({
+      border: on ? "var(--primary)" : "var(--border)",
+      bg: on ? "var(--accent)" : "var(--card)",
+      fg: on ? "var(--accent-foreground)" : "var(--muted-foreground)",
+      weight: on ? "750" : "600",
+      aria: on ? "true" : "false"
+    });
+    const sc = cell(isSearchMethod);
+    const pc = cell(isPhotoMethod);
+
+    const results = [
+      { title: "Rayuela", author: "Julio Cortázar", cover: "linear-gradient(155deg,#7a5c3a,#c9a87c)" },
+      { title: "Ficciones", author: "Jorge Luis Borges", cover: "linear-gradient(155deg,#3f5a4a,#8fae94)" },
+      { title: "La invención de Morel", author: "Adolfo Bioy Casares", cover: "linear-gradient(155deg,#6b4a5a,#c48fa0)" },
+      { title: "Los siete locos", author: "Roberto Arlt", cover: "linear-gradient(155deg,#5a4a2f,#b09a6a)" }
+    ];
+
+    // side note text
+    const nums = { results:"01", empty:"02", loading:"03", capture:"04", identifying:"05", notlib:"06", detail:"C — Detalle" };
+    const titles = { results:"Búsqueda", empty:"Sin resultados", loading:"Buscando…", capture:"Capturar", identifying:"Identificando", notlib:"No está en biblioteca", detail:"Entrada desde detalle" };
+    let curKey = S.view;
+    let stateDesc;
+    if (sheetOpen) {
+      const sk = S.sheet;
+      const sheetNums = { form:"07", error:"08", noreader:"09", success:"10", submitting:"07" };
+      const sheetTitles = { form:"Ficha de confirmación", error:"Error al registrar", noreader:"Sin lector activo", success:"Registrado", submitting:"Registrando…" };
+      curKey = "__sheet";
+      var stateNum = sheetNums[sk];
+      var stateTitle = sheetTitles[sk];
+      const sheetDescs = {
+        form: "Bottom-sheet etiquetada («Marcar como leído») con header del libro + cerrar, «Fecha de fin» (hoy, editable, max hoy), «Fecha de inicio (opcional)» y —solo con ejemplares— un Select «Ejemplar» (1 preseleccionado). Acción «Marcar como leído» con loading. Atribuido al lector activo.",
+        error: "Error inline dentro de la ficha («No se pudo registrar la lectura. Probá de nuevo.») que conserva lo cargado; la ficha sigue abierta para reintentar.",
+        noreader: "Sin lector activo: en vez del form, un prompt de inicio de sesión («Iniciá sesión para registrar la lectura.») con CTA.",
+        submitting: "Guardando: el botón primario pasa a «Registrando…» con spinner.",
+        success: "«¡Lectura registrada!» + «\u00abTítulo\u00bb quedó marcado como leído.» con «Marcar otro» y «Ver libro». Un toast también dispara."
+      };
+      stateDesc = sheetDescs[sk];
+    } else {
+      var stateNum = nums[curKey];
+      var stateTitle = titles[curKey];
+      const descs = {
+        results: "Input «Buscá por título o autor» + lista de resultados. Cada fila (tocable, ≥44px): tapa chica + título + autor(es). Al tocar abre la ficha de confirmación.",
+        empty: "«No encontramos libros en tu biblioteca para esa búsqueda.»",
+        loading: "Indicador liviano «Buscando…» (role=status) con skeletons de filas.",
+        capture: "Tarjeta de captura punteada + «Tomar foto» (visual de «Agregar por foto»), subtítulo «La IA lo identifica y lo busca en tu biblioteca.»",
+        identifying: "Estado compacto «Identificando el libro…» con spinner (role=status).",
+        notlib: "El libro identificado no está: estado «No está en tu biblioteca» + «Solo podés marcar como leídos libros que ya tenés cargados.» con «Agregar libro» (→ /agregar) y «Otra foto».",
+        detail: "En la sección «Lectura» del detalle, el botón «Marcar leído» (habilitado, ya no «Pronto») abre la misma ficha (estado 7). Tras el éxito, la fila del lector pasa al badge «Leído» (bg-success/15, ícono check)."
+      };
+      stateDesc = descs[curKey];
+    }
+
+    return {
+      themeAttr: S.theme, isDark, notDark: !isDark, toggleTheme: this.toggleTheme,
+      groups,
+      isDetail, isFlow,
+      isSearchMethod, isPhotoMethod,
+      isSearchResults, isSearchEmpty, isSearchLoading,
+      isCapture, isIdentifying, isNotInLib,
+      sheetOpen, isSuccess, isError, isNoReader, isSubmitting,
+      sheetFormLike, isFormFields,
+      notSubmitting: !isSubmitting,
+      submitOpacity: isSubmitting ? "0.85" : "1",
+      hasCopies: true,
+      // method cells
+      searchActiveAria: sc.aria, searchCellBorder: sc.border, searchCellBg: sc.bg, searchCellFg: sc.fg, searchCellWeight: sc.weight,
+      photoActiveAria: pc.aria, photoCellBorder: pc.border, photoCellBg: pc.bg, photoCellFg: pc.fg, photoCellWeight: pc.weight,
+      // detail
+      detailMarked: S.detailMarked, detailNotMarked: !S.detailMarked,
+      // data
+      searchInputValue: "Cortázar",
+      results,
+      bookTitle: "Rayuela",
+      bookAuthor: "Julio Cortázar",
+      // handlers
+      goSearch: this.goSearch, goPhoto: this.goPhoto, goCapture: this.goCapture,
+      goIdentifying: this.goIdentifying, goResults: this.goResults, goNotInLib: this.goNotInLib,
+      openSheetFromSearch: this.openSheetFromSearch, openSheetFromDetail: this.openSheetFromDetail,
+      closeSheet: this.closeSheet, markAnother: this.markAnother, submitMark: this.submitMark,
+      // side note
+      stateNum, stateTitle, stateDesc,
+      reused: ["Card", "Button", "Input", "Label", "Select", "Badge", "Skeleton", "EmptyState", "Dialog", "Toast", "Avatar"]
+    };
+  }
+
+  _currentPill() {
+    const S = this.state;
+    if (S.sheet === "form" || S.sheet === "submitting") return "form";
+    if (S.sheet === "error") return "error";
+    if (S.sheet === "noreader") return "noreader";
+    if (S.sheet === "success") return "success";
+    return S.view;
+  }
+}
+</script>
+</body>
+</html>

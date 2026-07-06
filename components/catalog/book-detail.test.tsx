@@ -31,6 +31,7 @@ vi.mock("@/components/ui/use-toast", () => ({
 vi.mock("@/components/auth/write-cta", () => ({
   WriteCta: () => <button type="button">Iniciar sesión</button>,
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 function jsonResponse(body: unknown, ok = true) {
   return Promise.resolve({ ok, json: () => Promise.resolve(body) } as Response);
@@ -116,15 +117,21 @@ describe("BookDetail", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Ejemplares · 0/)).toBeInTheDocument();
     expect(screen.getByText("Sin ejemplares.")).toBeInTheDocument();
-    expect(screen.getAllByText("Sin empezar")).toHaveLength(2); // both readers
+    // Active reader (Frank) gets the inline mark button; the other shows "Sin empezar".
+    expect(
+      screen.getByRole("button", { name: "Marcar leído" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Sin empezar")).toHaveLength(1);
   });
 
-  it("enables the 'Marcar como leído' action", async () => {
+  it("shows the reader's 'Leído' status without a mark button when finished", async () => {
+    // Default fixture: the active reader (r1/Frank) already finished b1.
     render(<BookDetail bookId="b1" />);
-    const btn = await screen.findByRole("button", {
-      name: /Marcar como leído/,
-    });
-    expect(btn).toBeEnabled();
+    expect(await screen.findByText("Frank")).toBeInTheDocument();
+    expect(screen.getByText("Leído")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Marcar leído" }),
+    ).not.toBeInTheDocument();
   });
 
   it("marking a reading updates the reader's status to Leído", async () => {
@@ -153,9 +160,11 @@ describe("BookDetail", () => {
 
     render(<BookDetail bookId="b1" />);
     expect(await screen.findByText("Frank")).toBeInTheDocument();
-    expect(screen.getByText("Sin empezar")).toBeInTheDocument();
+    // Active reader hasn't finished → the inline mark button is offered.
+    const markBtn = await screen.findByRole("button", { name: "Marcar leído" });
+    expect(markBtn).toBeEnabled();
 
-    fireEvent.click(screen.getByRole("button", { name: /Marcar como leído/ }));
+    fireEvent.click(markBtn);
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(
       within(dialog).getByRole("button", { name: /Marcar como leído/ }),

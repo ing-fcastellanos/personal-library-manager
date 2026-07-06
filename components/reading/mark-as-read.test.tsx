@@ -32,6 +32,7 @@ vi.mock("next/link", () => ({
     children: React.ReactNode;
   }) => <a href={href}>{children}</a>,
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/components/books/photo-add", () => ({
   prepareImage: async () => ({ base64: "x", contentType: "image/jpeg" }),
 }));

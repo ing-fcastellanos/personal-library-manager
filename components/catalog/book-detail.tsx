@@ -233,6 +233,9 @@ export function BookDetail({ bookId }: { bookId: string }) {
         <div className="overflow-hidden rounded-xl border bg-card">
           {readers.map((r, i) => {
             const s = statusByReader.get(r.id);
+            const isActive = reader?.id === r.id;
+            // The active reader can mark this book when they haven't finished it.
+            const canMark = isActive && s !== "finished";
             return (
               <div
                 key={r.id}
@@ -246,33 +249,41 @@ export function BookDetail({ bookId }: { bookId: string }) {
                     {r.name.slice(0, 1).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="flex-1 text-sm font-semibold">{r.name}</span>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold",
-                    statusClasses(s),
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{r.name}</p>
+                  {isActive && (
+                    <p className="text-xs text-muted-foreground">
+                      Lector activo
+                    </p>
                   )}
-                >
-                  {s === "finished" ? (
-                    <Check className="size-3" />
-                  ) : (
-                    <Minus className="size-3" />
-                  )}
-                  {s ? STATUS_LABEL[s] : "Sin empezar"}
-                </span>
+                </div>
+                {canMark ? (
+                  <Button
+                    size="sm"
+                    onClick={() => setMarkOpen(true)}
+                    className="shrink-0 gap-1.5"
+                  >
+                    <Check className="size-3.5" />
+                    Marcar leído
+                  </Button>
+                ) : (
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold",
+                      statusClasses(s),
+                    )}
+                  >
+                    {s === "finished" ? (
+                      <Check className="size-3" />
+                    ) : (
+                      <Minus className="size-3" />
+                    )}
+                    {s ? STATUS_LABEL[s] : "Sin empezar"}
+                  </span>
+                )}
               </div>
             );
           })}
-          <div className="bg-background p-3">
-            <Button
-              size="sm"
-              onClick={() => setMarkOpen(true)}
-              className="w-full gap-1.5"
-            >
-              <Check className="size-3.5" />
-              Marcar como leído
-            </Button>
-          </div>
         </div>
       </section>
 
@@ -290,8 +301,8 @@ export function BookDetail({ bookId }: { bookId: string }) {
           onDone={(event) => {
             // Optimistically surface the new "Leído" status without a full reload
             // (and without depending on the reading-events index, #24 resilience).
+            // The sheet stays open showing its success state until the reader acts.
             setEvents((prev) => [event, ...prev]);
-            setMarkOpen(false);
           }}
         />
       )}

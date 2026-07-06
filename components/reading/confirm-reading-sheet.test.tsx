@@ -14,6 +14,7 @@ vi.mock("@/components/ui/use-toast", () => ({
 vi.mock("@/components/auth/write-cta", () => ({
   WriteCta: () => <button type="button">Iniciar sesión</button>,
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 function json(body: unknown, status = 200) {
   return Promise.resolve({
