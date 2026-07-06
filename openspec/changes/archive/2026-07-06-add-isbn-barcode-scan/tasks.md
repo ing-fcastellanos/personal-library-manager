@@ -36,9 +36,9 @@
 - [x] 7.1 Generate the Claude Design prompt: **three** mode-selector layouts (2×2, overflow "más", icon-only) + all scanner states (aiming, detected/confirm, not-found, duplicate, camera-denied/manual, continuous progress), mobile-first, a11y, design tokens (M0)
 - [x] 7.2 Produce the designs in Claude Design and pick a mode-selector layout; validate against the base design system
 - [x] 7.3 Integrate the handoff: map markup to Next components + tokens/styles
-- [ ] 7.4 QA visual responsive + accessibility
+- [x] 7.4 QA visual responsive + accessibility
 
 ## 8. Verify
 
 - [x] 8.1 Lint, typecheck, and the affected test suite green
-- [ ] 8.2 Manual QA on a phone: scan a real ISBN → confirm → added; continuous scanning of several; duplicate handling; manual entry; camera-denied fallback
+- [x] 8.2 Manual QA on a phone: scan a real ISBN → confirm → added; continuous scanning of several; duplicate handling; manual entry; camera-denied fallback

@@ -86,4 +86,27 @@ describe("BookDetail", () => {
       await screen.findByText("No encontramos este libro"),
     ).toBeInTheDocument();
   });
+
+  it("stays resilient when copies/reading-events 500 (does not crash)", async () => {
+    // A missing Firestore index surfaces as a 500 returning `{"error":"internal"}`.
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies"))
+        return jsonResponse({ error: "internal" }, false);
+      if (url.endsWith("/reading-events"))
+        return jsonResponse({ error: "internal" }, false);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    // The book still renders; the failed lists degrade to empty, not a crash.
+    expect(
+      await screen.findByRole("heading", { name: "El nombre del viento" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Ejemplares · 0/)).toBeInTheDocument();
+    expect(screen.getByText("Sin ejemplares.")).toBeInTheDocument();
+    expect(screen.getAllByText("Sin empezar")).toHaveLength(2); // both readers
+  });
 });

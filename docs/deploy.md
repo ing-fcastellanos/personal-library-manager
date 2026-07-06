@@ -78,6 +78,24 @@ gcloud firestore databases list --format="value(name)"
 
 A fresh database is empty — seed any initial data (e.g. readers) separately.
 
+### Deploy the composite indexes (required)
+
+Server queries that combine an equality filter with an `orderBy` on another field (e.g.
+`readingEvents where bookId == … orderBy createdAt`, and the `copies` list) need **composite
+indexes**. They are declared in `firebase/firestore.indexes.json` but the emulator does not
+enforce them, so a missing index only surfaces in prod as a `500` (`FAILED_PRECONDITION:
+the query requires an index`) — e.g. the book detail page failing to load its reading
+events. Deploy them once (and again whenever the index file changes):
+
+```powershell
+npx firebase login   # first time only (opens a browser)
+npx firebase deploy --only firestore:indexes,firestore:rules --project $PROJECT_ID
+```
+
+Index builds take a few minutes; watch Firebase console → Firestore → Indexes until they are
+**Enabled**. (Rules are deployed too for completeness — the app is server-mediated, so the
+Admin SDK bypasses them, but keeping them in sync is good hygiene.)
+
 ## 2c. Firebase Authentication — enable email-link sign-in
 
 Login is a passwordless **email link** (Firebase Auth). Two console settings are required,
