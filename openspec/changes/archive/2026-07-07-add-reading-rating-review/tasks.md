@@ -31,4 +31,4 @@
 - [x] 6.1 Generate the specific Claude Design prompt for the rating + review UI: star control states (empty/hover/selected/read-only/focus), review textarea, capture-vs-edit, detail display, mobile-first, accessibility, M0 tokens.
 - [x] 6.2 Produce the design in Claude Design and validate against the base design system.
 - [x] 6.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
-- [ ] 6.4 QA: visual responsive + accessibility pass.
+- [x] 6.4 QA: visual responsive + accessibility pass.
