@@ -18,6 +18,8 @@ import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent } from "@/lib/types/reading-event";
 import type { Reader } from "@/lib/types/reader";
 import { KpiCard } from "./kpi-card";
+import { RecentReads } from "./recent-reads";
+import { ReaderTrends } from "./reader-trends";
 import { computeKpis, type Kpis, type PerReaderStat } from "./dashboard-stats";
 
 /**
@@ -95,6 +97,8 @@ export function Dashboard() {
           {kpis.perReader.length > 0 && (
             <PerReaderList perReader={kpis.perReader} />
           )}
+          <RecentReads events={data!.events} readers={data!.readers} />
+          <ReaderTrends events={data!.events} readers={data!.readers} />
         </div>
       )}
     </div>

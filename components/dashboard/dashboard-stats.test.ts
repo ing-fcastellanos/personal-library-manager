@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeKpis } from "./dashboard-stats";
+import { computeKpis, recentReads, readerTrend } from "./dashboard-stats";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent } from "@/lib/types/reading-event";
@@ -148,5 +148,123 @@ describe("computeKpis", () => {
       { readerId: "r1", name: "Frank", finished: 2 },
       { readerId: "r2", name: "Dani", finished: 0 },
     ]);
+  });
+});
+
+describe("recentReads", () => {
+  it("returns finished events newest-first, sliced to n", () => {
+    const events = [
+      event({ id: "e1", dateFinished: "2026-01-10" }),
+      event({ id: "e2", dateFinished: "2026-03-05" }),
+      event({ id: "e3", dateFinished: "2026-02-01" }),
+      event({ id: "e4", status: "reading", dateFinished: "2026-04-01" }),
+    ];
+    expect(recentReads(events, 2).map((e) => e.id)).toEqual(["e2", "e3"]);
+  });
+
+  it("returns empty with no finished events", () => {
+    expect(recentReads([event({ status: "reading" })])).toEqual([]);
+  });
+});
+
+describe("readerTrend", () => {
+  const now = new Date("2026-07-15T12:00:00");
+
+  it("returns null/zero stats for a reader with no finished readings", () => {
+    const t = readerTrend([], "r1", now);
+    expect(t).toEqual({
+      finished: 0,
+      activeMonths: 0,
+      booksPerMonth: null,
+      currentStreak: 0,
+      longestStreak: 0,
+      avgDaysBetween: null,
+    });
+  });
+
+  it("computes books/month across active months", () => {
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: "2026-05-01" }),
+      event({ id: "e2", readerId: "r1", dateFinished: "2026-05-15" }),
+      event({ id: "e3", readerId: "r1", dateFinished: "2026-06-01" }),
+    ];
+    const t = readerTrend(events, "r1", now);
+    expect(t.finished).toBe(3);
+    expect(t.activeMonths).toBe(2); // 2026-05, 2026-06
+    expect(t.booksPerMonth).toBeCloseTo(1.5);
+  });
+
+  it("computes an active current streak up to the present month", () => {
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: "2026-05-10" }),
+      event({ id: "e2", readerId: "r1", dateFinished: "2026-06-10" }),
+      event({ id: "e3", readerId: "r1", dateFinished: "2026-07-01" }), // current month
+    ];
+    const t = readerTrend(events, "r1", now); // now = 2026-07
+    expect(t.currentStreak).toBe(3);
+    expect(t.longestStreak).toBe(3);
+  });
+
+  it("shows a broken streak (0) when nothing finished in the current month", () => {
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: "2026-05-10" }),
+      event({ id: "e2", readerId: "r1", dateFinished: "2026-06-10" }),
+      // nothing in 2026-07 (now)
+    ];
+    const t = readerTrend(events, "r1", now);
+    expect(t.currentStreak).toBe(0);
+    expect(t.longestStreak).toBe(2); // the May-June run still counts historically
+  });
+
+  it("tracks a longest streak that differs from the (broken) current one", () => {
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: "2026-01-01" }),
+      event({ id: "e2", readerId: "r1", dateFinished: "2026-02-01" }),
+      event({ id: "e3", readerId: "r1", dateFinished: "2026-03-01" }),
+      event({ id: "e4", readerId: "r1", dateFinished: "2026-05-01" }), // gap in April
+    ];
+    const t = readerTrend(events, "r1", now); // now = July, nothing since May
+    expect(t.currentStreak).toBe(0);
+    expect(t.longestStreak).toBe(3); // Jan-Feb-Mar
+  });
+
+  it("computes the average days between consecutive finishes", () => {
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: "2026-01-01" }),
+      event({ id: "e2", readerId: "r1", dateFinished: "2026-01-11" }),
+      event({ id: "e3", readerId: "r1", dateFinished: "2026-01-31" }),
+    ];
+    const t = readerTrend(events, "r1", now);
+    // gaps: 10 days, 20 days -> avg 15
+    expect(t.avgDaysBetween).toBeCloseTo(15);
+  });
+
+  it("returns null avgDaysBetween with fewer than 2 finished readings", () => {
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: "2026-01-01" }),
+    ];
+    expect(readerTrend(events, "r1", now).avgDaysBetween).toBeNull();
+  });
+
+  it("collapses same-day finishes to a 0-day gap without error", () => {
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: "2026-01-01" }),
+      event({ id: "e2", readerId: "r1", dateFinished: "2026-01-01" }),
+    ];
+    expect(readerTrend(events, "r1", now).avgDaysBetween).toBe(0);
+  });
+
+  it("only counts the given reader's finished events", () => {
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: "2026-07-01" }),
+      event({ id: "e2", readerId: "r2", dateFinished: "2026-07-05" }),
+      event({
+        id: "e3",
+        readerId: "r1",
+        status: "reading",
+        dateFinished: "2026-07-10",
+      }),
+    ];
+    expect(readerTrend(events, "r1", now).finished).toBe(1);
   });
 });
