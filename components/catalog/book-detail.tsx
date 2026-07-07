@@ -12,6 +12,8 @@ import { CoverPreview } from "@/components/books/enrich-skeleton";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ConfirmReadingSheet } from "@/components/reading/confirm-reading-sheet";
 import { StarRating } from "@/components/reading/star-rating";
+import { ReadingEventCard } from "@/components/reading/reading-event-card";
+import { formatReadingDate } from "@/components/reading/history";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
@@ -29,17 +31,6 @@ const STATUS_LABEL: Record<ReadingStatus, string> = {
   reading: "Leyendo",
   abandoned: "Abandonado",
 };
-
-/** Formats an ISO `YYYY-MM-DD` finish date as es-AR "6 jul 2026" (local, no TZ shift). */
-function formatFinishedDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat("es-AR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(d);
-}
 
 export function BookDetail({ bookId }: { bookId: string }) {
   const { reader } = useAuth();
@@ -116,6 +107,9 @@ export function BookDetail({ bookId }: { bookId: string }) {
   const eventByReader = new Map<string, ReadingEvent>();
   for (const e of events)
     if (!eventByReader.has(e.readerId)) eventByReader.set(e.readerId, e);
+
+  const readerName = new Map<string, string>();
+  readers.forEach((r) => readerName.set(r.id, r.name));
 
   const meta = [
     ["Editorial", book.publisher],
@@ -249,7 +243,7 @@ export function BookDetail({ bookId }: { bookId: string }) {
             // undated); other statuses show their label; no event → "Sin empezar".
             let subtitle: string;
             if (s === "finished" && ev?.dateFinished) {
-              subtitle = `Finalizado el ${formatFinishedDate(ev.dateFinished)}`;
+              subtitle = `Finalizado el ${formatReadingDate(ev.dateFinished)}`;
               if (ev.rating == null && !ev.review)
                 subtitle += " · sin calificación";
             } else if (s === "finished") {
@@ -336,6 +330,24 @@ export function BookDetail({ bookId }: { bookId: string }) {
           })}
         </div>
       </section>
+
+      {/* Historial de lecturas (#26): the full log, shown when it adds beyond the
+          per-reader summary above — i.e. when some reader has more than one reading. */}
+      {events.length > eventByReader.size && (
+        <section>
+          <SectionTitle>Historial de lecturas</SectionTitle>
+          <div className="flex flex-col gap-3">
+            {events.map((ev) => (
+              <ReadingEventCard
+                key={ev.id}
+                event={ev}
+                showBook={false}
+                readerName={readerName.get(ev.readerId)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {sheet && (
         <ConfirmReadingSheet
