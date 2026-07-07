@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  :root {
+    --background:#f7f3ec; --foreground:#2b2620;
+    --card:#fffdf8; --card-foreground:#2b2620;
+    --popover:#fffdf8; --popover-foreground:#2b2620;
+    --primary:#6f5436; --primary-foreground:#faf6ef;
+    --secondary:#ece4d6; --secondary-foreground:#3a3228;
+    --muted:#efe8db; --muted-foreground:#756c5d;
+    --accent:#e8dcc6; --accent-foreground:#5c4a30;
+    --destructive:#b3261e; --destructive-foreground:#ffffff; --destructive-bg:#f6e0dd;
+    --success:#3f7d4e; --success-foreground:#ffffff; --success-bg:#dfeede;
+    --warning:#c98a1a; --warning-bg:#f6e9cf;
+    --border:#e2d9c8; --input:#e2d9c8; --ring:#6f5436;
+    --radius:0.625rem;
+  }
+  [data-theme="dark"] {
+    --background:#211d18; --foreground:#ece5d8;
+    --card:#2a251f; --card-foreground:#ece5d8;
+    --popover:#2a251f; --popover-foreground:#ece5d8;
+    --primary:#c9a87c; --primary-foreground:#26211b;
+    --secondary:#36302a; --secondary-foreground:#ece5d8;
+    --muted:#332e28; --muted-foreground:#a89e8d;
+    --accent:#3d352c; --accent-foreground:#ece5d8;
+    --destructive:#e5484d; --destructive-foreground:#ffffff; --destructive-bg:#3a221f;
+    --success:#67b97a; --success-foreground:#1c2a20; --success-bg:#23311f;
+    --warning:#e0b257; --warning-bg:#37301f;
+    --border:#3a342c; --input:#3a342c; --ring:#c9a87c;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--background); color:var(--foreground); }
+  a { color:var(--primary); text-decoration:none; }
+  a:hover { color:var(--accent-foreground); text-decoration:underline; }
+  @keyframes dsspin { to { transform:rotate(360deg); } }
+  @keyframes dspop { from { transform:scale(.9); opacity:0; } to { transform:scale(1); opacity:1; } }
+  @keyframes dsskel { 0%{ opacity:.55; } 50%{ opacity:1; } 100%{ opacity:.55; } }
+  .ds-sb::-webkit-scrollbar { width:7px; }
+  .ds-sb::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+</style>
+</helmet>
+<div data-theme="{{ themeAttr }}" style="font-family:system-ui,-apple-system,sans-serif;background:var(--background);color:var(--foreground);min-height:100vh;-webkit-font-smoothing:antialiased;">
+
+  <!-- header -->
+  <div style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;padding:14px 22px;background:color-mix(in srgb, var(--background) 86%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:34px;height:34px;border-radius:calc(var(--radius) - 2px);background:var(--primary);color:var(--primary-foreground);display:grid;place-items:center;flex:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18.7 8 13 13.5l-3-3L6 14.5"></path></svg>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:650;letter-spacing:-.01em;">Leído · Historial</div>
+        <div style="font-size:11px;color:var(--muted-foreground);">M4 · tabs + timeline global + historial por libro</div>
+      </div>
+    </div>
+    <button aria-label="Cambiar tema" onClick="{{ toggleTheme }}" style="margin-left:auto;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--foreground);border-radius:var(--radius);transition:all .15s;" style-hover="background:var(--accent);">
+      <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if>
+      <sc-if value="{{ notDark }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path></svg></sc-if>
+    </button>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:24px 22px 110px;">
+
+    <!-- scene switch -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;">
+      <sc-for list="{{ scenes }}" as="s" hint-placeholder-count="5">
+        <button aria-selected="{{ s.active }}" onClick="{{ s.go }}" style="cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;border:1.5px solid {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};transition:all .15s;display:flex;align-items:center;gap:7px;">
+          <span style="width:18px;height:18px;border-radius:999px;background:{{ s.numBg }};color:{{ s.numFg }};display:grid;place-items:center;font-size:10px;font-weight:700;">{{ s.num }}</span>{{ s.label }}
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:30px;align-items:flex-start;">
+
+      <!-- PHONE -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted-foreground);margin-bottom:10px;">Mobile · ~360px</div>
+        <div style="width:360px;max-width:100%;height:760px;border:9px solid var(--foreground);border-radius:42px;background:var(--background);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 52px -18px rgba(0,0,0,.42);position:relative;">
+
+          <!-- top bar -->
+          <div style="flex:none;display:flex;align-items:center;gap:10px;padding:15px 16px 0;background:var(--background);">
+            <sc-if value="{{ isBookDetail }}" hint-placeholder-val="{{ false }}">
+              <button aria-label="Volver" style="width:34px;height:34px;display:grid;place-items:center;border:0;background:transparent;color:var(--foreground);border-radius:var(--radius);cursor:pointer;" style-hover="background:var(--accent);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+            </sc-if>
+            <div style="font-size:19px;font-weight:750;letter-spacing:-.015em;flex:1;">{{ screenTitle }}</div>
+          </div>
+
+          <!-- ===== TABS (Part A) — only in /leido scenes ===== -->
+          <sc-if value="{{ isLeido }}" hint-placeholder-val="{{ true }}">
+            <div role="tablist" aria-label="Secciones de Leído" style="flex:none;display:flex;gap:4px;margin:14px 16px 0;padding:4px;background:var(--muted);border-radius:12px;">
+              <button role="tab" aria-selected="{{ regSelected }}" onClick="{{ goRegistrar }}" style="flex:1;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:{{ regWeight }};height:44px;border:0;border-radius:9px;background:{{ regBg }};color:{{ regFg }};box-shadow:{{ regShadow }};display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Registrar
+              </button>
+              <button role="tab" aria-selected="{{ histSelected }}" onClick="{{ goHistorial }}" style="flex:1;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:{{ histWeight }};height:44px;border:0;border-radius:9px;background:{{ histBg }};color:{{ histFg }};box-shadow:{{ histShadow }};display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18.7 8 13 13.5l-3-3L6 14.5"></path></svg>Historial
+              </button>
+            </div>
+          </sc-if>
+
+          <div class="ds-sb" role="tabpanel" style="flex:1;overflow-y:auto;padding:14px 16px 18px;display:flex;flex-direction:column;">
+
+            <!-- ============ REGISTRAR tab (existing flow, condensed) ============ -->
+            <sc-if value="{{ isRegistrar }}" hint-placeholder-val="{{ false }}">
+              <div role="radiogroup" aria-label="Método" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <button role="radio" aria-checked="true" style="cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border:1.5px solid var(--primary);border-radius:13px;background:var(--accent);color:var(--accent-foreground);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span style="font-size:14px;font-weight:750;">Buscar</span></button>
+                <button role="radio" aria-checked="false" style="cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;height:54px;border:1.5px solid var(--border);border-radius:13px;background:var(--card);color:var(--muted-foreground);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="4"></circle></svg><span style="font-size:14px;font-weight:600;">Por foto</span></button>
+              </div>
+              <div style="position:relative;margin-top:14px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                <input aria-label="Buscá por título o autor" placeholder="Buscá por título o autor" style="width:100%;font-family:inherit;font-size:15px;height:48px;padding:0 14px 0 40px;border:1px solid var(--input);border-radius:var(--radius);background:var(--card);color:var(--foreground);outline:none;" style-focus="border-color:var(--ring);outline:2px solid var(--ring);outline-offset:2px;" />
+              </div>
+              <div style="margin-top:18px;font-size:12.5px;color:var(--muted-foreground);line-height:1.55;padding:12px;border:1px dashed var(--border);border-radius:12px;">La pestaña <strong style="color:var(--foreground);">Registrar</strong> conserva el flujo de marcar como leído (#24 · #25). Sin cambios acá — el trabajo nuevo vive en <strong style="color:var(--foreground);">Historial</strong>.</div>
+            </sc-if>
+
+            <!-- ============ HISTORIAL tab (Part B) ============ -->
+            <sc-if value="{{ isHistorial }}" hint-placeholder-val="{{ true }}">
+
+              <!-- filters row -->
+              <div style="display:flex;flex-direction:column;gap:9px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);flex:1;">Filtros</div>
+                  <sc-if value="{{ filtersActive }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ clearFilters }}" style="display:inline-flex;align-items:center;gap:5px;font-family:inherit;font-size:12.5px;font-weight:650;color:var(--primary);background:transparent;border:0;cursor:pointer;padding:4px 2px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>Limpiar</button>
+                  </sc-if>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                  <!-- Lector -->
+                  <div style="flex:1;min-width:140px;">
+                    <label for="ds-f-reader" style="font-size:11.5px;font-weight:600;color:var(--muted-foreground);display:block;margin-bottom:5px;">Lector</label>
+                    <div style="position:relative;">
+                      <select id="ds-f-reader" onChange="{{ onReaderChange }}" style="width:100%;appearance:none;font-family:inherit;font-size:13.5px;font-weight:550;height:44px;padding:0 34px 0 12px;border:1px solid var(--input);border-radius:var(--radius);background:var(--card);color:var(--foreground);cursor:pointer;outline:none;" style-focus="border-color:var(--ring);outline:2px solid var(--ring);outline-offset:2px;">
+                        <option>Todos los lectores</option><option>Sofía</option><option>Mateo</option><option>Valen</option>
+                      </select>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;"><path d="m6 9 6 6 6-6"></path></svg>
+                    </div>
+                  </div>
+                  <!-- Calificación -->
+                  <div style="flex:1;min-width:140px;">
+                    <label for="ds-f-rating" style="font-size:11.5px;font-weight:600;color:var(--muted-foreground);display:block;margin-bottom:5px;">Calificación</label>
+                    <div style="position:relative;">
+                      <select id="ds-f-rating" style="width:100%;appearance:none;font-family:inherit;font-size:13.5px;font-weight:550;height:44px;padding:0 34px 0 12px;border:1px solid var(--input);border-radius:var(--radius);background:var(--card);color:var(--foreground);cursor:pointer;outline:none;" style-focus="border-color:var(--ring);outline:2px solid var(--ring);outline-offset:2px;">
+                        <option>Cualquier calificación</option><option>5 ★</option><option>4 ★</option><option>3 ★</option><option>2 ★</option><option>1 ★</option>
+                      </select>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;"><path d="m6 9 6 6 6-6"></path></svg>
+                    </div>
+                  </div>
+                  <!-- Desde -->
+                  <div style="flex:1;min-width:140px;">
+                    <label for="ds-f-from" style="font-size:11.5px;font-weight:600;color:var(--muted-foreground);display:block;margin-bottom:5px;">Desde</label>
+                    <input id="ds-f-from" type="date" max="2026-07-06" style="width:100%;font-family:inherit;font-size:13.5px;height:44px;padding:0 11px;border:1px solid var(--input);border-radius:var(--radius);background:var(--card);color:var(--muted-foreground);outline:none;" style-focus="border-color:var(--ring);outline:2px solid var(--ring);outline-offset:2px;" />
+                  </div>
+                  <!-- Hasta -->
+                  <div style="flex:1;min-width:140px;">
+                    <label for="ds-f-to" style="font-size:11.5px;font-weight:600;color:var(--muted-foreground);display:block;margin-bottom:5px;">Hasta</label>
+                    <input id="ds-f-to" type="date" max="2026-07-06" style="width:100%;font-family:inherit;font-size:13.5px;height:44px;padding:0 11px;border:1px solid var(--input);border-radius:var(--radius);background:var(--card);color:var(--muted-foreground);outline:none;" style-focus="border-color:var(--ring);outline:2px solid var(--ring);outline-offset:2px;" />
+                  </div>
+                </div>
+              </div>
+
+              <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+
+              <!-- LOADING -->
+              <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+                <div role="status" style="display:flex;align-items:center;gap:10px;padding:4px 2px 12px;color:var(--muted-foreground);font-size:13.5px;font-weight:600;">
+                  <span aria-hidden="true" style="width:18px;height:18px;border-radius:999px;border:2.4px solid var(--border);border-top-color:var(--primary);display:inline-block;animation:dsspin .7s linear infinite;"></span>Cargando historial…
+                </div>
+                <div style="display:flex;flex-direction:column;gap:12px;">
+                  <sc-for list="{{ skeletons }}" as="k" hint-placeholder-count="3">
+                    <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:14px;display:flex;gap:12px;">
+                      <div style="width:46px;height:66px;border-radius:8px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+                      <div style="flex:1;"><div style="height:14px;width:70%;border-radius:6px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div><div style="height:11px;width:45%;border-radius:6px;background:var(--muted);margin-top:9px;animation:dsskel 1.4s ease-in-out infinite;"></div><div style="height:11px;width:60%;border-radius:6px;background:var(--muted);margin-top:14px;animation:dsskel 1.4s ease-in-out infinite;"></div></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <!-- EMPTY (no readings) -->
+              <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 20px;">
+                  <div style="width:60px;height:60px;border-radius:18px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18.7 8 13 13.5l-3-3L6 14.5"></path></svg></div>
+                  <div style="font-size:16px;font-weight:750;margin-top:18px;">Todavía no hay lecturas</div>
+                  <div style="font-size:13px;color:var(--muted-foreground);line-height:1.5;margin-top:8px;max-width:250px;">Cuando marques un libro como leído desde <strong style="color:var(--foreground);">Registrar</strong>, va a aparecer acá.</div>
+                  <button onClick="{{ goRegistrar }}" style="margin-top:20px;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:700;height:48px;padding:0 20px;border:0;border-radius:14px;background:var(--primary);color:var(--primary-foreground);display:inline-flex;align-items:center;gap:8px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Registrar una lectura</button>
+                </div>
+              </sc-if>
+
+              <!-- NO MATCHES -->
+              <sc-if value="{{ isNoMatches }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:48px 20px;">
+                  <div style="width:60px;height:60px;border-radius:18px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3M8 11h6"></path></svg></div>
+                  <div style="font-size:15px;font-weight:750;margin-top:18px;line-height:1.4;">No hay lecturas para esos filtros.</div>
+                  <button onClick="{{ clearFilters }}" style="margin-top:18px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:700;height:46px;padding:0 18px;border:1px solid var(--border);border-radius:13px;background:var(--card);color:var(--foreground);display:inline-flex;align-items:center;gap:8px;" style-hover="background:var(--accent);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>Limpiar filtros</button>
+                </div>
+              </sc-if>
+
+              <!-- LIST -->
+              <sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+                <ul role="list" style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;">
+                  <sc-for list="{{ events }}" as="e" hint-placeholder-count="4">
+                    <li style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:14px;">
+                      <div style="display:flex;gap:12px;">
+                        <div style="position:relative;width:46px;height:66px;flex:none;border-radius:8px;overflow:hidden;background:{{ e.cover }};box-shadow:0 5px 12px -6px rgba(0,0,0,.5);"><div style="position:absolute;left:0;top:0;bottom:0;width:2.5px;background:rgba(0,0,0,.16);"></div></div>
+                        <div style="flex:1;min-width:0;">
+                          <div style="font-size:15px;font-weight:700;line-height:1.2;">{{ e.title }}</div>
+                          <div style="font-size:12.5px;color:var(--muted-foreground);margin-top:2px;">{{ e.authors }}</div>
+                          <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--muted-foreground);">
+                            <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:20px;height:20px;border-radius:999px;background:{{ e.avatarBg }};color:{{ e.avatarFg }};display:grid;place-items:center;font-size:9px;font-weight:750;">{{ e.initials }}</span><strong style="color:var(--foreground);font-weight:650;">{{ e.reader }}</strong></span>
+                            <span aria-hidden="true">·</span><span>{{ e.date }}</span>
+                          </div>
+                        </div>
+                        <sc-if value="{{ e.editable }}" hint-placeholder-val="{{ false }}">
+                          <button onClick="{{ e.edit }}" aria-label="Editar tu lectura" style="flex:none;width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--border);border-radius:11px;background:var(--card);color:var(--foreground);cursor:pointer;" style-hover="background:var(--accent);color:var(--accent-foreground);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"></path></svg></button>
+                        </sc-if>
+                      </div>
+                      <sc-if value="{{ e.hasRating }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex;align-items:center;gap:7px;margin-top:11px;">
+                          <div aria-label="{{ e.starAria }}" style="display:inline-flex;gap:3px;">
+                            <sc-for list="{{ e.stars }}" as="st" hint-placeholder-count="5"><span aria-hidden="true" style="color:{{ st.color }};display:grid;place-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="{{ st.fill }}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2 2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"></path></svg></span></sc-for>
+                          </div>
+                          <span style="font-size:12.5px;font-weight:700;color:var(--foreground);">{{ e.rating }}</span><span style="font-size:12.5px;color:var(--muted-foreground);">/ 5</span>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ e.hasReview }}" hint-placeholder-val="{{ true }}">
+                        <div style="font-size:13px;color:var(--muted-foreground);line-height:1.55;margin-top:9px;">{{ e.review }}</div>
+                      </sc-if>
+                    </li>
+                  </sc-for>
+                </ul>
+              </sc-if>
+
+            </sc-if>
+
+            <!-- ============ BOOK DETAIL (Part C) ============ -->
+            <sc-if value="{{ isBookDetail }}" hint-placeholder-val="{{ false }}">
+              <!-- book header -->
+              <div style="display:flex;gap:14px;padding:2px 0 16px;">
+                <div style="position:relative;width:76px;height:112px;flex:none;border-radius:10px;overflow:hidden;background:linear-gradient(155deg,#3f5a4a,#8fae94);box-shadow:0 10px 22px -10px rgba(0,0,0,.5);"><div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(0,0,0,.16);"></div></div>
+                <div style="flex:1;min-width:0;padding-top:4px;">
+                  <div style="font-size:18px;font-weight:760;line-height:1.2;letter-spacing:-.01em;">Ficciones</div>
+                  <div style="font-size:13.5px;color:var(--muted-foreground);margin-top:4px;">Jorge Luis Borges</div>
+                </div>
+              </div>
+
+              <!-- existing per-reader Lectura summary -->
+              <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground);margin-bottom:10px;">Lectura</div>
+              <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:14px;">
+                <div style="display:flex;align-items:center;gap:11px;">
+                  <div style="width:36px;height:36px;flex:none;border-radius:999px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;font-size:13px;font-weight:750;">SF</div>
+                  <div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:7px;"><span style="font-size:14px;font-weight:650;">Sofía</span><span style="font-size:10.5px;font-weight:700;color:var(--muted-foreground);background:var(--muted);padding:2px 7px;border-radius:999px;">Vos</span></div><div style="font-size:12px;color:var(--muted-foreground);margin-top:1px;">Última lectura · 6 jul 2026</div></div>
+                  <button onClick="{{ openEdit }}" aria-label="Editar tu lectura" style="flex:none;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;font-family:inherit;font-size:12.5px;font-weight:650;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--foreground);cursor:pointer;" style-hover="background:var(--accent);color:var(--accent-foreground);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z"></path></svg>Editar</button>
+                </div>
+              </div>
+
+              <!-- Historial de lecturas (re-reads exist) -->
+              <div style="display:flex;align-items:center;gap:8px;margin:22px 0 10px;">
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground);">Historial de lecturas</div>
+                <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--secondary);color:var(--secondary-foreground);">{{ bookHistoryCount }}</span>
+              </div>
+              <ul role="list" style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;">
+                <sc-for list="{{ bookHistory }}" as="e" hint-placeholder-count="3">
+                  <li style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:14px;">
+                    <div style="display:flex;align-items:center;gap:11px;">
+                      <div style="width:34px;height:34px;flex:none;border-radius:999px;background:{{ e.avatarBg }};color:{{ e.avatarFg }};display:grid;place-items:center;font-size:12px;font-weight:750;">{{ e.initials }}</div>
+                      <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:650;">{{ e.reader }}</div><div style="font-size:12px;color:var(--muted-foreground);margin-top:1px;">{{ e.date }}</div></div>
+                    </div>
+                    <sc-if value="{{ e.hasRating }}" hint-placeholder-val="{{ true }}">
+                      <div style="display:flex;align-items:center;gap:7px;margin-top:10px;padding-left:45px;">
+                        <div aria-label="{{ e.starAria }}" style="display:inline-flex;gap:3px;">
+                          <sc-for list="{{ e.stars }}" as="st" hint-placeholder-count="5"><span aria-hidden="true" style="color:{{ st.color }};display:grid;place-items:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="{{ st.fill }}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m12 2 2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"></path></svg></span></sc-for>
+                        </div>
+                        <span style="font-size:12.5px;font-weight:700;color:var(--foreground);">{{ e.rating }}</span><span style="font-size:12.5px;color:var(--muted-foreground);">/ 5</span>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ e.hasReview }}" hint-placeholder-val="{{ true }}">
+                      <div style="font-size:13px;color:var(--muted-foreground);line-height:1.55;margin-top:8px;padding-left:45px;">{{ e.review }}</div>
+                    </sc-if>
+                  </li>
+                </sc-for>
+              </ul>
+              <div style="font-size:12px;color:var(--muted-foreground);line-height:1.5;margin-top:14px;">Solo lectura: la edición vive en el resumen de arriba o en el timeline global.</div>
+            </sc-if>
+
+          </div>
+
+          <!-- edit sheet overlay (from #25) -->
+          <sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;justify-content:flex-end;">
+              <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(20,16,11,.42);animation:dspop .2s ease;"></div>
+              <div role="dialog" aria-labelledby="ds-edit-title" aria-modal="true" class="ds-sb" style="position:relative;z-index:1;background:var(--popover);color:var(--popover-foreground);border-top-left-radius:22px;border-top-right-radius:22px;padding:14px 18px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -18px 40px -18px rgba(0,0,0,.5);max-height:90%;overflow-y:auto;">
+                <div aria-hidden="true" style="width:38px;height:4px;border-radius:999px;background:var(--border);margin:0 auto 14px;"></div>
+                <div style="display:flex;gap:13px;align-items:center;">
+                  <div style="position:relative;width:44px;height:64px;flex:none;border-radius:8px;overflow:hidden;background:linear-gradient(155deg,#7a5c3a,#c9a87c);"><div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:rgba(0,0,0,.16);"></div></div>
+                  <div style="flex:1;min-width:0;"><div id="ds-edit-title" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);">Editar lectura</div><div style="font-size:16px;font-weight:750;margin-top:3px;">{{ editTitle }}</div></div>
+                  <button aria-label="Cancelar" onClick="{{ closeSheet }}" style="flex:none;width:36px;height:36px;display:grid;place-items:center;border:0;background:var(--muted);color:var(--muted-foreground);border-radius:999px;cursor:pointer;" style-hover="background:var(--accent);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+                </div>
+                <div style="font-size:13px;color:var(--muted-foreground);line-height:1.55;margin-top:16px;padding:14px;border:1px dashed var(--border);border-radius:12px;">La ficha de edición con estrellas + reseña es la de <strong style="color:var(--foreground);">#25</strong>. Acá se abre en modo editar con los valores de esta lectura precargados.</div>
+                <button onClick="{{ closeSheet }}" style="margin-top:16px;width:100%;cursor:pointer;font-family:inherit;font-size:15.5px;font-weight:700;height:52px;border:0;border-radius:14px;background:var(--primary);color:var(--primary-foreground);display:inline-flex;align-items:center;justify-content:center;gap:9px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>Guardar cambios</button>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+
+      <!-- SIDE NOTES -->
+      <div style="flex:1;min-width:290px;max-width:430px;display:flex;flex-direction:column;gap:18px;">
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:8px;">{{ sceneNum }} · {{ sceneTitle }}</div>
+          <div style="font-size:13.5px;line-height:1.6;color:var(--muted-foreground);">{{ sceneDesc }}</div>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">Dato · ReadingEvent</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--muted-foreground);">Cada entrada trae un snapshot denormalizado del libro (título / autores / tapa), así la tarjeta lo muestra sin lookups extra. Timeline global: más nuevas primero. La fila del lector activo expone «Editar» (→ ficha #25 en modo edición); las demás son solo lectura.</div>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">A11y &amp; copy</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--muted-foreground);">Tabs = <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">role="tab"</code> / <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">aria-selected</code>, navegables por teclado. Filtros con label real. Estrellas solo-lectura exponen <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">aria-label="N de 5 estrellas"</code>. El timeline es una <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">list</code>. Calificación por estrellas + valor, no solo color. Foco visible; toques ≥44px.</div>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">Fuera de alcance</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--muted-foreground);">Stats / KPIs / gráficos (dashboard, M5), export CSV y Goodreads (M7), y filtrado o paginación del lado del servidor.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:1180}}">
+class Component extends DCLogic {
+  state = {
+    theme: "light",
+    scene: "historial-list",  // registrar | historial-list | historial-loading | historial-empty | historial-nomatch | book-detail
+    filtersActive: false,
+    sheetOpen: false,
+    editTitle: "Rayuela"
+  };
+
+  componentDidMount() {
+    let t = this.state.theme;
+    try {
+      const saved = localStorage.getItem("readhist_theme");
+      if (saved === "dark" || saved === "light") { t = saved; this.setState({ theme: saved }); }
+    } catch (e) {}
+    this._applyTheme(t);
+  }
+
+  _applyTheme = (t) => { try { document.documentElement.setAttribute("data-theme", t); } catch (e) {} };
+
+  toggleTheme = () => {
+    const t = this.state.theme === "dark" ? "light" : "dark";
+    this.setState({ theme: t });
+    this._applyTheme(t);
+    try { localStorage.setItem("readhist_theme", t); } catch (e) {}
+  };
+
+  goRegistrar = () => this.setState({ scene: "registrar" });
+  goHistorial = () => this.setState({ scene: "historial-list" });
+  onReaderChange = () => this.setState({ filtersActive: true });
+  clearFilters = () => this.setState({ filtersActive: false, scene: "historial-list" });
+  openEdit = (title) => this.setState({ sheetOpen: true, editTitle: typeof title === "string" ? title : this.state.editTitle });
+  closeSheet = () => this.setState({ sheetOpen: false });
+
+  starRow(filled) {
+    return [1,2,3,4,5].map((i) => ({
+      color: i <= filled ? "var(--warning)" : "var(--muted-foreground)",
+      fill: i <= filled ? "currentColor" : "none"
+    }));
+  }
+
+  renderVals() {
+    const S = this.state;
+    const isDark = S.theme === "dark";
+
+    const AV = {
+      Sofía: { bg: "var(--accent)", fg: "var(--accent-foreground)", initials: "SF" },
+      Mateo: { bg: "var(--secondary)", fg: "var(--secondary-foreground)", initials: "MT" },
+      Valen: { bg: "var(--secondary)", fg: "var(--secondary-foreground)", initials: "VL" }
+    };
+    const starAria = (n) => n + " de 5 estrellas";
+
+    const rawEvents = [
+      { title: "Rayuela", authors: "Julio Cortázar", cover: "linear-gradient(155deg,#7a5c3a,#c9a87c)", reader: "Sofía", date: "6 jul 2026", rating: 4, review: "Una estructura que te obliga a elegir cómo leer. Volvería a empezar por el capítulo 73.", editable: true },
+      { title: "El Aleph", authors: "Jorge Luis Borges", cover: "linear-gradient(155deg,#3f5a4a,#8fae94)", reader: "Mateo", date: "28 jun 2026", rating: 5, review: "Cada relato es un universo. Impecable.", editable: false },
+      { title: "Ficciones", authors: "Jorge Luis Borges", cover: "linear-gradient(155deg,#6b4a5a,#c48fa0)", reader: "Sofía", date: "14 jun 2026", rating: 5, review: "", editable: true },
+      { title: "La invención de Morel", authors: "Adolfo Bioy Casares", cover: "linear-gradient(155deg,#5a4a2f,#b09a6a)", reader: "Valen", date: "2 jun 2026", rating: 0, review: "", editable: false }
+    ];
+    const events = rawEvents.map((e, idx) => {
+      const av = AV[e.reader] || AV.Valen;
+      return {
+        ...e,
+        avatarBg: av.bg, avatarFg: av.fg, initials: av.initials,
+        hasRating: e.rating > 0, hasReview: !!e.review,
+        stars: this.starRow(e.rating), starAria: starAria(e.rating),
+        edit: () => this.openEdit(e.title)
+      };
+    });
+
+    // book detail history (Ficciones: re-reads)
+    const rawBook = [
+      { reader: "Sofía", date: "6 jul 2026 · relectura", rating: 5, review: "Todavía mejor la segunda vez." },
+      { reader: "Sofía", date: "14 jun 2024", rating: 4, review: "Primera lectura — me perdí en «El jardín de senderos que se bifurcan»." },
+      { reader: "Mateo", date: "3 mar 2025", rating: 5, review: "" }
+    ];
+    const bookHistory = rawBook.map((e) => {
+      const av = AV[e.reader] || AV.Valen;
+      return { ...e, avatarBg: av.bg, avatarFg: av.fg, initials: av.initials, hasRating: e.rating > 0, hasReview: !!e.review, stars: this.starRow(e.rating), starAria: starAria(e.rating) };
+    });
+
+    // scene flags
+    const isRegistrar = S.scene === "registrar";
+    const isBookDetail = S.scene === "book-detail";
+    const isLeido = !isBookDetail;
+    const isHistorial = S.scene.indexOf("historial") === 0;
+    const isLoading = S.scene === "historial-loading";
+    const isEmpty = S.scene === "historial-empty";
+    const isNoMatches = S.scene === "historial-nomatch";
+    const isList = S.scene === "historial-list";
+
+    // tab styling
+    const regSel = isRegistrar;
+    const histSel = isHistorial;
+    const tab = (on) => ({
+      bg: on ? "var(--card)" : "transparent",
+      fg: on ? "var(--foreground)" : "var(--muted-foreground)",
+      weight: on ? "750" : "600",
+      shadow: on ? "0 1px 3px rgba(0,0,0,.14)" : "none",
+      sel: on ? "true" : "false"
+    });
+    const rt = tab(regSel), ht = tab(histSel);
+
+    const screenTitle = isBookDetail ? "Detalle del libro" : "Leído";
+
+    // scene switch pills (main-agent nav)
+    const sceneDefs = [
+      { id: "historial-list", num: "B", label: "Timeline" },
+      { id: "historial-loading", num: "L", label: "Cargando" },
+      { id: "historial-empty", num: "∅", label: "Sin lecturas" },
+      { id: "historial-nomatch", num: "0", label: "Sin match" },
+      { id: "book-detail", num: "C", label: "Detalle libro" }
+    ];
+    const scenes = sceneDefs.map((d) => {
+      const active = d.id === S.scene;
+      return {
+        ...d, active,
+        go: () => this.setState({ scene: d.id, sheetOpen: false, filtersActive: d.id === "historial-nomatch" ? true : S.filtersActive }),
+        bg: active ? "var(--primary)" : "var(--card)",
+        fg: active ? "var(--primary-foreground)" : "var(--foreground)",
+        border: active ? "var(--primary)" : "var(--border)",
+        numBg: active ? "color-mix(in srgb,var(--primary-foreground) 22%,transparent)" : "var(--muted)",
+        numFg: active ? "var(--primary-foreground)" : "var(--muted-foreground)"
+      };
+    });
+
+    const descs = {
+      "registrar": "Pestaña «Registrar» = el flujo existente de marcar como leído (#24 · #25), sin cambios. El trabajo de M4 vive en «Historial».",
+      "historial-list": "Timeline global (más nuevas primero). Fila de filtros (Lector, Calificación, Desde/Hasta + «Limpiar» cuando hay filtros). Cada tarjeta: tapa + título + autores, lector · fecha, estrellas solo-lectura + N/5, y reseña si existe. La fila del lector activo muestra «Editar».",
+      "historial-loading": "Estado liviano «Cargando historial…» (role=status) con skeletons de tarjetas.",
+      "historial-empty": "Sin lecturas aún: «Todavía no hay lecturas» + CTA para registrar una.",
+      "historial-nomatch": "Los filtros excluyen todo: «No hay lecturas para esos filtros.» + «Limpiar filtros».",
+      "book-detail": "Detalle del libro: bajo el resumen «Lectura» por lector, «Historial de lecturas» lista todas las lecturas del libro (ambos lectores, relecturas) como tarjetas por lector (avatar + nombre · fecha, estrellas + N/5, reseña). Solo lectura — se muestra cuando hay más lecturas que lectores (existe una relectura)."
+    };
+    const titles = { "registrar":"Tab · Registrar", "historial-list":"Tab · Historial", "historial-loading":"Historial · cargando", "historial-empty":"Historial · vacío", "historial-nomatch":"Historial · sin match", "book-detail":"Detalle · historial por libro" };
+    const nums = { "registrar":"A", "historial-list":"A · B", "historial-loading":"B", "historial-empty":"B", "historial-nomatch":"B", "book-detail":"C" };
+
+    return {
+      themeAttr: S.theme, isDark, notDark: !isDark, toggleTheme: this.toggleTheme,
+      scenes, screenTitle,
+      isRegistrar, isHistorial, isBookDetail, isLeido,
+      isLoading, isEmpty, isNoMatches, isList,
+      regSelected: rt.sel, regBg: rt.bg, regFg: rt.fg, regWeight: rt.weight, regShadow: rt.shadow,
+      histSelected: ht.sel, histBg: ht.bg, histFg: ht.fg, histWeight: ht.weight, histShadow: ht.shadow,
+      goRegistrar: this.goRegistrar, goHistorial: this.goHistorial,
+      filtersActive: S.filtersActive, clearFilters: this.clearFilters, onReaderChange: this.onReaderChange,
+      events, skeletons: [1,2,3],
+      bookHistory, bookHistoryCount: bookHistory.length,
+      sheetOpen: S.sheetOpen, editTitle: S.editTitle, openEdit: this.openEdit, closeSheet: this.closeSheet,
+      sceneNum: nums[S.scene], sceneTitle: titles[S.scene], sceneDesc: descs[S.scene]
+    };
+  }
+}
+</script>
+</body>
+</html>

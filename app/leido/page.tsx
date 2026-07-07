@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { BookCheck } from "lucide-react";
+import { BookCheck, Check, LineChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WriteCta } from "@/components/auth/write-cta";
@@ -27,17 +27,19 @@ export default function ReadPage() {
       <div
         role="tablist"
         aria-label="Leído"
-        className="grid grid-cols-2 gap-2 rounded-2xl border bg-card p-1.5"
+        className="flex gap-1 rounded-xl bg-muted p-1"
       >
         <TabButton
           selected={tab === "registrar"}
           onClick={() => setTab("registrar")}
+          icon={<Check className="size-4" aria-hidden="true" />}
         >
           Registrar
         </TabButton>
         <TabButton
           selected={tab === "historial"}
           onClick={() => setTab("historial")}
+          icon={<LineChart className="size-4" aria-hidden="true" />}
         >
           Historial
         </TabButton>
@@ -68,10 +70,12 @@ export default function ReadPage() {
 function TabButton({
   selected,
   onClick,
+  icon,
   children,
 }: {
   selected: boolean;
   onClick: () => void;
+  icon: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -81,12 +85,13 @@ function TabButton({
       aria-selected={selected}
       onClick={onClick}
       className={cn(
-        "h-10 rounded-xl text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-lg text-[13.5px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         selected
-          ? "bg-accent text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent/60",
+          ? "bg-card font-bold text-foreground shadow-sm"
+          : "font-semibold text-muted-foreground",
       )}
     >
+      {icon}
       {children}
     </button>
   );
