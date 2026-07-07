@@ -34,4 +34,4 @@
 - [x] 7.1 Generate the specific Claude Design prompt for the history/timeline: tabs, event card, filters, empty/loading states, per-book history, mobile-first, accessibility, M0 tokens.
 - [x] 7.2 Produce the design in Claude Design and validate against the base design system.
 - [x] 7.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
-- [ ] 7.4 QA: visual responsive + accessibility pass.
+- [x] 7.4 QA: visual responsive + accessibility pass.
