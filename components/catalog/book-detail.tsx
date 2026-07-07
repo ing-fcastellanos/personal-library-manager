@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Pencil, ChevronLeft, Check, Minus } from "lucide-react";
+import { Pencil, ChevronLeft, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CoverPreview } from "@/components/books/enrich-skeleton";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ConfirmReadingSheet } from "@/components/reading/confirm-reading-sheet";
+import { StarRating } from "@/components/reading/star-rating";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
@@ -29,11 +30,15 @@ const STATUS_LABEL: Record<ReadingStatus, string> = {
   abandoned: "Abandonado",
 };
 
-function statusClasses(s?: ReadingStatus): string {
-  if (s === "finished") return "bg-success/15 text-success";
-  if (s === "reading") return "bg-accent text-accent-foreground";
-  if (s === "abandoned") return "bg-muted text-muted-foreground";
-  return "bg-muted text-muted-foreground";
+/** Formats an ISO `YYYY-MM-DD` finish date as es-AR "6 jul 2026" (local, no TZ shift). */
+function formatFinishedDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(d);
 }
 
 export function BookDetail({ bookId }: { bookId: string }) {
@@ -43,7 +48,9 @@ export function BookDetail({ bookId }: { bookId: string }) {
   const [copies, setCopies] = React.useState<Copy[]>([]);
   const [events, setEvents] = React.useState<ReadingEvent[]>([]);
   const [readers, setReaders] = React.useState<Reader[]>([]);
-  const [markOpen, setMarkOpen] = React.useState(false);
+  const [sheet, setSheet] = React.useState<
+    { mode: "create" } | { mode: "edit"; event: ReadingEvent } | null
+  >(null);
 
   React.useEffect(() => {
     let alive = true;
@@ -104,11 +111,11 @@ export function BookDetail({ bookId }: { bookId: string }) {
     );
   }
 
-  // Latest status per reader (events arrive newest-first from the endpoint).
-  const statusByReader = new Map<string, ReadingStatus>();
+  // Latest event per reader (events arrive newest-first from the endpoint); it
+  // carries status plus the rating/review to display and edit (#25).
+  const eventByReader = new Map<string, ReadingEvent>();
   for (const e of events)
-    if (!statusByReader.has(e.readerId))
-      statusByReader.set(e.readerId, e.status);
+    if (!eventByReader.has(e.readerId)) eventByReader.set(e.readerId, e);
 
   const meta = [
     ["Editorial", book.publisher],
@@ -230,56 +237,99 @@ export function BookDetail({ bookId }: { bookId: string }) {
       {/* Lectura */}
       <section>
         <SectionTitle>Lectura</SectionTitle>
-        <div className="overflow-hidden rounded-xl border bg-card">
-          {readers.map((r, i) => {
-            const s = statusByReader.get(r.id);
+        <div className="flex flex-col gap-3">
+          {readers.map((r) => {
+            const ev = eventByReader.get(r.id);
+            const s = ev?.status;
             const isActive = reader?.id === r.id;
             // The active reader can mark this book when they haven't finished it.
             const canMark = isActive && s !== "finished";
+            const hasRatingOrReview = ev && (ev.rating != null || ev.review);
+            // Subtitle: a finished reading shows its date (or a bare "Leído" when
+            // undated); other statuses show their label; no event → "Sin empezar".
+            let subtitle: string;
+            if (s === "finished" && ev?.dateFinished) {
+              subtitle = `Finalizado el ${formatFinishedDate(ev.dateFinished)}`;
+              if (ev.rating == null && !ev.review)
+                subtitle += " · sin calificación";
+            } else if (s === "finished") {
+              subtitle = "Leído";
+            } else if (s) {
+              subtitle = STATUS_LABEL[s];
+            } else {
+              subtitle = "Sin empezar";
+            }
             return (
-              <div
-                key={r.id}
-                className={cn(
-                  "flex items-center gap-3 p-3.5",
-                  i < readers.length - 1 && "border-b",
-                )}
-              >
-                <Avatar className="size-9 shrink-0">
-                  <AvatarFallback>
-                    {r.name.slice(0, 1).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{r.name}</p>
-                  {isActive && (
-                    <p className="text-xs text-muted-foreground">
-                      Lector activo
-                    </p>
+              <div key={r.id} className="rounded-2xl border bg-card p-3.5">
+                <div className="flex items-center gap-3">
+                  <Avatar className="size-9 shrink-0">
+                    <AvatarFallback>
+                      {r.name.slice(0, 1).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold">
+                        {r.name}
+                      </span>
+                      {isActive && (
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                          Vos
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{subtitle}</p>
+                  </div>
+                  {canMark ? (
+                    <Button
+                      size="sm"
+                      onClick={() => setSheet({ mode: "create" })}
+                      className="shrink-0 gap-1.5"
+                    >
+                      <Check className="size-3.5" />
+                      Marcar leído
+                    </Button>
+                  ) : (
+                    isActive &&
+                    s === "finished" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          ev && setSheet({ mode: "edit", event: ev })
+                        }
+                        aria-label="Editar tu lectura"
+                        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold hover:bg-accent"
+                      >
+                        <Pencil className="size-3.5" aria-hidden="true" />
+                        Editar
+                      </button>
+                    )
                   )}
                 </div>
-                {canMark ? (
-                  <Button
-                    size="sm"
-                    onClick={() => setMarkOpen(true)}
-                    className="shrink-0 gap-1.5"
-                  >
-                    <Check className="size-3.5" />
-                    Marcar leído
-                  </Button>
-                ) : (
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold",
-                      statusClasses(s),
+
+                {/* rating + review (#25) */}
+                {hasRatingOrReview && (
+                  <div className="mt-3 space-y-1.5 pl-12">
+                    {ev.rating != null && (
+                      <div className="flex items-center gap-2">
+                        <StarRating
+                          value={ev.rating}
+                          readOnly
+                          size={16}
+                          label={`Calificación de ${r.name}`}
+                        />
+                        <span className="text-xs font-bold">{ev.rating}</span>
+                        <span className="text-xs text-muted-foreground">
+                          / 5
+                        </span>
+                      </div>
                     )}
-                  >
-                    {s === "finished" ? (
-                      <Check className="size-3" />
-                    ) : (
-                      <Minus className="size-3" />
+                    {ev.review && (
+                      <p className="text-[13px] leading-relaxed text-muted-foreground">
+                        {ev.review}
+                      </p>
                     )}
-                    {s ? STATUS_LABEL[s] : "Sin empezar"}
-                  </span>
+                  </div>
                 )}
               </div>
             );
@@ -287,7 +337,7 @@ export function BookDetail({ bookId }: { bookId: string }) {
         </div>
       </section>
 
-      {markOpen && (
+      {sheet && (
         <ConfirmReadingSheet
           target={{
             id: book.id,
@@ -297,12 +347,17 @@ export function BookDetail({ bookId }: { bookId: string }) {
             isbn13: book.isbn13 ?? null,
           }}
           reader={reader}
-          onClose={() => setMarkOpen(false)}
-          onDone={(event) => {
-            // Optimistically surface the new "Leído" status without a full reload
-            // (and without depending on the reading-events index, #24 resilience).
-            // The sheet stays open showing its success state until the reader acts.
-            setEvents((prev) => [event, ...prev]);
+          mode={sheet.mode}
+          event={sheet.mode === "edit" ? sheet.event : undefined}
+          onClose={() => setSheet(null)}
+          onDone={(saved) => {
+            // Optimistically reflect the create/edit without a full reload (and
+            // without depending on the reading-events index, #24 resilience):
+            // replace any existing event with the same id and move it to front.
+            setEvents((prev) => [
+              saved,
+              ...prev.filter((e) => e.id !== saved.id),
+            ]);
           }}
         />
       )}

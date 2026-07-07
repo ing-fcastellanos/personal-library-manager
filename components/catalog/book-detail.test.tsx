@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  within,
+  waitFor,
+} from "@testing-library/react";
 import { BookDetail } from "./book-detail";
 
 /**
@@ -117,11 +123,12 @@ describe("BookDetail", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Ejemplares · 0/)).toBeInTheDocument();
     expect(screen.getByText("Sin ejemplares.")).toBeInTheDocument();
-    // Active reader (Frank) gets the inline mark button; the other shows "Sin empezar".
+    // Active reader (Frank) gets the inline mark button; both rows read
+    // "Sin empezar" (no events loaded).
     expect(
       screen.getByRole("button", { name: "Marcar leído" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("Sin empezar")).toHaveLength(1);
+    expect(screen.getAllByText("Sin empezar")).toHaveLength(2);
   });
 
   it("shows the reader's 'Leído' status without a mark button when finished", async () => {
@@ -171,5 +178,86 @@ describe("BookDetail", () => {
     );
 
     expect(await screen.findByText("Leído")).toBeInTheDocument();
+  });
+
+  it("shows a reader's rating and review (#25)", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse([]);
+      if (url.endsWith("/reading-events"))
+        return jsonResponse([
+          {
+            id: "e1",
+            readerId: "r1",
+            bookId: "b1",
+            status: "finished",
+            rating: 4,
+            review: "Bestial el ritmo.",
+          },
+        ]);
+      if (url.endsWith("/api/readers")) return jsonResponse([readers[0]]);
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    expect(
+      await screen.findByRole("img", { name: "4 de 5 estrellas" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Bestial el ritmo.")).toBeInTheDocument();
+  });
+
+  it("lets the active reader edit their rating via PATCH (#25)", async () => {
+    const patches: Record<string, unknown>[] = [];
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse([]);
+      if (url.endsWith("/reading-events") && method === "GET")
+        return jsonResponse([
+          {
+            id: "e1",
+            readerId: "r1",
+            bookId: "b1",
+            status: "finished",
+            rating: 3,
+            review: "ok",
+          },
+        ]);
+      if (url.endsWith("/api/readers")) return jsonResponse([readers[0]]);
+      if (url.includes("/api/reading-events/") && method === "PATCH") {
+        const body = JSON.parse(String(init!.body)) as Record<string, unknown>;
+        patches.push(body);
+        return jsonResponse({
+          id: "e1",
+          readerId: "r1",
+          bookId: "b1",
+          status: "finished",
+          ...body,
+          bookTitle: book.title,
+          bookAuthors: book.authors,
+        });
+      }
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    expect(
+      await screen.findByRole("img", { name: "3 de 5 estrellas" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Editar/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("radio", { name: "5 estrellas" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /Guardar cambios/ }),
+    );
+
+    await waitFor(() => expect(patches).toHaveLength(1));
+    expect(patches[0].rating).toBe(5);
+    expect(
+      await screen.findByRole("img", { name: "5 de 5 estrellas" }),
+    ).toBeInTheDocument();
   });
 });

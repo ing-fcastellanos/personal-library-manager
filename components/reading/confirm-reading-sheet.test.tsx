@@ -40,11 +40,13 @@ const target = {
 };
 
 let posts: Array<{ body: Record<string, unknown> }>;
+let patches: Array<{ url: string; body: Record<string, unknown> }>;
 let copies: unknown[];
 let postStatus: number;
 
 beforeEach(() => {
   posts = [];
+  patches = [];
   copies = [];
   postStatus = 201;
   global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -56,9 +58,32 @@ beforeEach(() => {
       posts.push({ body });
       return json({ id: "e1", ...body, bookTitle: "Dune" }, postStatus);
     }
+    if (url.includes("/api/reading-events/") && method === "PATCH") {
+      const body = JSON.parse(String(init!.body)) as Record<string, unknown>;
+      patches.push({ url, body });
+      return json({ id: "e1", ...body, bookTitle: "Dune" }, postStatus);
+    }
     return json({});
   }) as unknown as typeof fetch;
 });
+
+const eventFixture = {
+  id: "e1",
+  readerId: "r1",
+  bookId: "b1",
+  status: "finished" as const,
+  copyId: null,
+  dateStarted: null,
+  dateFinished: "2026-07-01",
+  rating: 4,
+  review: "vieja reseña",
+  bookTitle: "Dune",
+  bookAuthors: ["Frank Herbert"],
+  isbn13: null,
+  coverUrl: null,
+  createdAt: "",
+  updatedAt: "",
+};
 
 const noop = () => {};
 
@@ -174,5 +199,74 @@ describe("ConfirmReadingSheet", () => {
       screen.getByText(/Iniciá sesión para registrar la lectura/),
     ).toBeInTheDocument();
     expect(screen.queryByLabelText("Fecha de fin")).not.toBeInTheDocument();
+  });
+
+  it("includes the rating and review in the create request", async () => {
+    render(
+      <ConfirmReadingSheet
+        target={target}
+        reader={reader}
+        onDone={noop}
+        onClose={noop}
+      />,
+    );
+    fireEvent.click(await screen.findByRole("radio", { name: "4 estrellas" }));
+    fireEvent.change(screen.getByLabelText("Reseña (opcional)"), {
+      target: { value: "  Buenísima  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Marcar como leído/ }));
+    await waitFor(() => expect(posts).toHaveLength(1));
+    expect(posts[0].body).toMatchObject({
+      status: "finished",
+      rating: 4,
+      review: "Buenísima",
+    });
+  });
+
+  it("edits an existing event via PATCH, preloading its values", async () => {
+    const onClose = vi.fn();
+    render(
+      <ConfirmReadingSheet
+        target={target}
+        reader={reader}
+        mode="edit"
+        event={eventFixture}
+        onDone={noop}
+        onClose={onClose}
+      />,
+    );
+    // Preloaded review + rating from the event.
+    expect(await screen.findByLabelText("Reseña (opcional)")).toHaveValue(
+      "vieja reseña",
+    );
+    fireEvent.change(screen.getByLabelText("Reseña (opcional)"), {
+      target: { value: "reseña nueva" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Guardar cambios/ }));
+    await waitFor(() => expect(patches).toHaveLength(1));
+    expect(patches[0].url).toContain("/api/reading-events/e1");
+    expect(patches[0].body).toMatchObject({
+      rating: 4,
+      review: "reseña nueva",
+    });
+    expect("status" in patches[0].body).toBe(false);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("clears a rating while editing", async () => {
+    render(
+      <ConfirmReadingSheet
+        target={target}
+        reader={reader}
+        mode="edit"
+        event={eventFixture}
+        onDone={noop}
+        onClose={noop}
+      />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Quitar" }));
+    fireEvent.click(screen.getByRole("button", { name: /Guardar cambios/ }));
+    await waitFor(() => expect(patches).toHaveLength(1));
+    expect(patches[0].body.rating).toBeNull();
   });
 });
