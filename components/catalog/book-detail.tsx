@@ -335,7 +335,12 @@ export function BookDetail({ bookId }: { bookId: string }) {
           per-reader summary above — i.e. when some reader has more than one reading. */}
       {events.length > eventByReader.size && (
         <section>
-          <SectionTitle>Historial de lecturas</SectionTitle>
+          <div className="mb-3 flex items-center gap-2">
+            <SectionTitle className="mb-0">Historial de lecturas</SectionTitle>
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold text-secondary-foreground">
+              {events.length}
+            </span>
+          </div>
           <div className="flex flex-col gap-3">
             {events.map((ev) => (
               <ReadingEventCard
