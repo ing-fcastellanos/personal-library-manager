@@ -259,7 +259,7 @@ export function ConfirmReadingSheet({
                       id="review"
                       value={review}
                       onChange={(e) => setReview(e.target.value)}
-                      rows={3}
+                      rows={4}
                       placeholder="¿Qué te pareció?"
                       className="w-full resize-y rounded-lg border border-input bg-card px-3 py-2.5 text-[15px] leading-relaxed outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
                     />

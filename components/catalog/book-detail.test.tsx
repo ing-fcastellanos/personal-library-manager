@@ -123,11 +123,12 @@ describe("BookDetail", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Ejemplares · 0/)).toBeInTheDocument();
     expect(screen.getByText("Sin ejemplares.")).toBeInTheDocument();
-    // Active reader (Frank) gets the inline mark button; the other shows "Sin empezar".
+    // Active reader (Frank) gets the inline mark button; both rows read
+    // "Sin empezar" (no events loaded).
     expect(
       screen.getByRole("button", { name: "Marcar leído" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("Sin empezar")).toHaveLength(1);
+    expect(screen.getAllByText("Sin empezar")).toHaveLength(2);
   });
 
   it("shows the reader's 'Leído' status without a mark button when finished", async () => {

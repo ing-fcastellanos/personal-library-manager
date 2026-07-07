@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Pencil, ChevronLeft, Check, Minus } from "lucide-react";
+import { Pencil, ChevronLeft, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,11 +30,15 @@ const STATUS_LABEL: Record<ReadingStatus, string> = {
   abandoned: "Abandonado",
 };
 
-function statusClasses(s?: ReadingStatus): string {
-  if (s === "finished") return "bg-success/15 text-success";
-  if (s === "reading") return "bg-accent text-accent-foreground";
-  if (s === "abandoned") return "bg-muted text-muted-foreground";
-  return "bg-muted text-muted-foreground";
+/** Formats an ISO `YYYY-MM-DD` finish date as es-AR "6 jul 2026" (local, no TZ shift). */
+function formatFinishedDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(d);
 }
 
 export function BookDetail({ bookId }: { bookId: string }) {
@@ -233,88 +237,99 @@ export function BookDetail({ bookId }: { bookId: string }) {
       {/* Lectura */}
       <section>
         <SectionTitle>Lectura</SectionTitle>
-        <div className="overflow-hidden rounded-xl border bg-card">
-          {readers.map((r, i) => {
+        <div className="flex flex-col gap-3">
+          {readers.map((r) => {
             const ev = eventByReader.get(r.id);
             const s = ev?.status;
             const isActive = reader?.id === r.id;
             // The active reader can mark this book when they haven't finished it.
             const canMark = isActive && s !== "finished";
             const hasRatingOrReview = ev && (ev.rating != null || ev.review);
+            // Subtitle: a finished reading shows its date (or a bare "Leído" when
+            // undated); other statuses show their label; no event → "Sin empezar".
+            let subtitle: string;
+            if (s === "finished" && ev?.dateFinished) {
+              subtitle = `Finalizado el ${formatFinishedDate(ev.dateFinished)}`;
+              if (ev.rating == null && !ev.review)
+                subtitle += " · sin calificación";
+            } else if (s === "finished") {
+              subtitle = "Leído";
+            } else if (s) {
+              subtitle = STATUS_LABEL[s];
+            } else {
+              subtitle = "Sin empezar";
+            }
             return (
-              <div
-                key={r.id}
-                className={cn(
-                  "flex gap-3 p-3.5",
-                  i < readers.length - 1 && "border-b",
-                )}
-              >
-                <Avatar className="size-9 shrink-0">
-                  <AvatarFallback>
-                    {r.name.slice(0, 1).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{r.name}</p>
-                  {isActive && (
-                    <p className="text-xs text-muted-foreground">
-                      Lector activo
-                    </p>
+              <div key={r.id} className="rounded-2xl border bg-card p-3.5">
+                <div className="flex items-center gap-3">
+                  <Avatar className="size-9 shrink-0">
+                    <AvatarFallback>
+                      {r.name.slice(0, 1).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold">
+                        {r.name}
+                      </span>
+                      {isActive && (
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                          Vos
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{subtitle}</p>
+                  </div>
+                  {canMark ? (
+                    <Button
+                      size="sm"
+                      onClick={() => setSheet({ mode: "create" })}
+                      className="shrink-0 gap-1.5"
+                    >
+                      <Check className="size-3.5" />
+                      Marcar leído
+                    </Button>
+                  ) : (
+                    isActive &&
+                    s === "finished" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          ev && setSheet({ mode: "edit", event: ev })
+                        }
+                        aria-label="Editar tu lectura"
+                        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold hover:bg-accent"
+                      >
+                        <Pencil className="size-3.5" aria-hidden="true" />
+                        Editar
+                      </button>
+                    )
                   )}
-                  {/* rating + review (#25) */}
-                  {hasRatingOrReview && (
-                    <div className="mt-1.5 space-y-1">
-                      {ev.rating != null && (
+                </div>
+
+                {/* rating + review (#25) */}
+                {hasRatingOrReview && (
+                  <div className="mt-3 space-y-1.5 pl-12">
+                    {ev.rating != null && (
+                      <div className="flex items-center gap-2">
                         <StarRating
                           value={ev.rating}
                           readOnly
-                          size={15}
+                          size={16}
                           label={`Calificación de ${r.name}`}
                         />
-                      )}
-                      {ev.review && (
-                        <p className="text-[13px] leading-relaxed text-muted-foreground">
-                          {ev.review}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  {isActive && s === "finished" && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        ev && setSheet({ mode: "edit", event: ev })
-                      }
-                      className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                    >
-                      <Pencil className="size-3" aria-hidden="true" />
-                      Editar
-                    </button>
-                  )}
-                </div>
-                {canMark ? (
-                  <Button
-                    size="sm"
-                    onClick={() => setSheet({ mode: "create" })}
-                    className="shrink-0 gap-1.5"
-                  >
-                    <Check className="size-3.5" />
-                    Marcar leído
-                  </Button>
-                ) : (
-                  <span
-                    className={cn(
-                      "inline-flex h-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold",
-                      statusClasses(s),
+                        <span className="text-xs font-bold">{ev.rating}</span>
+                        <span className="text-xs text-muted-foreground">
+                          / 5
+                        </span>
+                      </div>
                     )}
-                  >
-                    {s === "finished" ? (
-                      <Check className="size-3" />
-                    ) : (
-                      <Minus className="size-3" />
+                    {ev.review && (
+                      <p className="text-[13px] leading-relaxed text-muted-foreground">
+                        {ev.review}
+                      </p>
                     )}
-                    {s ? STATUS_LABEL[s] : "Sin empezar"}
-                  </span>
+                  </div>
                 )}
               </div>
             );
