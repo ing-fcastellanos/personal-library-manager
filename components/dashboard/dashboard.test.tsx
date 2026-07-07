@@ -58,15 +58,21 @@ beforeEach(() => {
   }) as unknown as typeof fetch;
 });
 
+// The dashboard commits its KPI grid + per-reader list in one state update
+// after the parallel fetch resolves; under load, React's effect scheduling can
+// take longer than the default 1000ms findBy* timeout, so wait generously for
+// the LAST thing to settle (the per-reader row) before asserting on the rest.
+const LONG = { timeout: 3000 };
+
 describe("Dashboard", () => {
   it("renders the real KPIs once loaded", async () => {
     render(<Dashboard />);
-    expect(await screen.findByText("Libros")).toBeInTheDocument();
+    expect(await screen.findByText("Frank", {}, LONG)).toBeInTheDocument();
+    expect(screen.getByText("Libros")).toBeInTheDocument();
     expect(screen.getByText("Ejemplares")).toBeInTheDocument();
     expect(screen.getByText("Leídos")).toBeInTheDocument();
     expect(screen.getByText("Pendientes")).toBeInTheDocument();
     expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(1); // real counts rendered
-    expect(screen.getByText("Frank")).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no books", async () => {
@@ -81,7 +87,7 @@ describe("Dashboard", () => {
 
     render(<Dashboard />);
     expect(
-      await screen.findByText("Tu biblioteca está vacía"),
+      await screen.findByText("Tu biblioteca está vacía", {}, LONG),
     ).toBeInTheDocument();
   });
 
@@ -97,7 +103,8 @@ describe("Dashboard", () => {
     }) as unknown as typeof fetch;
 
     render(<Dashboard />);
-    expect(await screen.findByText("Libros")).toBeInTheDocument();
+    expect(await screen.findByText("Frank", {}, LONG)).toBeInTheDocument();
+    expect(screen.getByText("Libros")).toBeInTheDocument();
     expect(screen.getByText("Ejemplares")).toBeInTheDocument();
   });
 });
