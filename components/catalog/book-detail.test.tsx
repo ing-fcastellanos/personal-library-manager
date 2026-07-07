@@ -260,4 +260,49 @@ describe("BookDetail", () => {
       await screen.findByRole("img", { name: "5 de 5 estrellas" }),
     ).toBeInTheDocument();
   });
+
+  it("lists multiple readings in the per-book history (#26)", async () => {
+    // Two readings by the same reader (a re-read) → the Historial section appears.
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse([]);
+      if (url.endsWith("/reading-events"))
+        return jsonResponse([
+          {
+            id: "e2",
+            readerId: "r1",
+            bookId: "b1",
+            status: "finished",
+            rating: 5,
+            review: "Mejor en la relectura.",
+            dateFinished: "2026-07-06",
+            bookTitle: book.title,
+            bookAuthors: book.authors,
+          },
+          {
+            id: "e1",
+            readerId: "r1",
+            bookId: "b1",
+            status: "finished",
+            rating: 3,
+            review: "Primera vuelta.",
+            dateFinished: "2024-02-01",
+            bookTitle: book.title,
+            bookAuthors: book.authors,
+          },
+        ]);
+      if (url.endsWith("/api/readers")) return jsonResponse([readers[0]]);
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    expect(
+      await screen.findByText("Historial de lecturas"),
+    ).toBeInTheDocument();
+    // The older reading appears only in the history section; the latest (shown in
+    // the per-reader summary too) appears in both.
+    expect(screen.getByText("Primera vuelta.")).toBeInTheDocument();
+    expect(screen.getAllByText("Mejor en la relectura.")).toHaveLength(2);
+  });
 });
