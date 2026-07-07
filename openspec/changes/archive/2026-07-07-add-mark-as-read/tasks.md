@@ -32,4 +32,4 @@
 - [x] 5.1 Generate the specific Claude Design prompt for the mark-as-read flow: states (choose method, identifying, confirm), mobile-first responsive, accessibility, M0 design tokens.
 - [x] 5.2 Produce the design in Claude Design and validate against the base design system.
 - [x] 5.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
-- [ ] 5.4 QA: visual responsive + accessibility pass.
+- [x] 5.4 QA: visual responsive + accessibility pass.
