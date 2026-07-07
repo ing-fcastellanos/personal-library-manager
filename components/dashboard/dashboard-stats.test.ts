@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { computeKpis } from "./dashboard-stats";
+import {
+  computeKpis,
+  topN,
+  booksByCategory,
+  booksByAuthor,
+  booksByPublisher,
+  readingsByCategory,
+} from "./dashboard-stats";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent } from "@/lib/types/reading-event";
@@ -148,5 +155,121 @@ describe("computeKpis", () => {
       { readerId: "r1", name: "Frank", finished: 2 },
       { readerId: "r2", name: "Dani", finished: 0 },
     ]);
+  });
+});
+
+describe("topN", () => {
+  it("returns everything sorted desc when at or under n", () => {
+    const entries = [
+      { key: "a", label: "A", count: 3 },
+      { key: "b", label: "B", count: 5 },
+    ];
+    expect(topN(entries, 6)).toEqual([
+      { key: "b", label: "B", count: 5 },
+      { key: "a", label: "A", count: 3 },
+    ]);
+  });
+
+  it("collapses the remainder into an Otros bucket with the summed count", () => {
+    const entries = Array.from({ length: 8 }, (_, i) => ({
+      key: `k${i}`,
+      label: `L${i}`,
+      count: 8 - i, // 8,7,6,5,4,3,2,1
+    }));
+    const result = topN(entries, 6);
+    expect(result).toHaveLength(7);
+    expect(result.slice(0, 6).map((e) => e.count)).toEqual([8, 7, 6, 5, 4, 3]);
+    expect(result[6]).toEqual({ key: "otros", label: "Otros", count: 2 + 1 });
+  });
+
+  it("handles empty input", () => {
+    expect(topN([])).toEqual([]);
+  });
+
+  it("handles ties stably enough to include all tied entries within n", () => {
+    const entries = [
+      { key: "a", label: "A", count: 1 },
+      { key: "b", label: "B", count: 1 },
+    ];
+    expect(topN(entries, 6)).toHaveLength(2);
+  });
+});
+
+describe("booksByCategory / booksByAuthor / booksByPublisher", () => {
+  it("counts each key a multi-value book contributes to", () => {
+    const books = [
+      book({
+        id: "b1",
+        authorKeys: ["borges", "casares"],
+        authors: ["Jorge Luis Borges", "Adolfo Bioy Casares"],
+        categoryKeys: ["ficcion"],
+        categories: ["Ficción"],
+        publisher: "Emecé",
+      }),
+      book({
+        id: "b2",
+        authorKeys: ["borges"],
+        authors: ["Jorge Luis Borges"],
+        categoryKeys: ["ficcion", "ensayo"],
+        categories: ["Ficción", "Ensayo"],
+        publisher: "Sudamericana",
+      }),
+    ];
+    expect(booksByAuthor(books)).toEqual([
+      { key: "borges", label: "Jorge Luis Borges", count: 2 },
+      { key: "casares", label: "Adolfo Bioy Casares", count: 1 },
+    ]);
+    expect(booksByCategory(books)).toEqual([
+      { key: "ficcion", label: "Ficción", count: 2 },
+      { key: "ensayo", label: "Ensayo", count: 1 },
+    ]);
+    expect(booksByPublisher(books)).toEqual([
+      { key: "emecé", label: "Emecé", count: 1 },
+      { key: "sudamericana", label: "Sudamericana", count: 1 },
+    ]);
+  });
+
+  it("skips books with no publisher", () => {
+    const books = [book({ id: "b1", publisher: null })];
+    expect(booksByPublisher(books)).toEqual([]);
+  });
+
+  it("returns empty for no books", () => {
+    expect(booksByCategory([])).toEqual([]);
+    expect(booksByAuthor([])).toEqual([]);
+    expect(booksByPublisher([])).toEqual([]);
+  });
+});
+
+describe("readingsByCategory", () => {
+  it("counts finished events by their book's categories", () => {
+    const books = [
+      book({
+        id: "b1",
+        categoryKeys: ["ficcion", "ensayo"],
+        categories: ["Ficción", "Ensayo"],
+      }),
+      book({ id: "b2", categoryKeys: ["ficcion"], categories: ["Ficción"] }),
+    ];
+    const events = [
+      event({ id: "e1", bookId: "b1", status: "finished" }),
+      event({ id: "e2", bookId: "b2", status: "finished" }),
+      event({ id: "e3", bookId: "b2", status: "reading" }), // not finished
+    ];
+    expect(readingsByCategory(books, events)).toEqual([
+      { key: "ficcion", label: "Ficción", count: 2 },
+      { key: "ensayo", label: "Ensayo", count: 1 },
+    ]);
+  });
+
+  it("skips events whose book is not found", () => {
+    const events = [event({ id: "e1", bookId: "missing", status: "finished" })];
+    expect(readingsByCategory([], events)).toEqual([]);
+  });
+
+  it("returns empty when there are no finished events", () => {
+    const books = [book({ id: "b1", categoryKeys: ["ficcion"] })];
+    const events = [event({ id: "e1", bookId: "b1", status: "reading" })];
+    expect(readingsByCategory(books, events)).toEqual([]);
   });
 });
