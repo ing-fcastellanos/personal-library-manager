@@ -8,16 +8,23 @@ import { WriteCta } from "@/components/auth/write-cta";
 import type { Reader } from "@/lib/types/reader";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent } from "@/lib/types/reading-event";
-import { todayIso, readingEventCreateBody, type MarkTarget } from "./mark-read";
+import {
+  todayIso,
+  readingEventCreateBody,
+  readingEventUpdateBody,
+  type MarkTarget,
+} from "./mark-read";
+import { StarRating } from "./star-rating";
 
 /**
  * Shared confirmation step for "marcar como leído" (#24, Claude Design handoff).
  * Given a resolved library book + the active reader, it captures the finish date
  * (default today), an optional start date, and — when the book has copies — which
- * copy the reading attributes to, then creates a `finished` ReadingEvent via
- * `POST /api/reading-events`. On success it shows an in-sheet confirmation with a
- * toast. Used by both entry points: the dedicated `/leido` flow and the book
- * detail. Rating/review are intentionally out of scope (#25).
+ * copy the reading attributes to, plus an optional rating (1–5) and review (#25),
+ * then creates a `finished` ReadingEvent via `POST /api/reading-events`. In `edit`
+ * mode it preloads an existing event and saves via `PATCH /api/reading-events/:id`
+ * instead. On create-success it shows an in-sheet confirmation; edit-success saves
+ * inline (toast + close). Used by the `/leido` flow and the book detail.
  */
 export function ConfirmReadingSheet({
   target,
@@ -25,6 +32,8 @@ export function ConfirmReadingSheet({
   onDone,
   onClose,
   onMarkAnother,
+  mode = "create",
+  event,
 }: {
   target: MarkTarget;
   reader: Reader | null;
@@ -32,13 +41,25 @@ export function ConfirmReadingSheet({
   onClose: () => void;
   /** Dedicated flow resets to the finder; omit in the book-detail entry. */
   onMarkAnother?: () => void;
+  /** "edit" preloads `event` and PATCHes it instead of creating (#25). */
+  mode?: "create" | "edit";
+  event?: ReadingEvent;
 }) {
   const router = useRouter();
   const { toast } = useToast();
+  const isEdit = mode === "edit" && !!event;
   const [copies, setCopies] = React.useState<Copy[]>([]);
-  const [copyId, setCopyId] = React.useState<string>("");
-  const [dateFinished, setDateFinished] = React.useState(todayIso());
-  const [dateStarted, setDateStarted] = React.useState("");
+  const [copyId, setCopyId] = React.useState<string>(event?.copyId ?? "");
+  const [dateFinished, setDateFinished] = React.useState(
+    event?.dateFinished ?? todayIso(),
+  );
+  const [dateStarted, setDateStarted] = React.useState(
+    event?.dateStarted ?? "",
+  );
+  const [rating, setRating] = React.useState<number | null>(
+    event?.rating ?? null,
+  );
+  const [review, setReview] = React.useState(event?.review ?? "");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
@@ -51,8 +72,9 @@ export function ConfirmReadingSheet({
         if (!alive) return;
         const list = Array.isArray(c) ? (c as Copy[]) : [];
         setCopies(list);
-        // Preselect the only copy so single-copy books need no interaction.
-        if (list.length === 1) setCopyId(list[0].id);
+        // Preselect the only copy so single-copy books need no interaction —
+        // without clobbering a copy already chosen (edit mode preloads one).
+        if (list.length === 1) setCopyId((prev) => prev || list[0].id);
       })
       .catch(() => {});
     return () => {
@@ -65,27 +87,53 @@ export function ConfirmReadingSheet({
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/reading-events", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(
-          readingEventCreateBody({
-            readerId: reader.id,
-            bookId: target.id,
-            copyId: copyId || null,
-            dateFinished,
-            dateStarted,
-          }),
-        ),
-      });
-      if (!res.ok) throw new Error("create failed");
-      const event = (await res.json()) as ReadingEvent;
-      toast({ title: "¡Lectura registrada!" });
-      setDone(true);
-      onDone(event);
+      const res = isEdit
+        ? await fetch(`/api/reading-events/${event.id}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(
+              readingEventUpdateBody({
+                dateFinished,
+                dateStarted,
+                rating,
+                review,
+              }),
+            ),
+          })
+        : await fetch("/api/reading-events", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(
+              readingEventCreateBody({
+                readerId: reader.id,
+                bookId: target.id,
+                copyId: copyId || null,
+                dateFinished,
+                dateStarted,
+                rating,
+                review,
+              }),
+            ),
+          });
+      if (!res.ok) throw new Error("save failed");
+      const saved = (await res.json()) as ReadingEvent;
+      if (isEdit) {
+        // Inline save: the book-detail row updates and the sheet closes.
+        toast({ title: "Cambios guardados" });
+        onDone(saved);
+        onClose();
+      } else {
+        toast({ title: "¡Lectura registrada!" });
+        setDone(true);
+        onDone(saved);
+      }
     } catch {
       // Keep the sheet open with the reader's input so they can retry.
-      setError("No se pudo registrar la lectura. Probá de nuevo.");
+      setError(
+        isEdit
+          ? "No se pudieron guardar los cambios. Probá de nuevo."
+          : "No se pudo registrar la lectura. Probá de nuevo.",
+      );
       setBusy(false);
     }
   }
@@ -100,7 +148,7 @@ export function ConfirmReadingSheet({
       />
       <div
         role="dialog"
-        aria-label="Marcar como leído"
+        aria-label={isEdit ? "Editar lectura" : "Marcar como leído"}
         className="relative max-h-[88%] w-full max-w-md overflow-y-auto rounded-t-[22px] bg-popover p-4 px-[18px] pb-[calc(18px+env(safe-area-inset-bottom))] text-popover-foreground shadow-2xl animate-in slide-in-from-bottom sm:rounded-2xl"
       >
         <span
@@ -121,7 +169,7 @@ export function ConfirmReadingSheet({
               <CoverThumb url={target.coverUrl} />
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                  Marcar como leído
+                  {isEdit ? "Editar lectura" : "Marcar como leído"}
                 </p>
                 <p className="mt-0.5 truncate text-base font-bold leading-tight">
                   {target.title}
@@ -197,6 +245,25 @@ export function ConfirmReadingSheet({
                       </select>
                     </Field>
                   )}
+
+                  {/* rating (#25) — the StarRating owns its own radiogroup label */}
+                  <div className="space-y-1.5">
+                    <p className="text-[13px] font-semibold">
+                      Calificación (opcional)
+                    </p>
+                    <StarRating value={rating} onChange={setRating} />
+                  </div>
+
+                  <Field id="review" label="Reseña (opcional)">
+                    <textarea
+                      id="review"
+                      value={review}
+                      onChange={(e) => setReview(e.target.value)}
+                      rows={3}
+                      placeholder="¿Qué te pareció?"
+                      className="w-full resize-y rounded-lg border border-input bg-card px-3 py-2.5 text-[15px] leading-relaxed outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </Field>
                 </div>
 
                 {error && (
@@ -226,7 +293,12 @@ export function ConfirmReadingSheet({
                         className="size-[18px] animate-spin"
                         aria-hidden="true"
                       />
-                      Registrando…
+                      {isEdit ? "Guardando…" : "Registrando…"}
+                    </>
+                  ) : isEdit ? (
+                    <>
+                      <Check className="size-[18px]" aria-hidden="true" />
+                      Guardar cambios
                     </>
                   ) : (
                     <>

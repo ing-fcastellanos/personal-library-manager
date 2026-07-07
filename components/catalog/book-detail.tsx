@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CoverPreview } from "@/components/books/enrich-skeleton";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ConfirmReadingSheet } from "@/components/reading/confirm-reading-sheet";
+import { StarRating } from "@/components/reading/star-rating";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
@@ -43,7 +44,9 @@ export function BookDetail({ bookId }: { bookId: string }) {
   const [copies, setCopies] = React.useState<Copy[]>([]);
   const [events, setEvents] = React.useState<ReadingEvent[]>([]);
   const [readers, setReaders] = React.useState<Reader[]>([]);
-  const [markOpen, setMarkOpen] = React.useState(false);
+  const [sheet, setSheet] = React.useState<
+    { mode: "create" } | { mode: "edit"; event: ReadingEvent } | null
+  >(null);
 
   React.useEffect(() => {
     let alive = true;
@@ -104,11 +107,11 @@ export function BookDetail({ bookId }: { bookId: string }) {
     );
   }
 
-  // Latest status per reader (events arrive newest-first from the endpoint).
-  const statusByReader = new Map<string, ReadingStatus>();
+  // Latest event per reader (events arrive newest-first from the endpoint); it
+  // carries status plus the rating/review to display and edit (#25).
+  const eventByReader = new Map<string, ReadingEvent>();
   for (const e of events)
-    if (!statusByReader.has(e.readerId))
-      statusByReader.set(e.readerId, e.status);
+    if (!eventByReader.has(e.readerId)) eventByReader.set(e.readerId, e);
 
   const meta = [
     ["Editorial", book.publisher],
@@ -232,15 +235,17 @@ export function BookDetail({ bookId }: { bookId: string }) {
         <SectionTitle>Lectura</SectionTitle>
         <div className="overflow-hidden rounded-xl border bg-card">
           {readers.map((r, i) => {
-            const s = statusByReader.get(r.id);
+            const ev = eventByReader.get(r.id);
+            const s = ev?.status;
             const isActive = reader?.id === r.id;
             // The active reader can mark this book when they haven't finished it.
             const canMark = isActive && s !== "finished";
+            const hasRatingOrReview = ev && (ev.rating != null || ev.review);
             return (
               <div
                 key={r.id}
                 className={cn(
-                  "flex items-center gap-3 p-3.5",
+                  "flex gap-3 p-3.5",
                   i < readers.length - 1 && "border-b",
                 )}
               >
@@ -256,11 +261,41 @@ export function BookDetail({ bookId }: { bookId: string }) {
                       Lector activo
                     </p>
                   )}
+                  {/* rating + review (#25) */}
+                  {hasRatingOrReview && (
+                    <div className="mt-1.5 space-y-1">
+                      {ev.rating != null && (
+                        <StarRating
+                          value={ev.rating}
+                          readOnly
+                          size={15}
+                          label={`Calificación de ${r.name}`}
+                        />
+                      )}
+                      {ev.review && (
+                        <p className="text-[13px] leading-relaxed text-muted-foreground">
+                          {ev.review}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {isActive && s === "finished" && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        ev && setSheet({ mode: "edit", event: ev })
+                      }
+                      className="mt-1.5 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                    >
+                      <Pencil className="size-3" aria-hidden="true" />
+                      Editar
+                    </button>
+                  )}
                 </div>
                 {canMark ? (
                   <Button
                     size="sm"
-                    onClick={() => setMarkOpen(true)}
+                    onClick={() => setSheet({ mode: "create" })}
                     className="shrink-0 gap-1.5"
                   >
                     <Check className="size-3.5" />
@@ -269,7 +304,7 @@ export function BookDetail({ bookId }: { bookId: string }) {
                 ) : (
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold",
+                      "inline-flex h-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold",
                       statusClasses(s),
                     )}
                   >
@@ -287,7 +322,7 @@ export function BookDetail({ bookId }: { bookId: string }) {
         </div>
       </section>
 
-      {markOpen && (
+      {sheet && (
         <ConfirmReadingSheet
           target={{
             id: book.id,
@@ -297,12 +332,17 @@ export function BookDetail({ bookId }: { bookId: string }) {
             isbn13: book.isbn13 ?? null,
           }}
           reader={reader}
-          onClose={() => setMarkOpen(false)}
-          onDone={(event) => {
-            // Optimistically surface the new "Leído" status without a full reload
-            // (and without depending on the reading-events index, #24 resilience).
-            // The sheet stays open showing its success state until the reader acts.
-            setEvents((prev) => [event, ...prev]);
+          mode={sheet.mode}
+          event={sheet.mode === "edit" ? sheet.event : undefined}
+          onClose={() => setSheet(null)}
+          onDone={(saved) => {
+            // Optimistically reflect the create/edit without a full reload (and
+            // without depending on the reading-events index, #24 resilience):
+            // replace any existing event with the same id and move it to front.
+            setEvents((prev) => [
+              saved,
+              ...prev.filter((e) => e.id !== saved.id),
+            ]);
           }}
         />
       )}

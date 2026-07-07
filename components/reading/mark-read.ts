@@ -1,4 +1,7 @@
-import type { ReadingEventCreateInput } from "@/lib/types/reading-event";
+import type {
+  ReadingEventCreateInput,
+  ReadingEventUpdateInput,
+} from "@/lib/types/reading-event";
 
 /**
  * Pure helpers for the mark-as-read flow (#24). Kept separate from the React
@@ -34,10 +37,23 @@ export function todayIso(now: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Normalizes a raw rating to an int 1–5, or null when unset/out of range (#25). */
+export function normalizeRating(rating?: number | null): number | null {
+  if (rating == null) return null;
+  const r = Math.round(rating);
+  return r >= 1 && r <= 5 ? r : null;
+}
+
+/** Normalizes review text: trimmed, or null when empty (#25). */
+export function normalizeReview(review?: string | null): string | null {
+  const r = review?.trim();
+  return r ? r : null;
+}
+
 /**
- * Builds the `POST /api/reading-events` body for a finished reading. `copyId` and
- * `dateStarted` are only included when set; an empty finish date is omitted so the
- * server keeps it null rather than storing "".
+ * Builds the `POST /api/reading-events` body for a finished reading. `copyId`,
+ * `dateStarted`, `rating`, and `review` are normalized so unset values become
+ * null (the server keeps them null rather than storing "" or an invalid rating).
  */
 export function readingEventCreateBody(input: {
   readerId: string;
@@ -45,6 +61,8 @@ export function readingEventCreateBody(input: {
   copyId?: string | null;
   dateFinished?: string;
   dateStarted?: string;
+  rating?: number | null;
+  review?: string | null;
 }): ReadingEventCreateInput {
   return {
     readerId: input.readerId,
@@ -53,6 +71,27 @@ export function readingEventCreateBody(input: {
     copyId: input.copyId || null,
     dateFinished: input.dateFinished || null,
     dateStarted: input.dateStarted || null,
+    rating: normalizeRating(input.rating),
+    review: normalizeReview(input.review),
+  };
+}
+
+/**
+ * Builds the `PATCH /api/reading-events/:id` body when editing a reading (#25).
+ * Omits `status` (the edit never changes it) and normalizes dates/rating/review;
+ * a cleared rating or empty review is sent as null so the change persists.
+ */
+export function readingEventUpdateBody(input: {
+  dateFinished?: string;
+  dateStarted?: string;
+  rating?: number | null;
+  review?: string | null;
+}): ReadingEventUpdateInput {
+  return {
+    dateFinished: input.dateFinished || null,
+    dateStarted: input.dateStarted || null,
+    rating: normalizeRating(input.rating),
+    review: normalizeReview(input.review),
   };
 }
 
