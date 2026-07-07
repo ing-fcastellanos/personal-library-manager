@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  :root {
+    --background:#f7f3ec; --foreground:#2b2620;
+    --card:#fffdf8; --card-foreground:#2b2620;
+    --popover:#fffdf8; --popover-foreground:#2b2620;
+    --primary:#6f5436; --primary-foreground:#faf6ef;
+    --secondary:#ece4d6; --secondary-foreground:#3a3228;
+    --muted:#efe8db; --muted-foreground:#756c5d;
+    --accent:#e8dcc6; --accent-foreground:#5c4a30;
+    --destructive:#b3261e; --destructive-foreground:#ffffff; --destructive-bg:#f6e0dd;
+    --success:#3f7d4e; --success-foreground:#ffffff; --success-bg:#dfeede;
+    --warning:#9a6b15; --warning-bg:#f6e9cf;
+    --border:#e2d9c8; --input:#e2d9c8; --ring:#6f5436;
+    --radius:0.625rem;
+  }
+  [data-theme="dark"] {
+    --background:#211d18; --foreground:#ece5d8;
+    --card:#2a251f; --card-foreground:#ece5d8;
+    --popover:#2a251f; --popover-foreground:#ece5d8;
+    --primary:#c9a87c; --primary-foreground:#26211b;
+    --secondary:#36302a; --secondary-foreground:#ece5d8;
+    --muted:#332e28; --muted-foreground:#a89e8d;
+    --accent:#3d352c; --accent-foreground:#ece5d8;
+    --destructive:#e5484d; --destructive-foreground:#ffffff; --destructive-bg:#3a221f;
+    --success:#67b97a; --success-foreground:#1c2a20; --success-bg:#23311f;
+    --warning:#e0b257; --warning-bg:#37301f;
+    --border:#3a342c; --input:#3a342c; --ring:#c9a87c;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; background:var(--background); color:var(--foreground); }
+  a { color:var(--primary); text-decoration:none; }
+  a:hover { color:var(--accent-foreground); text-decoration:underline; }
+  @keyframes dsskel { 0%{ opacity:.55; } 50%{ opacity:1; } 100%{ opacity:.55; } }
+  .ds-sb::-webkit-scrollbar { width:7px; }
+  .ds-sb::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+</style>
+</helmet>
+<div data-theme="{{ themeAttr }}" style="font-family:system-ui,-apple-system,sans-serif;background:var(--background);color:var(--foreground);min-height:100vh;-webkit-font-smoothing:antialiased;">
+
+  <!-- top header -->
+  <div style="position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:14px;padding:14px 22px;background:color-mix(in srgb, var(--background) 86%, transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:34px;height:34px;border-radius:calc(var(--radius) - 2px);background:var(--primary);color:var(--primary-foreground);display:grid;place-items:center;flex:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h8V3H3zM13 21h8V3h-8zM3 21h8v-6H3z"></path></svg>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:650;letter-spacing:-.01em;">Dashboard · Vistazo a tu biblioteca</div>
+        <div style="font-size:11px;color:var(--muted-foreground);">/ · grilla de KPIs + leídos por lector · 3 estados</div>
+      </div>
+    </div>
+    <button aria-label="Cambiar tema" onClick="{{ toggleTheme }}" style="margin-left:auto;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--foreground);border-radius:var(--radius);transition:all .15s;" style-hover="background:var(--accent);">
+      <sc-if value="{{ isDark }}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></sc-if>
+      <sc-if value="{{ notDark }}" hint-placeholder-val="{{ true }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"></path></svg></sc-if>
+    </button>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:24px 22px 110px;">
+
+    <!-- ================= PART A ================= -->
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);">Parte A</div>
+      <div style="font-size:16px;font-weight:750;letter-spacing:-.01em;">Tarjeta KPI · anatomía y grilla</div>
+    </div>
+    <div style="font-size:13px;color:var(--muted-foreground);line-height:1.55;max-width:640px;margin-bottom:20px;">Cada KPI: <strong style="color:var(--foreground);">label</strong> (chico, muted) + <strong style="color:var(--foreground);">ícono</strong> (arriba a la derecha, en un badge tintado con <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">accent</code>) + un <strong style="color:var(--foreground);">valor</strong> grande en negrita. En carga, el valor es un skeleton. La grilla reflota de 2 columnas (mobile) hacia arriba.</div>
+
+    <!-- anatomy: default + loading -->
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:26px;">
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground);margin-bottom:9px;">Default</div>
+        <div style="width:210px;border:1px solid var(--border);border-radius:16px;background:var(--card);padding:16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+            <span style="font-size:13px;font-weight:600;color:var(--muted-foreground);">Libros</span>
+            <span aria-hidden="true" style="width:34px;height:34px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6 4 14"></path><path d="M12 6v14"></path><path d="M8 8v12"></path><path d="M4 4v16"></path></svg></span>
+          </div>
+          <div style="font-size:30px;font-weight:780;letter-spacing:-.02em;line-height:1;">1.284</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground);margin-bottom:9px;">Loading</div>
+        <div style="width:210px;border:1px solid var(--border);border-radius:16px;background:var(--card);padding:16px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+            <span style="font-size:13px;font-weight:600;color:var(--muted-foreground);">Libros</span>
+            <span aria-hidden="true" style="width:34px;height:34px;flex:none;border-radius:11px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6 4 14"></path><path d="M12 6v14"></path><path d="M8 8v12"></path><path d="M4 4v16"></path></svg></span>
+          </div>
+          <div style="height:30px;width:62%;border-radius:8px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+        </div>
+      </div>
+      <div style="align-self:center;max-width:230px;font-size:12.5px;color:var(--muted-foreground);line-height:1.55;">El valor es texto (no solo tamaño/color) para lectores de pantalla; el ícono es decorativo (<code style="background:var(--muted);padding:1px 5px;border-radius:5px;">aria-hidden</code>).</div>
+    </div>
+
+    <!-- responsive grid demo -->
+    <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground);margin-bottom:10px;">Grilla · 6 KPIs (auto-fit)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:40px;">
+      <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;"><span style="font-size:13px;font-weight:600;color:var(--muted-foreground);">Libros</span><span aria-hidden="true" style="width:34px;height:34px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6 4 14"></path><path d="M12 6v14"></path><path d="M8 8v12"></path><path d="M4 4v16"></path></svg></span></div>
+        <div style="font-size:30px;font-weight:780;letter-spacing:-.02em;line-height:1;">1.284</div>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;"><span style="font-size:13px;font-weight:600;color:var(--muted-foreground);">Ejemplares</span><span aria-hidden="true" style="width:34px;height:34px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="12" height="12" rx="2"></rect><path d="M4 15V5a2 2 0 0 1 2-2h10"></path></svg></span></div>
+        <div style="font-size:30px;font-weight:780;letter-spacing:-.02em;line-height:1;">1.507</div>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;"><span style="font-size:13px;font-weight:600;color:var(--muted-foreground);">Leídos</span><span aria-hidden="true" style="width:34px;height:34px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg></span></div>
+        <div style="font-size:30px;font-weight:780;letter-spacing:-.02em;line-height:1;">486</div>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;"><span style="font-size:13px;font-weight:600;color:var(--muted-foreground);">Pendientes</span><span aria-hidden="true" style="width:34px;height:34px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.17a2 2 0 0 0-.59-1.4L12 12l-4.41 4.42a2 2 0 0 0-.59 1.41V22"></path><path d="M7 2v4.17a2 2 0 0 0 .59 1.4L12 12l4.41-4.42a2 2 0 0 0 .59-1.41V2"></path></svg></span></div>
+        <div style="font-size:30px;font-weight:780;letter-spacing:-.02em;line-height:1;">798</div>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;"><span style="font-size:13px;font-weight:600;color:var(--muted-foreground);">Autores</span><span aria-hidden="true" style="width:34px;height:34px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span></div>
+        <div style="font-size:30px;font-weight:780;letter-spacing:-.02em;line-height:1;">623</div>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;"><span style="font-size:13px;font-weight:600;color:var(--muted-foreground);">Editoriales</span><span aria-hidden="true" style="width:34px;height:34px;flex:none;border-radius:11px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"></path></svg></span></div>
+        <div style="font-size:30px;font-weight:780;letter-spacing:-.02em;line-height:1;">154</div>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin-bottom:30px;"></div>
+
+    <!-- ================= PART B ================= -->
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);">Parte B</div>
+      <div style="font-size:16px;font-weight:750;letter-spacing:-.01em;">Leídos por lector</div>
+    </div>
+    <div style="font-size:13px;color:var(--muted-foreground);line-height:1.55;max-width:640px;margin-bottom:18px;">Una fila por lector: avatar (inicial) + nombre + su conteo de terminados con un pequeño label «leídos». Filas separadas por un divisor fino; la última sin divisor.</div>
+
+    <div style="max-width:420px;border:1px solid var(--border);border-radius:16px;background:var(--card);overflow:hidden;margin-bottom:44px;">
+      <sc-for list="{{ readers }}" as="r" hint-placeholder-count="4">
+        <div>
+          <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;min-height:44px;">
+            <div aria-hidden="true" style="width:38px;height:38px;flex:none;border-radius:999px;background:{{ r.avBg }};color:{{ r.avFg }};display:grid;place-items:center;font-size:13px;font-weight:750;">{{ r.initials }}</div>
+            <div style="flex:1;min-width:0;font-size:14.5px;font-weight:650;">{{ r.name }}</div>
+            <div style="text-align:right;flex:none;">
+              <div style="font-size:16px;font-weight:750;letter-spacing:-.01em;line-height:1;">{{ r.count }}</div>
+              <div style="font-size:11px;color:var(--muted-foreground);margin-top:3px;">leídos</div>
+            </div>
+          </div>
+          <sc-if value="{{ r.notLast }}" hint-placeholder-val="{{ true }}">
+            <div style="height:1px;background:var(--border);margin:0 15px;"></div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin-bottom:30px;"></div>
+
+    <!-- ================= PART C ================= -->
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);">Parte C</div>
+      <div style="font-size:16px;font-weight:750;letter-spacing:-.01em;">Estados de la página</div>
+    </div>
+
+    <!-- state pills -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px;">
+      <sc-for list="{{ pills }}" as="s" hint-placeholder-count="3">
+        <button aria-selected="{{ s.active }}" onClick="{{ s.go }}" style="cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;border:1.5px solid {{ s.border }};background:{{ s.bg }};color:{{ s.fg }};transition:all .15s;display:flex;align-items:center;gap:7px;">
+          <span style="width:18px;height:18px;border-radius:999px;background:{{ s.numBg }};color:{{ s.numFg }};display:grid;place-items:center;font-size:10px;font-weight:700;">{{ s.num }}</span>
+          {{ s.label }}
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:30px;align-items:flex-start;">
+
+      <!-- PHONE FRAME -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--muted-foreground);margin-bottom:10px;">Mobile · ~360px</div>
+        <div style="width:360px;max-width:100%;height:760px;border:9px solid var(--foreground);border-radius:42px;background:var(--background);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 52px -18px rgba(0,0,0,.42);">
+
+          <!-- page header -->
+          <div style="flex:none;padding:20px 18px 14px;">
+            <div style="font-size:24px;font-weight:770;letter-spacing:-.02em;">Dashboard</div>
+            <div style="font-size:14px;color:var(--muted-foreground);margin-top:4px;">Un vistazo a tu biblioteca.</div>
+          </div>
+
+          <div class="ds-sb" style="flex:1;overflow-y:auto;">
+
+            <!-- POPULATED -->
+            <sc-if value="{{ isPopulated }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:0 16px;">
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Libros</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6 4 14"></path><path d="M12 6v14"></path><path d="M8 8v12"></path><path d="M4 4v16"></path></svg></span></div>
+                    <div style="font-size:26px;font-weight:780;letter-spacing:-.02em;line-height:1;">1.284</div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Ejemplares</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="12" height="12" rx="2"></rect><path d="M4 15V5a2 2 0 0 1 2-2h10"></path></svg></span></div>
+                    <div style="font-size:26px;font-weight:780;letter-spacing:-.02em;line-height:1;">1.507</div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Leídos</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg></span></div>
+                    <div style="font-size:26px;font-weight:780;letter-spacing:-.02em;line-height:1;">486</div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Pendientes</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.17a2 2 0 0 0-.59-1.4L12 12l-4.41 4.42a2 2 0 0 0-.59 1.41V22"></path><path d="M7 2v4.17a2 2 0 0 0 .59 1.4L12 12l4.41-4.42a2 2 0 0 0 .59-1.41V2"></path></svg></span></div>
+                    <div style="font-size:26px;font-weight:780;letter-spacing:-.02em;line-height:1;">798</div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Autores</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span></div>
+                    <div style="font-size:26px;font-weight:780;letter-spacing:-.02em;line-height:1;">623</div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Editoriales</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:color-mix(in srgb,var(--accent) 72%,var(--card));color:var(--accent-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"></path></svg></span></div>
+                    <div style="font-size:26px;font-weight:780;letter-spacing:-.02em;line-height:1;">154</div>
+                  </div>
+                </div>
+              </div>
+              <div style="padding:24px 16px 22px;">
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground);margin-bottom:11px;">Leídos por lector</div>
+                <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);overflow:hidden;">
+                  <sc-for list="{{ readers }}" as="r" hint-placeholder-count="4">
+                    <div>
+                      <div style="display:flex;align-items:center;gap:12px;padding:13px 15px;min-height:44px;">
+                        <div aria-hidden="true" style="width:38px;height:38px;flex:none;border-radius:999px;background:{{ r.avBg }};color:{{ r.avFg }};display:grid;place-items:center;font-size:13px;font-weight:750;">{{ r.initials }}</div>
+                        <div style="flex:1;min-width:0;font-size:14.5px;font-weight:650;">{{ r.name }}</div>
+                        <div style="text-align:right;flex:none;">
+                          <div style="font-size:16px;font-weight:750;letter-spacing:-.01em;line-height:1;">{{ r.count }}</div>
+                          <div style="font-size:11px;color:var(--muted-foreground);margin-top:3px;">leídos</div>
+                        </div>
+                      </div>
+                      <sc-if value="{{ r.notLast }}" hint-placeholder-val="{{ true }}">
+                        <div style="height:1px;background:var(--border);margin:0 15px;"></div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- LOADING -->
+            <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:0 16px;">
+                <div role="status" aria-label="Cargando indicadores" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Libros</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6 4 14"></path><path d="M12 6v14"></path><path d="M8 8v12"></path><path d="M4 4v16"></path></svg></span></div>
+                    <div style="height:26px;width:64%;border-radius:8px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Ejemplares</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="12" height="12" rx="2"></rect><path d="M4 15V5a2 2 0 0 1 2-2h10"></path></svg></span></div>
+                    <div style="height:26px;width:70%;border-radius:8px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Leídos</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg></span></div>
+                    <div style="height:26px;width:52%;border-radius:8px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Pendientes</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.17a2 2 0 0 0-.59-1.4L12 12l-4.41 4.42a2 2 0 0 0-.59 1.41V22"></path><path d="M7 2v4.17a2 2 0 0 0 .59 1.4L12 12l4.41-4.42a2 2 0 0 0 .59-1.41V2"></path></svg></span></div>
+                    <div style="height:26px;width:66%;border-radius:8px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Autores</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span></div>
+                    <div style="height:26px;width:48%;border-radius:8px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+                  </div>
+                  <div style="border:1px solid var(--border);border-radius:16px;background:var(--card);padding:15px;display:flex;flex-direction:column;gap:12px;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;"><span style="font-size:12.5px;font-weight:600;color:var(--muted-foreground);">Editoriales</span><span aria-hidden="true" style="width:30px;height:30px;flex:none;border-radius:10px;background:var(--muted);color:var(--muted-foreground);display:grid;place-items:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"></path></svg></span></div>
+                    <div style="height:26px;width:44%;border-radius:8px;background:var(--muted);animation:dsskel 1.4s ease-in-out infinite;"></div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- EMPTY -->
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 26px 60px;">
+                <div style="width:66px;height:66px;border-radius:20px;background:var(--accent);color:var(--accent-foreground);display:grid;place-items:center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></div>
+                <div style="font-size:19px;font-weight:760;margin-top:20px;letter-spacing:-.01em;">Tu biblioteca está vacía</div>
+                <div style="font-size:13.5px;color:var(--muted-foreground);line-height:1.55;margin-top:9px;max-width:260px;">Agregá tu primer libro y acá van a aparecer tus indicadores.</div>
+                <button style="margin-top:24px;cursor:pointer;font-family:inherit;font-size:15px;font-weight:700;height:50px;padding:0 24px;border:0;border-radius:14px;background:var(--primary);color:var(--primary-foreground);display:inline-flex;align-items:center;justify-content:center;gap:8px;outline:none;" style-focus="outline:2px solid var(--ring);outline-offset:2px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Agregar libro
+                </button>
+              </div>
+            </sc-if>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- SIDE NOTES -->
+      <div style="flex:1;min-width:290px;max-width:430px;display:flex;flex-direction:column;gap:18px;">
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--primary);margin-bottom:8px;">{{ stateNum }} · {{ stateTitle }}</div>
+          <div style="font-size:13.5px;line-height:1.6;color:var(--muted-foreground);">{{ stateDesc }}</div>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">Números reales · es-AR</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--muted-foreground);">Todo sale de datos ya cargados en la pantalla (fetch paralelo, sin agregación en servidor). Formateados con separador de miles es-AR (<code style="background:var(--muted);padding:1px 5px;border-radius:5px;">1.284</code>). Muestra: Leídos <strong style="color:var(--foreground);">486</strong> + Pendientes <strong style="color:var(--foreground);">798</strong> = Libros <strong style="color:var(--foreground);">1.284</strong>; los conteos por lector suman los 486 leídos.</div>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">A11y &amp; copy</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--muted-foreground);">Valores KPI como texto (no solo tamaño/color). Íconos decorativos (<code style="background:var(--muted);padding:1px 5px;border-radius:5px;">aria-hidden</code>). La grilla de carga es <code style="background:var(--muted);padding:1px 5px;border-radius:5px;">role="status"</code>. Foco visible en «Agregar libro»; toques ≥44px. La lista por lector es simple y legible (sin ARIA exótico).</div>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">Fuera de alcance</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--muted-foreground);">Gráficos / distribuciones (#28), «lecturas recientes» y tendencias por lector (#29), objetivos anuales de lectura (#30), y cualquier endpoint de agregación en servidor.</div>
+        </div>
+
+        <div style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+          <div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-foreground);margin-bottom:10px;">Anclaje · components/ui</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            <sc-for list="{{ reused }}" as="p" hint-placeholder-count="4">
+              <span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--secondary);color:var(--secondary-foreground);">{{ p }}</span>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1240,&quot;height&quot;:1480}}">
+class Component extends DCLogic {
+  state = { theme: "light", page: "populated" };
+
+  componentDidMount() {
+    let t = this.state.theme;
+    try {
+      const saved = localStorage.getItem("dashboard_theme");
+      if (saved === "dark" || saved === "light") { t = saved; this.setState({ theme: saved }); }
+    } catch (e) {}
+    this._applyTheme(t);
+  }
+
+  _applyTheme = (t) => { try { document.documentElement.setAttribute("data-theme", t); } catch (e) {} };
+
+  toggleTheme = () => {
+    const t = this.state.theme === "dark" ? "light" : "dark";
+    this.setState({ theme: t });
+    this._applyTheme(t);
+    try { localStorage.setItem("dashboard_theme", t); } catch (e) {}
+  };
+
+  icon(name, size) {
+    const s = size || 18;
+    const a = `width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
+    const p = {
+      libros: '<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>',
+      ejemplares: '<rect x="7" y="7" width="12" height="12" rx="2"/><path d="M4 15V5a2 2 0 0 1 2-2h10"/>',
+      leidos: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+      pendientes: '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.4L12 12l-4.41 4.42a2 2 0 0 0-.59 1.41V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.4L12 12l4.41-4.42a2 2 0 0 0 .59-1.41V2"/>',
+      autores: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+      editoriales: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>'
+    };
+    return `<svg ${a}>${p[name] || ""}</svg>`;
+  }
+
+  renderVals() {
+    const S = this.state;
+    const isDark = S.theme === "dark";
+    const fmt = (n) => n.toLocaleString("es-AR");
+
+    const kpiDefs = [
+      ["Libros", 1284, "libros"],
+      ["Ejemplares", 1507, "ejemplares"],
+      ["Leídos", 486, "leidos"],
+      ["Pendientes", 798, "pendientes"],
+      ["Autores", 623, "autores"],
+      ["Editoriales", 154, "editoriales"]
+    ];
+    const kpis = kpiDefs.map(([label, value, ic]) => ({
+      label, value: fmt(value), icon: this.icon(ic, 18), iconSm: this.icon(ic, 16)
+    }));
+    const skeletons = kpiDefs.map(([label, , ic]) => ({ label, iconSm: this.icon(ic, 16) }));
+
+    const av = {
+      accent: { avBg: "var(--accent)", avFg: "var(--accent-foreground)" },
+      primary: { avBg: "var(--primary)", avFg: "var(--primary-foreground)" },
+      secondary: { avBg: "var(--secondary)", avFg: "var(--secondary-foreground)" }
+    };
+    const readerDefs = [
+      ["Sofía", "SF", 213, "accent"],
+      ["Martín", "MA", 158, "primary"],
+      ["Lucía", "LU", 92, "secondary"],
+      ["Tomás", "TO", 23, "accent"]
+    ];
+    const readers = readerDefs.map((r, i, arr) => ({
+      name: r[0], initials: r[1], count: fmt(r[2]),
+      ...av[r[3]], notLast: i < arr.length - 1
+    }));
+
+    const currentPill = S.page;
+    const mk = (id, num, label) => {
+      const active = currentPill === id;
+      return {
+        id, num, label, active,
+        go: () => this.setState({ page: id }),
+        bg: active ? "var(--primary)" : "var(--card)",
+        fg: active ? "var(--primary-foreground)" : "var(--foreground)",
+        border: active ? "var(--primary)" : "var(--border)",
+        numBg: active ? "color-mix(in srgb,var(--primary-foreground) 22%,transparent)" : "var(--muted)",
+        numFg: active ? "var(--primary-foreground)" : "var(--muted-foreground)"
+      };
+    };
+    const pills = [
+      mk("populated", "01", "Poblado"),
+      mk("loading", "02", "Cargando"),
+      mk("empty", "03", "Vacía")
+    ];
+
+    const notes = {
+      populated: { num: "01", title: "Poblado", desc: "Grilla completa de 6 KPIs con números reales (variados, no todos iguales, para mostrar escala) + la lista «Leídos por lector» con una fila por lector y su conteo de terminados." },
+      loading: { num: "02", title: "Cargando (inicial)", desc: "Mientras resuelve el fetch paralelo, la grilla muestra tarjetas de carga: label e ícono ya visibles, el valor en skeleton. Todavía no aparece la lista por lector." },
+      empty: { num: "03", title: "Biblioteca vacía", desc: "Sin libros: en vez de una grilla de ceros, un estado vacío amigable («Tu biblioteca está vacía» + invitación) y una acción primaria «Agregar libro» (→ /agregar)." }
+    };
+    const n = notes[S.page];
+
+    return {
+      themeAttr: S.theme, isDark, notDark: !isDark, toggleTheme: this.toggleTheme,
+      kpis, skeletons, readers, pills,
+      isPopulated: S.page === "populated",
+      isLoading: S.page === "loading",
+      isEmpty: S.page === "empty",
+      stateNum: n.num, stateTitle: n.title, stateDesc: n.desc,
+      reused: ["Card", "Avatar", "AvatarFallback", "EmptyState", "Skeleton", "Button"]
+    };
+  }
+}
+</script>
+</body>
+</html>
