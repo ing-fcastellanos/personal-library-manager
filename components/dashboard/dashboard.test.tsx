@@ -75,6 +75,34 @@ describe("Dashboard", () => {
     expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(1); // real counts rendered
   });
 
+  it("renders the Composición charts with real distributions", async () => {
+    render(<Dashboard />);
+    expect(await screen.findByText("Frank", {}, LONG)).toBeInTheDocument();
+    expect(screen.getByText("Composición")).toBeInTheDocument();
+    expect(screen.getByText("Libros por categoría")).toBeInTheDocument();
+    expect(screen.getByText("Libros por autor")).toBeInTheDocument();
+    expect(screen.getByText("Libros por editorial")).toBeInTheDocument();
+    expect(screen.getByText("Lecturas por categoría")).toBeInTheDocument();
+    // b1 (Cortázar, Sudamericana, ficcion) has one finished event.
+    expect(screen.getByText("Sudamericana")).toBeInTheDocument();
+  });
+
+  it("shows an empty readings-by-category state when nothing is finished yet", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books")) return jsonResponse(books);
+      if (url.endsWith("/api/copies")) return jsonResponse(copies);
+      if (url.endsWith("/api/reading-events")) return jsonResponse([]);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<Dashboard />);
+    expect(
+      await screen.findByText("Todavía no hay lecturas terminadas.", {}, LONG),
+    ).toBeInTheDocument();
+  });
+
   it("shows an empty state when there are no books", async () => {
     global.fetch = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
