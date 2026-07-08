@@ -21,11 +21,13 @@ vi.mock("next/link", () => ({
 }));
 
 describe("QrPrintSheet", () => {
+  // Renders two DOM trees (screen + print-only), toggled by @media print, not
+  // removed — both exist in jsdom, so labels legitimately match twice.
   it("renders the three action QR codes with real-text labels, without any auth context", async () => {
     render(<QrPrintSheet />);
-    expect(await screen.findByText("Ver dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Agregar libro")).toBeInTheDocument();
-    expect(screen.getByText("Registrar leído")).toBeInTheDocument();
+    expect(await screen.findAllByText("Ver dashboard")).not.toHaveLength(0);
+    expect(screen.getAllByText("Agregar libro").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Registrar leído").length).toBeGreaterThan(0);
   });
 
   it("calls window.print() when Imprimir is activated", () => {

@@ -14,9 +14,19 @@ import QRCode from "qrcode";
 export function QrCode({
   value,
   size = 160,
+  className = "rounded-lg",
+  style,
 }: {
   value: string;
   size?: number;
+  /** Applied to the canvas element; default rounds the corners for the on-screen plate. */
+  className?: string;
+  /**
+   * Overrides the *displayed* size independently of `size` (the canvas's draw
+   * resolution/attribute size) — e.g. a high `size` for print sharpness, sized
+   * down on-page via `style={{ width: "4.2cm", height: "4.2cm" }}`.
+   */
+  style?: React.CSSProperties;
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
@@ -38,7 +48,8 @@ export function QrCode({
       width={size}
       height={size}
       aria-hidden="true"
-      className="rounded-lg"
+      className={className}
+      style={style}
     />
   );
 }
