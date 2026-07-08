@@ -19,7 +19,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card p-3 md:flex">
+    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card p-3 md:flex print:hidden">
       <Link
         href="/"
         className="mb-4 flex items-center gap-2.5 rounded-md px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
