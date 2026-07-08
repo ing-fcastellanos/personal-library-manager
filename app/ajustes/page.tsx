@@ -39,6 +39,21 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Códigos QR</CardTitle>
+          <CardDescription>
+            Imprimí QRs para pegar junto al librero: dashboard, agregar y
+            registrar leído.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link href="/ajustes/qr">Ver e imprimir QR</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Apariencia</CardTitle>
           <CardDescription>
             Cambiá el tema con el botón sol/luna del header. Se recuerda por

@@ -22,7 +22,7 @@ export function Header() {
   const title = useCurrentTitle();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70 md:h-16 md:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70 md:h-16 md:px-6 print:hidden">
       <h1 className="flex-1 truncate text-lg font-bold tracking-tight md:text-xl">
         {title}
       </h1>
