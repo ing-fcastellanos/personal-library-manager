@@ -127,6 +127,78 @@ describe("ReadingGoal", () => {
       />,
     );
     expect(screen.getByText("Cumplida")).toBeInTheDocument();
+    expect(screen.queryByText("Vos")).not.toBeInTheDocument();
+  });
+
+  it("shows a Vos badge on the active reader's card (no goal or in progress), but not on others'", () => {
+    const readers = [
+      mkReader({
+        id: "r1",
+        name: "Sofía",
+        preferences: { readingGoals: { [year]: 24 } },
+      }),
+      mkReader({ id: "r2", name: "Mateo" }),
+    ];
+    render(
+      <ReadingGoal
+        events={[]}
+        readers={readers}
+        activeReaderId="r1"
+        onGoalSaved={vi.fn()}
+      />,
+    );
+    expect(screen.getAllByText("Vos")).toHaveLength(1);
+  });
+
+  it("exposes progress as an accessible progressbar with a real-text label", () => {
+    const readers = [
+      mkReader({
+        id: "r1",
+        name: "Sofía",
+        preferences: { readingGoals: { [year]: 24 } },
+      }),
+    ];
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: `${year}-01-15` }),
+    ];
+    render(
+      <ReadingGoal
+        events={events}
+        readers={readers}
+        activeReaderId="r1"
+        onGoalSaved={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("progressbar", { name: "1 / 24 libros" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the progress and count visible while editing an existing goal", () => {
+    const readers = [
+      mkReader({
+        id: "r1",
+        name: "Sofía",
+        preferences: { readingGoals: { [year]: 24 } },
+      }),
+    ];
+    const events = [
+      event({ id: "e1", readerId: "r1", dateFinished: `${year}-01-15` }),
+    ];
+    render(
+      <ReadingGoal
+        events={events}
+        readers={readers}
+        activeReaderId="r1"
+        onGoalSaved={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Editar tu meta" }));
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("/ 24")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Meta anual de Sofía (libros)"),
+    ).toBeInTheDocument();
   });
 
   it("lets the active reader set a goal, PATCHing the merged preferences", async () => {
@@ -155,7 +227,7 @@ describe("ReadingGoal", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Fijá tu meta" }));
-    fireEvent.change(screen.getByLabelText("Meta anual de Sofía"), {
+    fireEvent.change(screen.getByLabelText("Meta anual de Sofía (libros)"), {
       target: { value: "24" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Guardar" }));

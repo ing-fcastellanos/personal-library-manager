@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { Target, Check, Pencil } from "lucide-react";
+import { Target, Check, SquarePen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ReadingEvent } from "@/lib/types/reading-event";
 import type { Reader } from "@/lib/types/reader";
@@ -73,6 +73,11 @@ function GoalCard({
   const [input, setInput] = React.useState(goal != null ? String(goal) : "");
   const [saving, setSaving] = React.useState(false);
 
+  function openEdit() {
+    setInput(goal != null ? String(goal) : "");
+    setEditing(true);
+  }
+
   async function save() {
     const n = Number(input);
     if (!Number.isFinite(n) || n <= 0) {
@@ -103,6 +108,44 @@ function GoalCard({
   const met = goal != null && finished >= goal;
   const projection = goal != null ? projectedTotal(finished) : null;
 
+  const editForm = (
+    <div>
+      <label
+        htmlFor={`goal-${reader.id}`}
+        className="mb-1.5 block text-[11.5px] font-semibold text-muted-foreground"
+      >
+        Meta anual de {reader.name} (libros)
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          id={`goal-${reader.id}`}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={999}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          className="h-11 w-20 rounded-[10px] border border-input bg-background px-2 text-center text-[15px] font-semibold outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="inline-flex h-11 items-center rounded-xl bg-primary px-[18px] text-sm font-bold text-primary-foreground disabled:opacity-60"
+        >
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditing(false)}
+          className="inline-flex h-11 items-center rounded-xl px-3 text-sm font-semibold text-muted-foreground hover:text-foreground"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="rounded-2xl border bg-card p-4">
       <div className="flex items-center gap-2.5">
@@ -111,91 +154,81 @@ function GoalCard({
             {reader.name.slice(0, 1).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        <span className="text-[15.5px] font-bold">{reader.name}</span>
-        {met && (
+        <span className="text-[15px] font-bold">{reader.name}</span>
+        {met ? (
           <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-[10.5px] font-bold text-success">
             <Check className="size-3" aria-hidden="true" />
             Cumplida
           </span>
+        ) : (
+          isActive && (
+            <span className="ml-auto shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-bold text-muted-foreground">
+              Vos
+            </span>
+          )
         )}
       </div>
 
-      {editing ? (
-        <div className="mt-3.5 flex items-center gap-2">
-          <label htmlFor={`goal-${reader.id}`} className="sr-only">
-            Meta anual de {reader.name}
-          </label>
-          <input
-            id={`goal-${reader.id}`}
-            type="number"
-            inputMode="numeric"
-            min={1}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="h-10 w-24 rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <button
-            type="button"
-            onClick={save}
-            disabled={saving}
-            className="inline-flex h-10 items-center rounded-lg bg-primary px-3 text-sm font-bold text-primary-foreground disabled:opacity-60"
+      {goal == null ? (
+        editing ? (
+          <div className="mt-3.5">{editForm}</div>
+        ) : (
+          <div
+            className={cn(
+              "mt-3.5 flex flex-col items-center gap-2.5 rounded-[13px] border-[1.5px] border-dashed px-3.5 text-center",
+              isActive ? "py-5" : "py-[26px]",
+            )}
           >
-            {saving ? "Guardando…" : "Guardar"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditing(false)}
-            className="text-sm font-semibold text-muted-foreground hover:text-foreground"
-          >
-            Cancelar
-          </button>
-        </div>
-      ) : goal == null ? (
-        <div className="mt-3.5 flex flex-col items-center gap-2.5 rounded-xl border border-dashed py-5 text-center">
-          <span className="grid size-9 place-items-center rounded-full bg-muted text-muted-foreground">
-            <Target className="size-[18px]" aria-hidden="true" />
-          </span>
-          {isActive ? (
-            <>
-              <p className="text-[13px] font-semibold text-muted-foreground">
-                Sin meta este año
+            {isActive ? (
+              <>
+                <Target
+                  className="size-[26px] text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <p className="text-[13.5px] font-semibold">Sin meta este año</p>
+                <button
+                  type="button"
+                  onClick={openEdit}
+                  className="mt-0.5 inline-flex h-11 items-center rounded-xl bg-primary px-[18px] text-sm font-bold text-primary-foreground"
+                >
+                  Fijá tu meta
+                </button>
+              </>
+            ) : (
+              <p className="text-[13.5px] font-semibold text-muted-foreground">
+                Sin meta
               </p>
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="inline-flex h-9 items-center rounded-lg bg-primary px-3.5 text-[13px] font-bold text-primary-foreground"
-              >
-                Fijá tu meta
-              </button>
-            </>
-          ) : (
-            <p className="text-[13px] font-semibold text-muted-foreground">
-              Sin meta
-            </p>
-          )}
-        </div>
+            )}
+          </div>
+        )
       ) : (
         <div className="mt-3.5">
-          <div className="flex items-end justify-between gap-2">
-            <p className="text-2xl font-extrabold leading-none tracking-tight tabular-nums">
-              {nf0.format(finished)}
-              <span className="text-sm font-semibold text-muted-foreground">
+          <div className="flex items-end gap-2">
+            <p className="leading-none tracking-tight tabular-nums">
+              <span className="text-3xl font-extrabold">
+                {nf0.format(finished)}
+              </span>
+              <span className="text-base font-semibold text-muted-foreground">
                 {" "}
                 / {nf0.format(goal)}
               </span>
             </p>
-            {isActive && (
+            {isActive && !editing && (
               <button
                 type="button"
-                onClick={() => setEditing(true)}
+                onClick={openEdit}
                 aria-label="Editar tu meta"
-                className="grid size-8 shrink-0 place-items-center rounded-lg border text-foreground hover:bg-accent"
+                className="ml-auto grid size-9 shrink-0 place-items-center rounded-[10px] border text-foreground hover:bg-accent"
               >
-                <Pencil className="size-[14px]" aria-hidden="true" />
+                <SquarePen className="size-[15px]" aria-hidden="true" />
               </button>
             )}
           </div>
-          <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-muted">
+          <div
+            role="progressbar"
+            aria-label={`${nf0.format(finished)} / ${nf0.format(goal)} libros`}
+            className="mt-3 h-2.5 overflow-hidden rounded-full bg-muted"
+          >
             <div
               className={cn(
                 "h-full rounded-full",
@@ -204,11 +237,16 @@ function GoalCard({
               style={{ width: `${Math.min(100, (finished / goal) * 100)}%` }}
             />
           </div>
-          {!met && projection != null && (
-            <p className="mt-2 text-[12.5px] text-muted-foreground">
-              A este ritmo, terminarías el año con ~{nf0.format(projection)}{" "}
-              libros.
-            </p>
+          {editing ? (
+            <div className="mt-3.5 border-t pt-3.5">{editForm}</div>
+          ) : (
+            !met &&
+            projection != null && (
+              <p className="mt-2.5 text-[12.5px] text-muted-foreground">
+                A este ritmo, terminarías el año con ~{nf0.format(projection)}{" "}
+                libros.
+              </p>
+            )
           )}
         </div>
       )}
