@@ -13,11 +13,13 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/components/auth/auth-provider";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent } from "@/lib/types/reading-event";
 import type { Reader } from "@/lib/types/reader";
 import { KpiCard } from "./kpi-card";
+import { ReadingGoal } from "./reading-goal";
 import { RecentReads } from "./recent-reads";
 import { ReaderTrends } from "./reader-trends";
 import { BarChart } from "./bar-chart";
@@ -54,6 +56,7 @@ const AVATAR_TINTS = [
 ] as const;
 
 export function Dashboard() {
+  const { reader: activeReader } = useAuth();
   const [data, setData] = React.useState<Sources | null>(null);
 
   React.useEffect(() => {
@@ -109,6 +112,23 @@ export function Dashboard() {
           <Composicion books={data!.books} events={data!.events} />
           <RecentReads events={data!.events} readers={data!.readers} />
           <ReaderTrends events={data!.events} readers={data!.readers} />
+          <ReadingGoal
+            events={data!.events}
+            readers={data!.readers}
+            activeReaderId={activeReader?.id ?? null}
+            onGoalSaved={(updated: Reader) =>
+              setData((d) =>
+                d
+                  ? {
+                      ...d,
+                      readers: d.readers.map((r) =>
+                        r.id === updated.id ? updated : r,
+                      ),
+                    }
+                  : d,
+              )
+            }
+          />
         </div>
       )}
     </div>
