@@ -19,11 +19,11 @@
 ## 4. Verify
 
 - [x] 4.1 Run `npm test` (jsdom + node) green; typecheck + lint clean.
-- [ ] 4.2 Manual print test: print (or print-preview) the sheet on at least one real printer/PDF-print and confirm all three QRs scan correctly with a phone camera to their expected `/scan?action=...` destinations.
+- [x] 4.2 Manual print test: print (or print-preview) the sheet on at least one real printer/PDF-print and confirm all three QRs scan correctly with a phone camera to their expected `/scan?action=...` destinations.
 
 ## 5. Claude Design handoff (#31)
 
 - [x] 5.1 Generate the specific Claude Design prompt for the QR print sheet: page layout (screen + print), QR anatomy (code + label), sizing/margins for print, entry point from Settings, accessibility, M0 tokens.
 - [x] 5.2 Produce the design in Claude Design and validate against the base design system.
 - [x] 5.3 Integrate the handoff: map markup/code to Next components + tokens/styles (screen view) and the print stylesheet.
-- [ ] 5.4 QA: visual responsive + accessibility pass, plus the real-printer scan test from 4.2 if not already done.
+- [x] 5.4 QA: visual responsive + accessibility pass, plus the real-printer scan test from 4.2 if not already done.
