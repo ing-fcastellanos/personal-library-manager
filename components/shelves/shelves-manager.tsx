@@ -8,8 +8,10 @@ import {
   Trash2,
   Plus,
   Eye,
+  QrCode as QrCodeIcon,
   AlertTriangle,
 } from "lucide-react";
+import { ShelfQrDialog } from "@/components/qr/shelf-qr-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -137,6 +139,15 @@ export function ShelvesManager() {
                   Ver contenido
                 </Link>
               </Button>
+              <ShelfQrDialog
+                shelfId={shelf.id}
+                shelfName={shelf.name}
+                trigger={
+                  <Button variant="outline" size="icon" aria-label="Ver QR">
+                    <QrCodeIcon className="size-4" />
+                  </Button>
+                }
+              />
               <ShelfDialog
                 shelf={shelf}
                 trigger={

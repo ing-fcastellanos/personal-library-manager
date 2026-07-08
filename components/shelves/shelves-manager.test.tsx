@@ -21,6 +21,9 @@ vi.mock("next/link", () => ({
     </a>
   ),
 }));
+vi.mock("qrcode", () => ({
+  default: { toCanvas: vi.fn().mockResolvedValue(undefined) },
+}));
 
 function jsonResponse(body: unknown, status = 200) {
   return Promise.resolve({
@@ -70,5 +73,15 @@ describe("ShelvesManager", () => {
     await screen.findByText("Living");
     fireEvent.click(screen.getByRole("button", { name: /Agregar estante/ }));
     expect(await screen.findByText("Nuevo estante")).toBeInTheDocument();
+  });
+
+  it("opens the QR dialog for the right shelf", async () => {
+    render(<ShelvesManager />);
+    await screen.findByText("Living");
+    // Second shelf (Estudio) "Ver QR" button.
+    fireEvent.click(screen.getAllByRole("button", { name: "Ver QR" })[1]);
+    expect(
+      await screen.findByRole("heading", { name: "Estudio" }),
+    ).toBeInTheDocument();
   });
 });
