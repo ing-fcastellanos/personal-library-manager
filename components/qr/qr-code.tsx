@@ -29,6 +29,13 @@ export function QrCode({
   style?: React.CSSProperties;
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  // Read inside the draw effect without retriggering it on every parent
+  // render (the caller typically passes a fresh style object literal each
+  // time) — synced in its own effect, not during render (react-hooks/refs).
+  const styleRef = React.useRef(style);
+  React.useEffect(() => {
+    styleRef.current = style;
+  });
 
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -37,9 +44,19 @@ export function QrCode({
       errorCorrectionLevel: "M",
       width: size,
       margin: 4,
-    }).catch(() => {
-      // Nothing actionable client-side on failure — the canvas just stays blank.
-    });
+    })
+      .then(() => {
+        // `qrcode`'s canvas renderer force-sets canvas.style.width/height to
+        // match the draw resolution (`size`) as a side effect of drawing —
+        // clobbering any CSS size we asked for (e.g. a high-res draw scaled
+        // down to a physical print size). Reassert ours after it finishes.
+        const s = styleRef.current;
+        if (s?.width != null) canvas.style.width = String(s.width);
+        if (s?.height != null) canvas.style.height = String(s.height);
+      })
+      .catch(() => {
+        // Nothing actionable client-side on failure — the canvas just stays blank.
+      });
   }, [value, size]);
 
   return (
