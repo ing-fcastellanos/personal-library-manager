@@ -98,7 +98,19 @@ describe("Dashboard", () => {
     expect(screen.getAllByText("Dani").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows empty recent-reads state when the library has no finished readings", async () => {
+  it("renders the Composición charts with real distributions", async () => {
+    render(<Dashboard />);
+    expect(await screen.findByText("Tendencias", {}, LONG)).toBeInTheDocument();
+    expect(screen.getByText("Composición")).toBeInTheDocument();
+    expect(screen.getByText("Libros por categoría")).toBeInTheDocument();
+    expect(screen.getByText("Libros por autor")).toBeInTheDocument();
+    expect(screen.getByText("Libros por editorial")).toBeInTheDocument();
+    expect(screen.getByText("Lecturas por categoría")).toBeInTheDocument();
+    // b1 (Cortázar, Sudamericana, ficcion) has one finished event.
+    expect(screen.getByText("Sudamericana")).toBeInTheDocument();
+  });
+
+  it("shows empty states in Composición and Recent Reads when nothing is finished yet", async () => {
     global.fetch = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/api/books")) return jsonResponse(books);
@@ -109,9 +121,14 @@ describe("Dashboard", () => {
     }) as unknown as typeof fetch;
 
     render(<Dashboard />);
-    expect(
-      await screen.findByText("Todavía no hay lecturas terminadas.", {}, LONG),
-    ).toBeInTheDocument();
+    // Both the "Lecturas por categoría" chart and the Recent Reads card share
+    // this empty-state copy, so there are two matches once both sections render.
+    const empties = await screen.findAllByText(
+      "Todavía no hay lecturas terminadas.",
+      {},
+      LONG,
+    );
+    expect(empties.length).toBeGreaterThanOrEqual(2);
   });
 
   it("shows an empty state when there are no books", async () => {

@@ -20,7 +20,16 @@ import type { Reader } from "@/lib/types/reader";
 import { KpiCard } from "./kpi-card";
 import { RecentReads } from "./recent-reads";
 import { ReaderTrends } from "./reader-trends";
-import { computeKpis, type Kpis, type PerReaderStat } from "./dashboard-stats";
+import { BarChart } from "./bar-chart";
+import {
+  computeKpis,
+  booksByCategory,
+  booksByAuthor,
+  booksByPublisher,
+  readingsByCategory,
+  type Kpis,
+  type PerReaderStat,
+} from "./dashboard-stats";
 
 /**
  * Library dashboard (#27, Claude Design handoff): real KPI overview of the
@@ -97,11 +106,38 @@ export function Dashboard() {
           {kpis.perReader.length > 0 && (
             <PerReaderList perReader={kpis.perReader} />
           )}
+          <Composicion books={data!.books} events={data!.events} />
           <RecentReads events={data!.events} readers={data!.readers} />
           <ReaderTrends events={data!.events} readers={data!.readers} />
         </div>
       )}
     </div>
+  );
+}
+
+function Composicion({
+  books,
+  events,
+}: {
+  books: Book[];
+  events: ReadingEvent[];
+}) {
+  return (
+    <section>
+      <h2 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+        Composición
+      </h2>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <BarChart title="Libros por categoría" data={booksByCategory(books)} />
+        <BarChart title="Libros por autor" data={booksByAuthor(books)} />
+        <BarChart title="Libros por editorial" data={booksByPublisher(books)} />
+        <BarChart
+          title="Lecturas por categoría"
+          data={readingsByCategory(books, events)}
+          emptyMessage="Todavía no hay lecturas terminadas."
+        />
+      </div>
+    </section>
   );
 }
 
