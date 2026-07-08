@@ -25,4 +25,4 @@
 - [x] 5.1 Generate the specific Claude Design prompt for the charts section: bar chart anatomy (label/value/bar), the four distributions, "Otros" bucket treatment, empty/loading states, mobile-first responsive, accessibility (contrast, text-not-color-only), M0 tokens.
 - [x] 5.2 Produce the design in Claude Design and validate against the base design system.
 - [x] 5.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
-- [ ] 5.4 QA: visual responsive + accessibility pass.
+- [x] 5.4 QA: visual responsive + accessibility pass.

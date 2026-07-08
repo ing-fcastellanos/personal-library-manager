@@ -29,4 +29,4 @@
 - [x] 6.1 Generate the specific Claude Design prompt for "últimos leídos" + reader trends: recent-reads card list, per-reader trend card anatomy (pace/streak/ritmo), comparison layout, empty/zero states, mobile-first responsive, accessibility, M0 tokens.
 - [x] 6.2 Produce the design in Claude Design and validate against the base design system.
 - [x] 6.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
-- [ ] 6.4 QA: visual responsive + accessibility pass.
+- [x] 6.4 QA: visual responsive + accessibility pass.

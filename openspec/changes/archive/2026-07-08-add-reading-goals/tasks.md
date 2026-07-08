@@ -26,4 +26,4 @@
 - [x] 5.1 Generate the specific Claude Design prompt for the reading-goal widget: three states (sin meta/en progreso/cumplida), the set/edit control, progress + projection display, comparison layout with #29's trends section, mobile-first responsive, accessibility, M0 tokens.
 - [x] 5.2 Produce the design in Claude Design and validate against the base design system.
 - [x] 5.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
-- [ ] 5.4 QA: visual responsive + accessibility pass.
+- [x] 5.4 QA: visual responsive + accessibility pass.
