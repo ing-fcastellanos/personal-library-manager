@@ -101,3 +101,9 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+/* QR print sheet (#31): portrait A4 with room for the 4.2cm tiles + margins. */
+@page {
+  size: A4 portrait;
+  margin: 1.4cm;
+}
