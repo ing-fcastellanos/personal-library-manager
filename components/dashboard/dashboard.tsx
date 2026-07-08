@@ -18,6 +18,8 @@ import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent } from "@/lib/types/reading-event";
 import type { Reader } from "@/lib/types/reader";
 import { KpiCard } from "./kpi-card";
+import { RecentReads } from "./recent-reads";
+import { ReaderTrends } from "./reader-trends";
 import { BarChart } from "./bar-chart";
 import {
   computeKpis,
@@ -105,6 +107,8 @@ export function Dashboard() {
             <PerReaderList perReader={kpis.perReader} />
           )}
           <Composicion books={data!.books} events={data!.events} />
+          <RecentReads events={data!.events} readers={data!.readers} />
+          <ReaderTrends events={data!.events} readers={data!.readers} />
         </div>
       )}
     </div>

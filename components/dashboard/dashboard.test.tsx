@@ -41,7 +41,17 @@ const copies = [
   { id: "c1", bookId: "b1" },
   { id: "c2", bookId: "b1" },
 ];
-const events = [{ id: "e1", readerId: "r1", bookId: "b1", status: "finished" }];
+const events = [
+  {
+    id: "e1",
+    readerId: "r1",
+    bookId: "b1",
+    status: "finished",
+    dateFinished: "2026-07-06",
+    bookTitle: "Rayuela",
+    bookAuthors: ["Julio Cortázar"],
+  },
+];
 const readers = [
   { id: "r1", name: "Frank" },
   { id: "r2", name: "Dani" },
@@ -67,7 +77,7 @@ const LONG = { timeout: 3000 };
 describe("Dashboard", () => {
   it("renders the real KPIs once loaded", async () => {
     render(<Dashboard />);
-    expect(await screen.findByText("Frank", {}, LONG)).toBeInTheDocument();
+    expect(await screen.findByText("Tendencias", {}, LONG)).toBeInTheDocument();
     expect(screen.getByText("Libros")).toBeInTheDocument();
     expect(screen.getByText("Ejemplares")).toBeInTheDocument();
     expect(screen.getByText("Leídos")).toBeInTheDocument();
@@ -75,9 +85,22 @@ describe("Dashboard", () => {
     expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(1); // real counts rendered
   });
 
+  it("renders the recent-reads and trends sections with real data", async () => {
+    render(<Dashboard />);
+    expect(await screen.findByText("Tendencias", {}, LONG)).toBeInTheDocument();
+    expect(screen.getByText("Últimos leídos")).toBeInTheDocument();
+    expect(screen.getByText("Rayuela")).toBeInTheDocument(); // b1's finished event
+    expect(
+      screen.getByRole("link", { name: "Ver historial completo" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Tendencias")).toBeInTheDocument();
+    // "Dani" shows up in both the per-reader list and the trends comparison.
+    expect(screen.getAllByText("Dani").length).toBeGreaterThanOrEqual(1);
+  });
+
   it("renders the Composición charts with real distributions", async () => {
     render(<Dashboard />);
-    expect(await screen.findByText("Frank", {}, LONG)).toBeInTheDocument();
+    expect(await screen.findByText("Tendencias", {}, LONG)).toBeInTheDocument();
     expect(screen.getByText("Composición")).toBeInTheDocument();
     expect(screen.getByText("Libros por categoría")).toBeInTheDocument();
     expect(screen.getByText("Libros por autor")).toBeInTheDocument();
@@ -87,7 +110,7 @@ describe("Dashboard", () => {
     expect(screen.getByText("Sudamericana")).toBeInTheDocument();
   });
 
-  it("shows an empty readings-by-category state when nothing is finished yet", async () => {
+  it("shows empty states in Composición and Recent Reads when nothing is finished yet", async () => {
     global.fetch = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/api/books")) return jsonResponse(books);
@@ -98,9 +121,14 @@ describe("Dashboard", () => {
     }) as unknown as typeof fetch;
 
     render(<Dashboard />);
-    expect(
-      await screen.findByText("Todavía no hay lecturas terminadas.", {}, LONG),
-    ).toBeInTheDocument();
+    // Both the "Lecturas por categoría" chart and the Recent Reads card share
+    // this empty-state copy, so there are two matches once both sections render.
+    const empties = await screen.findAllByText(
+      "Todavía no hay lecturas terminadas.",
+      {},
+      LONG,
+    );
+    expect(empties.length).toBeGreaterThanOrEqual(2);
   });
 
   it("shows an empty state when there are no books", async () => {
@@ -131,7 +159,7 @@ describe("Dashboard", () => {
     }) as unknown as typeof fetch;
 
     render(<Dashboard />);
-    expect(await screen.findByText("Frank", {}, LONG)).toBeInTheDocument();
+    expect(await screen.findByText("Tendencias", {}, LONG)).toBeInTheDocument();
     expect(screen.getByText("Libros")).toBeInTheDocument();
     expect(screen.getByText("Ejemplares")).toBeInTheDocument();
   });
