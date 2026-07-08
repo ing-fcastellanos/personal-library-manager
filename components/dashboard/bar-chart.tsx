@@ -3,18 +3,14 @@
 import type { DistributionEntry } from "./dashboard-stats";
 
 /**
- * Accessible horizontal bar chart (#28), hand-rolled SVG over the design
- * tokens — no charting library, matching the project's existing pattern
- * (star rating, barcode scanner UI). Each bar carries a real SVG `<text>`
- * label and count so the distribution is readable (incl. by assistive tech)
- * without relying on bar length or color alone.
+ * Accessible horizontal bar chart (#28, Claude Design handoff): label and
+ * count are real DOM text (readable and CSS-truncatable, per the handoff's
+ * a11y notes); only the bar track/fill is SVG (`<rect>`, no charting
+ * library), sized as a percentage of its row so it stays responsive. The
+ * "Otros" bucket (see `topN` in dashboard-stats.ts) renders at reduced
+ * opacity to read as an aggregate, not a peer category.
  */
 const ROW_H = 28;
-const LABEL_W = 92;
-const VALUE_W = 30;
-const GAP = 8;
-const CHART_W = 320;
-const BAR_W = CHART_W - LABEL_W - VALUE_W - GAP * 2;
 
 export function BarChart({
   title,
@@ -27,68 +23,61 @@ export function BarChart({
 }) {
   const max = Math.max(1, ...data.map((d) => d.count));
   const nf = new Intl.NumberFormat("es-AR");
-  const height = data.length * ROW_H;
 
   return (
     <div className="rounded-2xl border bg-card p-4">
-      <h3 className="mb-3 text-[13px] font-semibold text-muted-foreground">
-        {title}
-      </h3>
+      <h3 className="mb-3 text-sm font-bold tracking-tight">{title}</h3>
       {data.length === 0 ? (
-        <p className="py-4 text-center text-sm text-muted-foreground">
+        <p className="px-2 py-6 text-center text-sm text-muted-foreground">
           {emptyMessage}
         </p>
       ) : (
-        <svg
-          role="img"
-          aria-label={title}
-          viewBox={`0 0 ${CHART_W} ${height}`}
-          width="100%"
-          height={height}
-          className="text-foreground"
-        >
-          {data.map((d, i) => {
-            const y = i * ROW_H;
-            const barWidth = Math.max(2, (d.count / max) * BAR_W);
-            const valueText = nf.format(d.count);
+        <div role="group" aria-label={title} className="flex flex-col">
+          {data.map((d) => {
+            const pct = Math.max(3, Math.round((d.count / max) * 100));
             return (
-              <g key={d.key} transform={`translate(0, ${y})`}>
-                <text
-                  x={0}
-                  y={ROW_H / 2}
-                  dominantBaseline="middle"
-                  className="fill-foreground text-[11px] font-medium"
-                >
-                  {d.label.length > 14 ? `${d.label.slice(0, 13)}…` : d.label}
-                </text>
-                <rect
-                  x={LABEL_W}
-                  y={(ROW_H - 14) / 2}
-                  width={BAR_W}
-                  height={14}
-                  rx={4}
-                  className="fill-muted"
-                />
-                <rect
-                  x={LABEL_W}
-                  y={(ROW_H - 14) / 2}
-                  width={barWidth}
-                  height={14}
-                  rx={4}
-                  className="fill-primary"
-                />
-                <text
-                  x={LABEL_W + BAR_W + GAP}
-                  y={ROW_H / 2}
-                  dominantBaseline="middle"
-                  className="fill-foreground text-[11px] font-bold tabular-nums"
-                >
-                  {valueText}
-                </text>
-              </g>
+              <div
+                key={d.key}
+                className="flex items-center gap-2.5"
+                style={{ height: ROW_H }}
+              >
+                <div className="w-24 shrink-0 truncate text-xs text-foreground">
+                  {d.label}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <svg
+                    width="100%"
+                    height={10}
+                    aria-hidden="true"
+                    className="block"
+                  >
+                    <rect
+                      x="0"
+                      y="0"
+                      width="100%"
+                      height={10}
+                      rx={5}
+                      className="fill-muted"
+                    />
+                    <rect
+                      x="0"
+                      y="0"
+                      width={`${pct}%`}
+                      height={10}
+                      rx={5}
+                      className={
+                        d.key === "otros" ? "fill-primary/40" : "fill-primary"
+                      }
+                    />
+                  </svg>
+                </div>
+                <div className="w-10 shrink-0 text-right text-xs font-bold tabular-nums text-foreground">
+                  {nf.format(d.count)}
+                </div>
+              </div>
             );
           })}
-        </svg>
+        </div>
       )}
     </div>
   );
