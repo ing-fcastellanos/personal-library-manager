@@ -14,7 +14,7 @@ import { PinSection } from "@/components/auth/pin-section";
 
 export default function SettingsPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:hidden">
       <h1 className="text-2xl font-bold tracking-tight">Ajustes</h1>
 
       <section className="space-y-3">
