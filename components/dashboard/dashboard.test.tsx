@@ -16,6 +16,12 @@ vi.mock("next/link", () => ({
     children: React.ReactNode;
   }) => <a href={href}>{children}</a>,
 }));
+vi.mock("@/components/auth/auth-provider", () => ({
+  useAuth: () => ({ reader: { id: "r1", name: "Frank" }, loading: false }),
+}));
+vi.mock("@/components/ui/use-toast", () => ({
+  useToast: () => ({ toast: vi.fn() }),
+}));
 
 function jsonResponse(body: unknown, ok = true) {
   return Promise.resolve({ ok, json: () => Promise.resolve(body) } as Response);
@@ -67,12 +73,21 @@ const LONG = { timeout: 3000 };
 describe("Dashboard", () => {
   it("renders the real KPIs once loaded", async () => {
     render(<Dashboard />);
-    expect(await screen.findByText("Frank", {}, LONG)).toBeInTheDocument();
+    expect(await screen.findByText("Meta anual", {}, LONG)).toBeInTheDocument();
     expect(screen.getByText("Libros")).toBeInTheDocument();
     expect(screen.getByText("Ejemplares")).toBeInTheDocument();
     expect(screen.getByText("Leídos")).toBeInTheDocument();
     expect(screen.getByText("Pendientes")).toBeInTheDocument();
     expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(1); // real counts rendered
+  });
+
+  it("renders the Meta anual section with a CTA for the active reader", async () => {
+    render(<Dashboard />);
+    expect(await screen.findByText("Meta anual", {}, LONG)).toBeInTheDocument();
+    // r1 (Frank) is the mocked active reader and has no goal set.
+    expect(
+      screen.getByRole("button", { name: "Fijá tu meta" }),
+    ).toBeInTheDocument();
   });
 
   it("shows an empty state when there are no books", async () => {
@@ -103,7 +118,7 @@ describe("Dashboard", () => {
     }) as unknown as typeof fetch;
 
     render(<Dashboard />);
-    expect(await screen.findByText("Frank", {}, LONG)).toBeInTheDocument();
+    expect(await screen.findByText("Meta anual", {}, LONG)).toBeInTheDocument();
     expect(screen.getByText("Libros")).toBeInTheDocument();
     expect(screen.getByText("Ejemplares")).toBeInTheDocument();
   });
