@@ -1,20 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { BookCheck, Check, LineChart } from "lucide-react";
+import { BookCheck, Check, LineChart, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WriteCta } from "@/components/auth/write-cta";
 import { useAuth } from "@/components/auth/auth-provider";
 import { MarkAsRead } from "@/components/reading/mark-as-read";
 import { ReadingHistory } from "@/components/reading/reading-history";
+import { ReadingExport } from "@/components/reading/reading-export";
 
 /**
- * The "Leído" section — everything about finished readings. Two tabs: **Registrar**
- * (mark-as-read, #24/#25, write-gated per ADR-0006) and **Historial** (the reading
- * history timeline, #26 — a public read; editing an own entry needs sign-in).
+ * The "Leído" section — everything about finished readings. Three tabs:
+ * **Registrar** (mark-as-read, #24/#25, write-gated per ADR-0006), **Historial**
+ * (the reading history timeline, #26 — a public read; editing an own entry needs
+ * sign-in), and **Exportar** (Goodreads/StoryGraph-compatible CSV, #34 — a public
+ * read like Historial, reuses the same filters).
  */
-type Tab = "registrar" | "historial";
+type Tab = "registrar" | "historial" | "exportar";
 
 export default function ReadPage() {
   const { reader, loading } = useAuth();
@@ -43,6 +46,13 @@ export default function ReadPage() {
         >
           Historial
         </TabButton>
+        <TabButton
+          selected={tab === "exportar"}
+          onClick={() => setTab("exportar")}
+          icon={<Download className="size-4" aria-hidden="true" />}
+        >
+          Exportar
+        </TabButton>
       </div>
 
       {tab === "registrar" ? (
@@ -58,9 +68,13 @@ export default function ReadPage() {
             />
           )}
         </div>
-      ) : (
+      ) : tab === "historial" ? (
         <div role="tabpanel" aria-label="Historial">
           <ReadingHistory />
+        </div>
+      ) : (
+        <div role="tabpanel" aria-label="Exportar">
+          <ReadingExport />
         </div>
       )}
     </div>

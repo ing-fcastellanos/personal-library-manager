@@ -63,6 +63,7 @@ const event = (p: Partial<ReadingEvent>): ReadingEvent => ({
   dateFinished: null,
   rating: null,
   review: null,
+  publishPending: false,
   bookTitle: "T",
   bookAuthors: [],
   isbn13: null,

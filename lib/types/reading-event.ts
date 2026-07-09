@@ -13,6 +13,8 @@ export type ReadingStatus = z.infer<typeof readingStatusSchema>;
  * **snapshot** of the book at event time (`bookTitle`, `bookAuthors`, `isbn13`,
  * `coverUrl`) so history (#26), recent-reads (#29) and CSV export (#34) never join.
  * Per-reader read/pending status is derived from these events (Decision D).
+ * `publishPending` (#34) is a manual, opt-in reminder that the reader still wants to
+ * publish this reading to Goodreads — never set automatically.
  */
 export const readingEventSchema = z.object({
   id: z.string(),
@@ -24,6 +26,7 @@ export const readingEventSchema = z.object({
   dateFinished: z.string().nullish(),
   rating: z.number().int().min(1).max(5).nullish(),
   review: z.string().nullish(),
+  publishPending: z.boolean().default(false),
   // --- Denormalized snapshot of the book at event time (Decision C) ---
   bookTitle: z.string().min(1),
   bookAuthors: z.array(z.string()).default([]),
@@ -58,5 +61,6 @@ export const readingEventUpdateSchema = z.object({
   dateFinished: z.string().nullish(),
   rating: z.number().int().min(1).max(5).nullish(),
   review: z.string().nullish(),
+  publishPending: z.boolean().optional(),
 });
 export type ReadingEventUpdateInput = z.infer<typeof readingEventUpdateSchema>;

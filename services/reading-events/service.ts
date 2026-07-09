@@ -46,6 +46,7 @@ export async function createReadingEvent(
     dateFinished: input.dateFinished ?? null,
     rating: input.rating ?? null,
     review: input.review ?? null,
+    publishPending: false,
     // Denormalized snapshot of the book at event time (ADR-0007).
     bookTitle: book.title,
     bookAuthors: book.authors,

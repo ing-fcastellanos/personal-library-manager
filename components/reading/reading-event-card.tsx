@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Pencil } from "lucide-react";
+import { Check, ExternalLink, Pencil } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { ReadingEvent } from "@/lib/types/reading-event";
 import { StarRating } from "./star-rating";
 import { eventDate, formatReadingDate } from "./history";
+import { goodreadsSearchUrl } from "./goodreads";
 
 /**
  * One reading event, shared by the global history timeline and the per-book
@@ -14,20 +15,27 @@ import { eventDate, formatReadingDate } from "./history";
  * (default) it leads with the book (cover/title/authors from the event's
  * denormalized snapshot); without it, it leads with the reader (for a book's own
  * history where the book is implied). The optional icon "Editar" appears only when
- * `editable`.
+ * `editable`; the "pendiente de publicar" toggle and "Publicar en Goodreads" link
+ * (#34) share that same own-event gate — publishing only makes sense for a
+ * reading the active reader themselves recorded.
  */
 export function ReadingEventCard({
   event,
   readerName,
   showBook = true,
   editable = false,
+  goodreadsUrl,
   onEdit,
+  onTogglePublishPending,
 }: {
   event: ReadingEvent;
   readerName?: string;
   showBook?: boolean;
   editable?: boolean;
+  /** The active reader's own Goodreads profile URL, if configured (ADR-0005). */
+  goodreadsUrl?: string | null;
   onEdit?: () => void;
+  onTogglePublishPending?: (next: boolean) => void;
 }) {
   const name = readerName ?? "Lector";
   const date = formatReadingDate(eventDate(event));
@@ -105,6 +113,44 @@ export function ReadingEventCard({
             <p className="text-[13px] leading-relaxed text-muted-foreground">
               {event.review}
             </p>
+          )}
+        </div>
+      )}
+
+      {editable && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t pt-3">
+          {onTogglePublishPending && (
+            <label
+              htmlFor={`pub-${event.id}`}
+              className="inline-flex min-h-11 flex-1 items-center gap-2 text-[12.5px] font-semibold text-muted-foreground"
+            >
+              <span className="relative inline-flex size-[22px] shrink-0">
+                <input
+                  type="checkbox"
+                  id={`pub-${event.id}`}
+                  checked={event.publishPending}
+                  onChange={(e) => onTogglePublishPending(e.target.checked)}
+                  className="peer size-[22px] appearance-none rounded-md border border-input bg-card checked:border-primary checked:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+                <Check
+                  className="pointer-events-none absolute inset-0 m-auto size-3.5 text-primary-foreground opacity-0 peer-checked:opacity-100"
+                  aria-hidden="true"
+                />
+              </span>
+              Pendiente de publicar
+            </label>
+          )}
+          {goodreadsUrl && (
+            <a
+              href={goodreadsSearchUrl(event.isbn13, event.bookTitle)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Publicar en Goodreads (se abre en una pestaña nueva)"
+              className="inline-flex min-h-11 items-center gap-1 text-[12.5px] font-semibold text-primary hover:underline"
+            >
+              Publicar en Goodreads
+              <ExternalLink className="size-3.5" aria-hidden="true" />
+            </a>
           )}
         </div>
       )}

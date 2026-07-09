@@ -29,6 +29,7 @@ function mapDoc(doc: DocumentSnapshot): ReadingEvent {
     dateFinished: data.dateFinished ?? null,
     rating: data.rating ?? null,
     review: data.review ?? null,
+    publishPending: data.publishPending ?? false,
     bookTitle: data.bookTitle,
     bookAuthors: data.bookAuthors ?? [],
     isbn13: data.isbn13 ?? null,
