@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useShelf } from "@/components/shelf/shelf-context";
+import { useToast } from "@/components/ui/use-toast";
 import { AddBookForm } from "./add-book-form";
 import {
   type BookData,
@@ -96,12 +97,17 @@ async function jsonOrThrow(res: Response) {
 
 export function AddBook() {
   const router = useRouter();
+  const { toast } = useToast();
   const { shelf: scanShelf } = useShelf();
   const [shelves, setShelves] = React.useState<Shelf[]>([]);
+  const [shelvesLoaded, setShelvesLoaded] = React.useState(false);
   // Candidates from a title search, keyed by the synthetic id handed to the form.
   const candidateStore = React.useRef(new Map<string, EnrichCandidate>());
   // The existing book a duplicate check last surfaced (target for "add as copy").
   const lastDuplicate = React.useRef<ExistingBook | null>(null);
+  // Guards the stale-shelf toast (#32) against firing more than once for the
+  // same scanned id.
+  const notifiedShelfRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     fetch("/api/shelves")
@@ -109,8 +115,21 @@ export function AddBook() {
       .then((data: { id: string; name: string }[]) =>
         setShelves(data.map((s) => ({ id: s.id, name: s.name }))),
       )
-      .catch(() => setShelves([]));
+      .catch(() => setShelves([]))
+      .finally(() => setShelvesLoaded(true));
   }, []);
+
+  // A shelf QR (#33) can point at a shelf deleted since it was printed: once
+  // the shelf list has loaded, tell the reader instead of silently dropping
+  // the preselection. `shelvesLoaded` (not `shelves.length`) distinguishes
+  // "haven't fetched yet" from "fetched, and the reader has zero shelves".
+  React.useEffect(() => {
+    if (!scanShelf || !shelvesLoaded) return;
+    if (notifiedShelfRef.current === scanShelf) return;
+    if (shelves.some((s) => s.id === scanShelf)) return;
+    notifiedShelfRef.current = scanShelf;
+    toast({ title: "Ese estante ya no existe" });
+  }, [scanShelf, shelves, shelvesLoaded, toast]);
 
   async function onEnrichIsbn(isbn: string): Promise<BookData> {
     const { candidate } = (await jsonOrThrow(

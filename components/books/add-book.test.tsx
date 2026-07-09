@@ -13,6 +13,10 @@ const shelfMock = vi.hoisted(() => ({ value: null as string | null }));
 vi.mock("@/components/shelf/shelf-context", () => ({
   useShelf: () => ({ shelf: shelfMock.value }),
 }));
+const toastMock = vi.hoisted(() => vi.fn());
+vi.mock("@/components/ui/use-toast", () => ({
+  useToast: () => ({ toast: toastMock }),
+}));
 
 function jsonResponse(body: unknown, status = 200) {
   return Promise.resolve({
@@ -32,6 +36,7 @@ const candidate = {
 
 let duplicatesResponse: unknown = { recommendation: "add-new", matches: [] };
 let lastIntakeBody: { copy?: { shelfId?: string | null } } | null = null;
+let shelvesResponse: { id: string; name: string }[] = [];
 const intake = vi.fn(() =>
   jsonResponse({ book: { id: "b1" }, copy: { id: "c1" } }, 201),
 );
@@ -40,10 +45,12 @@ beforeEach(() => {
   duplicatesResponse = { recommendation: "add-new", matches: [] };
   lastIntakeBody = null;
   shelfMock.value = null;
+  shelvesResponse = [];
+  toastMock.mockClear();
   intake.mockClear();
   global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
-    if (url.startsWith("/api/shelves")) return jsonResponse([]);
+    if (url.startsWith("/api/shelves")) return jsonResponse(shelvesResponse);
     if (url.startsWith("/api/enrich")) return jsonResponse({ candidate });
     if (url.startsWith("/api/books/duplicates"))
       return jsonResponse(duplicatesResponse);
@@ -136,5 +143,43 @@ describe("AddBook", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar libro" }));
     await waitFor(() => expect(intake).toHaveBeenCalledOnce());
     expect(lastIntakeBody?.copy?.shelfId).toBe("shelf-9");
+  });
+
+  it("toasts when the scanned shelf no longer exists (#32)", async () => {
+    shelfMock.value = "shelf-deleted";
+    shelvesResponse = [{ id: "shelf-1", name: "Living" }];
+    render(<AddBook />);
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Ese estante ya no existe" }),
+      ),
+    );
+  });
+
+  it("does not toast when the scanned shelf exists (#32)", async () => {
+    shelfMock.value = "shelf-1";
+    shelvesResponse = [{ id: "shelf-1", name: "Living" }];
+    render(<AddBook />);
+    await waitFor(() =>
+      expect(screen.getByLabelText("Código ISBN")).toBeInTheDocument(),
+    );
+    expect(toastMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Ese estante ya no existe" }),
+    );
+  });
+
+  it("does not toast again for the same stale shelf on a later re-render", async () => {
+    shelfMock.value = "shelf-deleted";
+    shelvesResponse = [{ id: "shelf-1", name: "Living" }];
+    render(<AddBook />);
+    await waitFor(() => expect(toastMock).toHaveBeenCalledTimes(1));
+    // Trigger an unrelated re-render (form validation) while the same stale
+    // scanShelf is still in context.
+    fireEvent.click(
+      screen.getByRole("button", { name: /Cargar manualmente sin buscar/ }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Guardar libro" }));
+    await screen.findByText("El título es obligatorio.");
+    expect(toastMock).toHaveBeenCalledTimes(1);
   });
 });
