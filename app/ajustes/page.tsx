@@ -11,6 +11,7 @@ import { ReadersManager } from "@/components/readers/readers-manager";
 import { ShelvesManager } from "@/components/shelves/shelves-manager";
 import { AISettingsManager } from "@/components/ai-settings/ai-settings-manager";
 import { PinSection } from "@/components/auth/pin-section";
+import { BackupButton } from "@/components/settings/backup-button";
 
 export default function SettingsPage() {
   return (
@@ -49,6 +50,19 @@ export default function SettingsPage() {
           <Button asChild variant="outline">
             <Link href="/ajustes/qr">Ver e imprimir QR</Link>
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Backup</CardTitle>
+          <CardDescription>
+            Descargá un JSON completo de tu biblioteca (libros, ejemplares,
+            lecturas, lectores y estantes) para tu propio resguardo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BackupButton />
         </CardContent>
       </Card>
 
