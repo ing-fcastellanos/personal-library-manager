@@ -6,4 +6,4 @@
 ## 2. Verify
 
 - [x] 2.1 Run `npm test` (jsdom + node) green; typecheck + lint clean.
-- [ ] 2.2 Manual end-to-end check closing out M6: scan a real printed action QR (#31) and a real shelf QR (#33), confirm routing + auth gating + shelf preselection all work, and confirm the new notice appears for a shelf QR pointing at a deleted shelf.
+- [x] 2.2 Manual end-to-end check closing out M6: scan a real printed action QR (#31) and a real shelf QR (#33), confirm routing + auth gating + shelf preselection all work, and confirm the new notice appears for a shelf QR pointing at a deleted shelf.
