@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Pencil, ChevronLeft, Check } from "lucide-react";
+import { Pencil, ChevronLeft, Check, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -150,7 +150,9 @@ export function BookDetail({ bookId }: { bookId: string }) {
                   href={goodreadsSearchUrl(book.isbn13, book.title)}
                   target="_blank"
                   rel="noreferrer"
+                  aria-label="Ver en Goodreads (se abre en una pestaña nueva)"
                 >
+                  <ExternalLink className="size-3.5" />
                   Ver en Goodreads
                 </a>
               </Button>

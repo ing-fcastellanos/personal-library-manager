@@ -99,7 +99,7 @@ describe("BookDetail", () => {
     render(<BookDetail bookId="b1" />);
     await screen.findByRole("heading", { name: "El nombre del viento" });
     expect(
-      screen.getByRole("link", { name: "Ver en Goodreads" }),
+      screen.getByRole("link", { name: /Ver en Goodreads/ }),
     ).toHaveAttribute(
       "href",
       "https://www.goodreads.com/search?q=9780756404741",
@@ -120,7 +120,7 @@ describe("BookDetail", () => {
     render(<BookDetail bookId="b1" />);
     await screen.findByRole("heading", { name: "El nombre del viento" });
     expect(
-      screen.getByRole("link", { name: "Ver en Goodreads" }),
+      screen.getByRole("link", { name: /Ver en Goodreads/ }),
     ).toHaveAttribute(
       "href",
       "https://www.goodreads.com/search?q=El%20nombre%20del%20viento",

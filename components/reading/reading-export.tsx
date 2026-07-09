@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Download, FileDown } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/auth-provider";
 import type { Reader } from "@/lib/types/reader";
 import type { ReadingEvent } from "@/lib/types/reading-event";
@@ -93,33 +94,56 @@ export function ReadingExport() {
     );
   }
 
+  const isEmpty = filtered.length === 0;
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <ReadingFiltersBar
-          readers={readers}
-          value={filters}
-          onChange={setFilters}
-        />
+      <div className="space-y-2">
+        <div className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          Filtros
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <ReadingFiltersBar
+            readers={readers}
+            value={filters}
+            onChange={setFilters}
+          />
+        </div>
+      </div>
+
+      <div>
         <button
           type="button"
           onClick={download}
-          disabled={filtered.length === 0}
-          className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-primary px-3.5 text-sm font-bold text-primary-foreground disabled:opacity-50"
+          disabled={isEmpty}
+          aria-disabled={isEmpty}
+          className={cn(
+            "inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-bold transition-colors",
+            isEmpty
+              ? "cursor-not-allowed border border-border bg-muted text-muted-foreground opacity-75"
+              : "bg-primary text-primary-foreground hover:brightness-[1.06]",
+          )}
         >
-          <Download className="size-4" aria-hidden="true" />
+          <Download className="size-[18px]" aria-hidden="true" />
           Descargar CSV
         </button>
+        {!isEmpty && (
+          <p className="mt-2 text-center text-[11.5px] leading-relaxed text-muted-foreground">
+            Formato compatible con Goodreads y StoryGraph · {filtered.length}{" "}
+            lecturas
+          </p>
+        )}
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="flex flex-col items-center px-5 py-10 text-center">
-          <span className="grid size-14 place-items-center rounded-2xl bg-muted text-muted-foreground">
-            <FileDown className="size-7" aria-hidden="true" />
-          </span>
-          <p className="mt-4 text-sm font-semibold">
-            No hay lecturas para exportar con esos filtros.
-          </p>
+      <div className="border-t" />
+
+      {isEmpty ? (
+        <div className="flex items-center justify-center px-4 py-10 text-center">
+          <div className="max-w-[280px] rounded-2xl border border-dashed bg-muted px-5 py-6">
+            <p className="text-sm font-semibold text-muted-foreground">
+              No hay lecturas para exportar con esos filtros.
+            </p>
+          </div>
         </div>
       ) : (
         <ul className="flex flex-col gap-3">

@@ -75,7 +75,7 @@ describe("ReadingEventCard", () => {
     );
     expect(screen.queryByText("Pendiente de publicar")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Publicar en Goodreads" }),
+      screen.queryByRole("link", { name: /Publicar en Goodreads/ }),
     ).not.toBeInTheDocument();
 
     rerender(
@@ -88,7 +88,7 @@ describe("ReadingEventCard", () => {
       />,
     );
     expect(screen.getByText("Pendiente de publicar")).toBeInTheDocument();
-    const link = screen.getByRole("link", { name: "Publicar en Goodreads" });
+    const link = screen.getByRole("link", { name: /Publicar en Goodreads/ });
     expect(link).toHaveAttribute(
       "href",
       "https://www.goodreads.com/search?q=Rayuela",
@@ -98,7 +98,7 @@ describe("ReadingEventCard", () => {
   it("hides the Goodreads link when the active reader has no goodreadsUrl", () => {
     render(<ReadingEventCard event={event} readerName="Sofía" editable />);
     expect(
-      screen.queryByRole("link", { name: "Publicar en Goodreads" }),
+      screen.queryByRole("link", { name: /Publicar en Goodreads/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -126,7 +126,7 @@ describe("ReadingEventCard", () => {
       />,
     );
     expect(
-      screen.getByRole("link", { name: "Publicar en Goodreads" }),
+      screen.getByRole("link", { name: /Publicar en Goodreads/ }),
     ).toHaveAttribute(
       "href",
       "https://www.goodreads.com/search?q=9788437604572",

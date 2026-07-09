@@ -38,6 +38,6 @@
 ## 8. Claude Design handoff (#34)
 
 - [x] 8.1 Generate the specific Claude Design prompt for: the Exportar tab (filters + download + per-row pending toggle), the pending-to-publish toggle and publish link as they appear in Historial, and the "Ver en Goodreads" button on the book detail page — states, responsive, accessibility, M0 tokens.
-- [ ] 8.2 Produce the design in Claude Design and validate against the base design system.
-- [ ] 8.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
+- [x] 8.2 Produce the design in Claude Design and validate against the base design system.
+- [x] 8.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
 - [ ] 8.4 QA: visual responsive + accessibility pass, plus a real CSV download opened in a spreadsheet app to confirm Goodreads/StoryGraph would accept it.

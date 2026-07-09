@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Pencil } from "lucide-react";
+import { Check, ExternalLink, Pencil } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import type { ReadingEvent } from "@/lib/types/reading-event";
@@ -120,13 +120,23 @@ export function ReadingEventCard({
       {editable && (
         <div className="mt-3 flex flex-wrap items-center gap-3 border-t pt-3">
           {onTogglePublishPending && (
-            <label className="inline-flex items-center gap-2 text-[12.5px] font-semibold text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={event.publishPending}
-                onChange={(e) => onTogglePublishPending(e.target.checked)}
-                className="size-4 rounded border-input accent-primary"
-              />
+            <label
+              htmlFor={`pub-${event.id}`}
+              className="inline-flex min-h-11 flex-1 items-center gap-2 text-[12.5px] font-semibold text-muted-foreground"
+            >
+              <span className="relative inline-flex size-[22px] shrink-0">
+                <input
+                  type="checkbox"
+                  id={`pub-${event.id}`}
+                  checked={event.publishPending}
+                  onChange={(e) => onTogglePublishPending(e.target.checked)}
+                  className="peer size-[22px] appearance-none rounded-md border border-input bg-card checked:border-primary checked:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+                <Check
+                  className="pointer-events-none absolute inset-0 m-auto size-3.5 text-primary-foreground opacity-0 peer-checked:opacity-100"
+                  aria-hidden="true"
+                />
+              </span>
               Pendiente de publicar
             </label>
           )}
@@ -135,9 +145,11 @@ export function ReadingEventCard({
               href={goodreadsSearchUrl(event.isbn13, event.bookTitle)}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center text-[12.5px] font-semibold text-primary hover:underline"
+              aria-label="Publicar en Goodreads (se abre en una pestaña nueva)"
+              className="inline-flex min-h-11 items-center gap-1 text-[12.5px] font-semibold text-primary hover:underline"
             >
               Publicar en Goodreads
+              <ExternalLink className="size-3.5" aria-hidden="true" />
             </a>
           )}
         </div>
