@@ -22,4 +22,4 @@
 ## 5. Verify
 
 - [x] 5.1 Run `npm test` (jsdom + node) green; typecheck + lint clean.
-- [ ] 5.2 Manual check: open a shelf's QR, print (or print-preview), confirm only that tile prints and the QR scans to `/scan?action=add&shelf=<id>` for the right shelf.
+- [x] 5.2 Manual check: open a shelf's QR, print (or print-preview), confirm only that tile prints and the QR scans to `/scan?action=add&shelf=<id>` for the right shelf.
