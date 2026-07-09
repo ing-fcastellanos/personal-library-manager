@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { BookPlus, Camera, Pencil, Library, Barcode } from "lucide-react";
+import {
+  BookPlus,
+  Camera,
+  Pencil,
+  Library,
+  Barcode,
+  FileUp,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WriteCta } from "@/components/auth/write-cta";
@@ -10,13 +17,15 @@ import { AddBook } from "@/components/books/add-book";
 import { AddBookByPhoto } from "@/components/books/add-book-by-photo";
 import { AddBookByShelf } from "@/components/books/add-book-by-shelf";
 import { AddBookByCode } from "@/components/books/add-book-by-code";
+import { AddBookByCsv } from "@/components/books/add-book-by-csv";
 
-type Mode = "photo" | "shelf" | "code" | "manual";
+type Mode = "photo" | "shelf" | "code" | "manual" | "csv";
 
 /**
- * Book add (#14 manual, #20 by photo, #21 by shelf). Write-gated (ADR-0006): a
- * signed-out reader gets the sign-in prompt; a signed-in reader chooses how to add
- * — one photo, a whole shelf (AI batch), or by hand.
+ * Book add (#14 manual, #20 by photo, #21 by shelf, #35 by CSV import). Write-gated
+ * (ADR-0006): a signed-out reader gets the sign-in prompt; a signed-in reader
+ * chooses how to add — one photo, a whole shelf (AI batch), a Goodreads/StoryGraph
+ * CSV bootstrap, by code, or by hand.
  */
 export default function AddPage() {
   const { reader, loading } = useAuth();
@@ -57,6 +66,13 @@ export default function AddPage() {
               icon={<Pencil className="size-[22px]" aria-hidden="true" />}
               label="Manual"
             />
+            <ModeTab
+              active={mode === "csv"}
+              onClick={() => setMode("csv")}
+              icon={<FileUp className="size-[22px]" aria-hidden="true" />}
+              label="Importar CSV"
+              wide
+            />
           </div>
           {mode === "photo" && (
             <AddBookByPhoto onManual={() => setMode("manual")} />
@@ -64,6 +80,7 @@ export default function AddPage() {
           {mode === "shelf" && <AddBookByShelf />}
           {mode === "code" && <AddBookByCode />}
           {mode === "manual" && <AddBook />}
+          {mode === "csv" && <AddBookByCsv />}
         </>
       ) : (
         <EmptyState
@@ -82,11 +99,14 @@ function ModeTab({
   onClick,
   icon,
   label,
+  wide = false,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
+  /** Spans both grid columns — used for a 5th tile in an otherwise 2×2 grid. */
+  wide?: boolean;
 }) {
   return (
     <button
@@ -97,6 +117,7 @@ function ModeTab({
       className={cn(
         "flex min-h-[78px] flex-col items-center justify-center gap-2 rounded-xl border-[1.5px] p-3 text-[13px] transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        wide && "col-span-2 flex-row",
         active
           ? "border-primary bg-accent font-bold text-accent-foreground"
           : "border-border bg-card font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground",
