@@ -15,6 +15,7 @@ const event: ReadingEvent = {
   dateFinished: "2026-07-06",
   rating: 4,
   review: "Bestial el ritmo.",
+  publishPending: false,
   bookTitle: "Rayuela",
   bookAuthors: ["Julio Cortázar"],
   isbn13: null,
@@ -62,5 +63,73 @@ describe("ReadingEventCard", () => {
     );
     expect(screen.queryByText("Rayuela")).not.toBeInTheDocument();
     expect(screen.getByText("Sofía")).toBeInTheDocument();
+  });
+
+  it("shows the pending-to-publish toggle and Goodreads link only when editable (#34)", () => {
+    const { rerender } = render(
+      <ReadingEventCard
+        event={event}
+        readerName="Sofía"
+        goodreadsUrl="https://www.goodreads.com/user/show/1"
+      />,
+    );
+    expect(screen.queryByText("Pendiente de publicar")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Publicar en Goodreads" }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <ReadingEventCard
+        event={event}
+        readerName="Sofía"
+        editable
+        goodreadsUrl="https://www.goodreads.com/user/show/1"
+        onTogglePublishPending={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Pendiente de publicar")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "Publicar en Goodreads" });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://www.goodreads.com/search?q=Rayuela",
+    );
+  });
+
+  it("hides the Goodreads link when the active reader has no goodreadsUrl", () => {
+    render(<ReadingEventCard event={event} readerName="Sofía" editable />);
+    expect(
+      screen.queryByRole("link", { name: "Publicar en Goodreads" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("toggling the checkbox calls onTogglePublishPending with the new value", () => {
+    const onToggle = vi.fn();
+    render(
+      <ReadingEventCard
+        event={event}
+        readerName="Sofía"
+        editable
+        onTogglePublishPending={onToggle}
+      />,
+    );
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(onToggle).toHaveBeenCalledWith(true);
+  });
+
+  it("prefers the ISBN over the title in the Goodreads link when present", () => {
+    render(
+      <ReadingEventCard
+        event={{ ...event, isbn13: "9788437604572" }}
+        readerName="Sofía"
+        editable
+        goodreadsUrl="https://www.goodreads.com/user/show/1"
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "Publicar en Goodreads" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.goodreads.com/search?q=9788437604572",
+    );
   });
 });

@@ -8,6 +8,7 @@ import type { ReadingEvent } from "@/lib/types/reading-event";
 import { ReadingEventCard } from "./reading-event-card";
 import { ConfirmReadingSheet } from "./confirm-reading-sheet";
 import { filterEvents, type HistoryFilters } from "./history";
+import { ReadingFiltersBar } from "./reading-filters-bar";
 import type { MarkTarget } from "./mark-read";
 
 /**
@@ -60,6 +61,20 @@ export function ReadingHistory() {
     );
   }
 
+  async function togglePublishPending(event: ReadingEvent, next: boolean) {
+    try {
+      const res = await fetch(`/api/reading-events/${event.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ publishPending: next }),
+      });
+      if (!res.ok) return;
+      onSaved((await res.json()) as ReadingEvent);
+    } catch {
+      // Best-effort — the checkbox simply won't reflect the change if this fails.
+    }
+  }
+
   if (events === null) {
     return (
       <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
@@ -87,21 +102,11 @@ export function ReadingHistory() {
     <div className="space-y-4">
       {/* filters */}
       <div className="flex flex-wrap gap-2">
-        <select
-          aria-label="Filtrar por lector"
-          value={filters.readerId ?? ""}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, readerId: e.target.value || undefined }))
-          }
-          className="h-10 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <option value="">Todos los lectores</option>
-          {readers.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
-            </option>
-          ))}
-        </select>
+        <ReadingFiltersBar
+          readers={readers}
+          value={filters}
+          onChange={(v) => setFilters((f) => ({ ...f, ...v }))}
+        />
 
         <select
           aria-label="Filtrar por calificación"
@@ -121,25 +126,6 @@ export function ReadingHistory() {
             </option>
           ))}
         </select>
-
-        <input
-          type="date"
-          aria-label="Desde"
-          value={filters.from ?? ""}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, from: e.target.value || undefined }))
-          }
-          className="h-10 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        <input
-          type="date"
-          aria-label="Hasta"
-          value={filters.to ?? ""}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, to: e.target.value || undefined }))
-          }
-          className="h-10 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-        />
 
         {active && (
           <button
@@ -175,7 +161,11 @@ export function ReadingHistory() {
                 event={ev}
                 readerName={readerName.get(ev.readerId)}
                 editable={!!reader && ev.readerId === reader.id}
+                goodreadsUrl={reader?.goodreadsUrl}
                 onEdit={() => setEditing(ev)}
+                onTogglePublishPending={(next) =>
+                  togglePublishPending(ev, next)
+                }
               />
             </li>
           ))}

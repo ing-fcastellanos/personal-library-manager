@@ -26,6 +26,7 @@ const mk = (p: Partial<ReadingEvent>): ReadingEvent => ({
   dateFinished: "2026-07-06",
   rating: null,
   review: null,
+  publishPending: false,
   bookTitle: "T",
   bookAuthors: [],
   isbn13: null,

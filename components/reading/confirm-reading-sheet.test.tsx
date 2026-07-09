@@ -77,6 +77,7 @@ const eventFixture = {
   dateFinished: "2026-07-01",
   rating: 4,
   review: "vieja reseña",
+  publishPending: false,
   bookTitle: "Dune",
   bookAuthors: ["Frank Herbert"],
   isbn13: null,

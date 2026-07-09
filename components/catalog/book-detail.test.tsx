@@ -95,6 +95,38 @@ describe("BookDetail", () => {
     );
   });
 
+  it("shows a Ver en Goodreads link using the book's ISBN (#34)", async () => {
+    render(<BookDetail bookId="b1" />);
+    await screen.findByRole("heading", { name: "El nombre del viento" });
+    expect(
+      screen.getByRole("link", { name: "Ver en Goodreads" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.goodreads.com/search?q=9780756404741",
+    );
+  });
+
+  it("falls back to the title in the Goodreads link with no ISBN", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books/b1"))
+        return jsonResponse({ ...book, isbn13: null });
+      if (url.endsWith("/copies")) return jsonResponse(copies);
+      if (url.endsWith("/reading-events")) return jsonResponse(events);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    await screen.findByRole("heading", { name: "El nombre del viento" });
+    expect(
+      screen.getByRole("link", { name: "Ver en Goodreads" }),
+    ).toHaveAttribute(
+      "href",
+      "https://www.goodreads.com/search?q=El%20nombre%20del%20viento",
+    );
+  });
+
   it("shows a not-found state", async () => {
     found = false;
     render(<BookDetail bookId="missing" />);

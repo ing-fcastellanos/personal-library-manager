@@ -62,6 +62,7 @@ function event(o: Partial<ReadingEvent>): ReadingEvent {
     dateFinished: null,
     rating: null,
     review: null,
+    publishPending: false,
     bookTitle: "Cien Años de Soledad",
     bookAuthors: ["Gabriel García Márquez"],
     isbn13: null,

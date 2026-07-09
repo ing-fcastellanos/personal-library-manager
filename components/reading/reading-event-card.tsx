@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { ReadingEvent } from "@/lib/types/reading-event";
 import { StarRating } from "./star-rating";
 import { eventDate, formatReadingDate } from "./history";
+import { goodreadsSearchUrl } from "./goodreads";
 
 /**
  * One reading event, shared by the global history timeline and the per-book
@@ -14,20 +15,27 @@ import { eventDate, formatReadingDate } from "./history";
  * (default) it leads with the book (cover/title/authors from the event's
  * denormalized snapshot); without it, it leads with the reader (for a book's own
  * history where the book is implied). The optional icon "Editar" appears only when
- * `editable`.
+ * `editable`; the "pendiente de publicar" toggle and "Publicar en Goodreads" link
+ * (#34) share that same own-event gate — publishing only makes sense for a
+ * reading the active reader themselves recorded.
  */
 export function ReadingEventCard({
   event,
   readerName,
   showBook = true,
   editable = false,
+  goodreadsUrl,
   onEdit,
+  onTogglePublishPending,
 }: {
   event: ReadingEvent;
   readerName?: string;
   showBook?: boolean;
   editable?: boolean;
+  /** The active reader's own Goodreads profile URL, if configured (ADR-0005). */
+  goodreadsUrl?: string | null;
   onEdit?: () => void;
+  onTogglePublishPending?: (next: boolean) => void;
 }) {
   const name = readerName ?? "Lector";
   const date = formatReadingDate(eventDate(event));
@@ -105,6 +113,32 @@ export function ReadingEventCard({
             <p className="text-[13px] leading-relaxed text-muted-foreground">
               {event.review}
             </p>
+          )}
+        </div>
+      )}
+
+      {editable && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t pt-3">
+          {onTogglePublishPending && (
+            <label className="inline-flex items-center gap-2 text-[12.5px] font-semibold text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={event.publishPending}
+                onChange={(e) => onTogglePublishPending(e.target.checked)}
+                className="size-4 rounded border-input accent-primary"
+              />
+              Pendiente de publicar
+            </label>
+          )}
+          {goodreadsUrl && (
+            <a
+              href={goodreadsSearchUrl(event.isbn13, event.bookTitle)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center text-[12.5px] font-semibold text-primary hover:underline"
+            >
+              Publicar en Goodreads
+            </a>
           )}
         </div>
       )}

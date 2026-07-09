@@ -14,6 +14,7 @@ import { ConfirmReadingSheet } from "@/components/reading/confirm-reading-sheet"
 import { StarRating } from "@/components/reading/star-rating";
 import { ReadingEventCard } from "@/components/reading/reading-event-card";
 import { formatReadingDate } from "@/components/reading/history";
+import { goodreadsSearchUrl } from "@/components/reading/goodreads";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
@@ -143,12 +144,23 @@ export function BookDetail({ bookId }: { bookId: string }) {
                 {book.authors.join(", ")}
               </p>
             </div>
-            <Button className="shrink-0 gap-1.5" asChild>
-              <Link href={`/libros/${book.id}/editar`}>
-                <Pencil className="size-3.5" />
-                Editar
-              </Link>
-            </Button>
+            <div className="flex shrink-0 gap-1.5">
+              <Button variant="outline" className="gap-1.5" asChild>
+                <a
+                  href={goodreadsSearchUrl(book.isbn13, book.title)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Ver en Goodreads
+                </a>
+              </Button>
+              <Button className="gap-1.5" asChild>
+                <Link href={`/libros/${book.id}/editar`}>
+                  <Pencil className="size-3.5" />
+                  Editar
+                </Link>
+              </Button>
+            </div>
           </div>
           {meta.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">

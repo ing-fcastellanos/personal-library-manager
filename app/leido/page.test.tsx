@@ -13,6 +13,9 @@ vi.mock("@/components/reading/mark-as-read", () => ({
 vi.mock("@/components/reading/reading-history", () => ({
   ReadingHistory: () => <div>PANEL_HISTORIAL</div>,
 }));
+vi.mock("@/components/reading/reading-export", () => ({
+  ReadingExport: () => <div>PANEL_EXPORTAR</div>,
+}));
 
 describe("ReadPage", () => {
   it("defaults to Registrar and switches to Historial", () => {
@@ -24,6 +27,17 @@ describe("ReadPage", () => {
     expect(screen.getByText("PANEL_HISTORIAL")).toBeInTheDocument();
     expect(screen.queryByText("PANEL_REGISTRAR")).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Historial" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("switches to Exportar (#34)", () => {
+    render(<ReadPage />);
+    fireEvent.click(screen.getByRole("tab", { name: "Exportar" }));
+    expect(screen.getByText("PANEL_EXPORTAR")).toBeInTheDocument();
+    expect(screen.queryByText("PANEL_REGISTRAR")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Exportar" })).toHaveAttribute(
       "aria-selected",
       "true",
     );

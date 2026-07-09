@@ -29,6 +29,7 @@ describe("searchCatalog (emulator)", () => {
       dateFinished: null,
       rating: null,
       review: null,
+      publishPending: false,
       bookTitle: gabo.title,
       bookAuthors: gabo.authors,
       isbn13: gabo.isbn13 ?? null,
