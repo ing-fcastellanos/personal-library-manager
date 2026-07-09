@@ -1,13 +1,17 @@
 "use client";
 
 import * as React from "react";
+import { Check, BookOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ProcessedRow } from "./process";
 
 /**
  * Per-row review list (#35, design D5/D6). Duplicate matches show as a
  * non-blocking badge with an inline override, never a modal — the reader
  * keeps reviewing other rows without dismissing anything (spec: "Review each
- * row before importing").
+ * row before importing"). An exact ISBN match badges as "already in your
+ * library" (accent); an ambiguous title match badges as a warning — distinct
+ * colors per the Claude Design handoff, since the two carry different risk.
  */
 export function ReviewList({
   rows,
@@ -25,16 +29,32 @@ export function ReviewList({
       {rows.map((row) => {
         const title = row.candidate?.title ?? row.source.title;
         const authors = row.candidate?.authors ?? row.source.authors;
+        const isExactDup = row.duplicate && row.recommendation === "add-copy";
         return (
-          <li key={row.key} className="rounded-2xl border bg-card p-3.5">
-            <div className="flex gap-3">
-              <input
-                type="checkbox"
-                checked={row.include}
-                onChange={(e) => update(row.key, { include: e.target.checked })}
-                aria-label={`Incluir ${title}`}
-                className="mt-1 size-5 shrink-0 rounded border-input accent-primary"
-              />
+          <li
+            key={row.key}
+            className={cn(
+              "rounded-2xl border bg-card p-3.5 transition-opacity",
+              row.duplicate ? "border-warning/40" : "border-border",
+              !row.include && "opacity-55",
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <span className="relative -m-1 mt-0 inline-flex size-11 shrink-0 items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={row.include}
+                  onChange={(e) =>
+                    update(row.key, { include: e.target.checked })
+                  }
+                  aria-label={`${row.include ? "Excluir" : "Incluir"} ${title}`}
+                  className="peer size-6 appearance-none rounded-[7px] border border-input bg-card checked:border-primary checked:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+                <Check
+                  className="pointer-events-none absolute size-3.5 text-primary-foreground opacity-0 peer-checked:opacity-100"
+                  aria-hidden="true"
+                />
+              </span>
               <CoverThumb url={row.candidate?.coverUrl ?? null} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[15px] font-bold leading-tight">
@@ -44,9 +64,21 @@ export function ReviewList({
                   {authors.join(", ")}
                 </p>
                 {row.duplicate && (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-accent-foreground">
-                      {row.recommendation === "add-copy"
+                  <div
+                    className={cn(
+                      "mt-2 inline-flex flex-wrap items-center gap-1.5 rounded-[10px] border px-2.5 py-1.5",
+                      isExactDup
+                        ? "border-primary/30 bg-accent"
+                        : "border-warning/40 bg-warning-bg",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "text-[11.5px] font-semibold",
+                        isExactDup ? "text-accent-foreground" : "text-warning",
+                      )}
+                    >
+                      {isExactDup
                         ? "Ya está en tu biblioteca"
                         : "Podría ser un duplicado"}{" "}
                       · {row.duplicate.book.title}
@@ -61,7 +93,7 @@ export function ReviewList({
                               : "create-new",
                         })
                       }
-                      className="text-[11px] font-semibold text-primary hover:underline"
+                      className="text-[11.5px] font-bold text-primary underline-offset-2 hover:underline"
                     >
                       {row.action === "create-new"
                         ? "Usar existente"
@@ -99,10 +131,14 @@ export function ReviewList({
 
 function CoverThumb({ url }: { url: string | null }) {
   return (
-    <span className="relative h-[66px] w-[46px] shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary to-accent shadow-md">
-      {url && (
+    <span className="relative h-[58px] w-[40px] shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary to-accent shadow-md">
+      {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt="" className="size-full object-cover" />
+      ) : (
+        <span className="grid size-full place-items-center bg-muted text-muted-foreground">
+          <BookOpen className="size-4" aria-hidden="true" />
+        </span>
       )}
     </span>
   );

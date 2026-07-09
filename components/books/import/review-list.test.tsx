@@ -28,9 +28,18 @@ describe("ReviewList", () => {
   it("excluding a row updates it to include: false", () => {
     const onChange = vi.fn();
     render(<ReviewList rows={[row()]} onChange={onChange} />);
-    fireEvent.click(screen.getByLabelText("Incluir Rayuela"));
+    fireEvent.click(screen.getByLabelText("Excluir Rayuela"));
     expect(onChange).toHaveBeenCalledWith([
       expect.objectContaining({ include: false }),
+    ]);
+  });
+
+  it("re-including an excluded row updates it to include: true", () => {
+    const onChange = vi.fn();
+    render(<ReviewList rows={[row({ include: false })]} onChange={onChange} />);
+    fireEvent.click(screen.getByLabelText("Incluir Rayuela"));
+    expect(onChange).toHaveBeenCalledWith([
+      expect.objectContaining({ include: true }),
     ]);
   });
 
@@ -75,5 +84,28 @@ describe("ReviewList", () => {
     expect(onChange).toHaveBeenCalledWith([
       expect.objectContaining({ action: "create-new" }),
     ]);
+  });
+
+  it("badges an ambiguous match as a possible duplicate, not as already-owned", () => {
+    const ambiguousRow = row({
+      duplicate: {
+        book: {
+          id: "b7",
+          title: "La invención de Morel",
+          authors: ["Adolfo Bioy Casares"],
+          isbn13: null,
+        },
+        tier: "strong",
+        score: 0.7,
+        existingCopies: 1,
+        suggestedAction: "review",
+      },
+      recommendation: "review",
+    });
+    render(<ReviewList rows={[ambiguousRow]} onChange={vi.fn()} />);
+    expect(screen.getByText(/Podría ser un duplicado/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Ya está en tu biblioteca/),
+    ).not.toBeInTheDocument();
   });
 });

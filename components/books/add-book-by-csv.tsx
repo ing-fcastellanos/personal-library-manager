@@ -29,12 +29,19 @@ type Phase =
  * (design D8). Every `ReadingEvent` attributes to the active reader — no
  * separate picker step (design D7).
  */
+const STEP_LABEL: Partial<Record<Phase, string>> = {
+  upload: "Paso 1 de 3",
+  mapping: "Paso 2 de 3",
+  review: "Paso 3 de 3",
+};
+
 export function AddBookByCsv() {
   const { reader } = useAuth();
   const { toast } = useToast();
   const [phase, setPhase] = React.useState<Phase>("upload");
   const [headers, setHeaders] = React.useState<string[]>([]);
   const [rows, setRows] = React.useState<Record<string, string>[]>([]);
+  const [format, setFormat] = React.useState<ImportFormat>("unknown");
   const [mapping, setMapping] = React.useState<ColumnMapping>(
     defaultMapping("unknown"),
   );
@@ -51,6 +58,7 @@ export function AddBookByCsv() {
       const detected: ImportFormat = detectFormat(parsed.headers);
       setHeaders(parsed.headers);
       setRows(parsed.rows);
+      setFormat(detected);
       setMapping(defaultMapping(detected));
       setPhase("mapping");
     } catch {
@@ -89,10 +97,17 @@ export function AddBookByCsv() {
     setPhase("summary");
   }
 
+  const stepChip = STEP_LABEL[phase] && (
+    <span className="mb-3 self-end rounded-full bg-muted px-2.5 py-1 text-[11.5px] font-bold text-muted-foreground">
+      {STEP_LABEL[phase]}
+    </span>
+  );
+
   // ───────────────────────── upload ─────────────────────────
   if (phase === "upload") {
     return (
       <div className="flex flex-col items-center px-2 pt-2 text-center">
+        {stepChip}
         <div className="flex aspect-[4/3] w-full max-w-[300px] flex-col items-center justify-center gap-3.5 rounded-[20px] border-2 border-dashed border-border bg-card p-6">
           <span className="grid size-[72px] place-items-center rounded-full bg-accent text-accent-foreground">
             <FileUp className="size-9" strokeWidth={1.6} aria-hidden="true" />
@@ -121,12 +136,18 @@ export function AddBookByCsv() {
   // ───────────────────────── mapping ─────────────────────────
   if (phase === "mapping") {
     return (
-      <MappingStep
-        headers={headers}
-        value={mapping}
-        onChange={setMapping}
-        onConfirm={onConfirmMapping}
-      />
+      <div className="flex flex-col items-end">
+        {stepChip}
+        <div className="w-full">
+          <MappingStep
+            format={format}
+            headers={headers}
+            value={mapping}
+            onChange={setMapping}
+            onConfirm={onConfirmMapping}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -147,8 +168,12 @@ export function AddBookByCsv() {
           role="status"
           aria-live="polite"
         >
-          {phase === "processing" ? "Procesando" : "Importando"} {progress.done}
-          /{progress.total}
+          Procesando {progress.done}/{progress.total}
+        </p>
+        <p className="mt-1.5 max-w-[250px] text-[12.5px] text-muted-foreground">
+          {phase === "processing"
+            ? "Enriqueciendo y buscando duplicados."
+            : "Guardando tu biblioteca."}
         </p>
         <div className="mt-5 w-full max-w-xs">
           <div
@@ -174,6 +199,17 @@ export function AddBookByCsv() {
     const includedCount = processed.filter((r) => r.include).length;
     return (
       <div className="space-y-4">
+        <div className="flex justify-end">{stepChip}</div>
+        {processed.length > 0 && (
+          <div className="flex items-baseline justify-between">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Revisá tus lecturas
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {includedCount} de {processed.length} incluidas
+            </p>
+          </div>
+        )}
         {processed.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
             No encontramos lecturas terminadas para importar en este archivo.
@@ -185,7 +221,7 @@ export function AddBookByCsv() {
               type="button"
               onClick={onConfirmImport}
               disabled={includedCount === 0}
-              className="sticky bottom-0 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-[15px] font-bold text-primary-foreground disabled:opacity-50"
+              className="sticky bottom-0 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-bold text-primary-foreground disabled:cursor-not-allowed disabled:border disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-75"
             >
               Importar {includedCount}{" "}
               {includedCount === 1 ? "lectura" : "lecturas"}

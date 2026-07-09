@@ -49,7 +49,7 @@ describe("AddBookByCsv", () => {
 
     // Mapping step — Goodreads is auto-detected, defaults pre-filled.
     await screen.findByRole("button", { name: "Continuar" });
-    expect(screen.getByLabelText("Título")).toHaveValue("Title");
+    expect(screen.getByLabelText(/Título/)).toHaveValue("Title");
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     // Review step — only the "read" row survives the finished-only filter.

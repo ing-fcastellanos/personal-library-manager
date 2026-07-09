@@ -11,14 +11,18 @@ export type ImportFormat = "goodreads" | "storygraph" | "unknown";
 export type TargetField =
   "title" | "author" | "isbn" | "rating" | "review" | "dateFinished" | "status";
 
-export const TARGET_FIELDS: { field: TargetField; label: string }[] = [
-  { field: "title", label: "Título" },
-  { field: "author", label: "Autor" },
-  { field: "isbn", label: "ISBN" },
-  { field: "rating", label: "Calificación" },
-  { field: "review", label: "Reseña" },
-  { field: "dateFinished", label: "Fecha leído" },
-  { field: "status", label: "Estado" },
+export const TARGET_FIELDS: {
+  field: TargetField;
+  label: string;
+  required: boolean;
+}[] = [
+  { field: "title", label: "Título", required: true },
+  { field: "author", label: "Autor", required: false },
+  { field: "isbn", label: "ISBN", required: false },
+  { field: "rating", label: "Calificación", required: false },
+  { field: "review", label: "Reseña", required: false },
+  { field: "dateFinished", label: "Fecha leído", required: false },
+  { field: "status", label: "Estado", required: true },
 ];
 
 export type ColumnMapping = Record<TargetField, string>;

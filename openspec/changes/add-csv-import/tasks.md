@@ -51,6 +51,6 @@
 ## 11. Claude Design handoff (#35)
 
 - [x] 11.1 Generate the specific Claude Design prompt for the import wizard (upload, column mapping, enrichment progress, review list with duplicate badges and physical/digital toggle, confirm/summary): states, responsive, accessibility, M0 tokens.
-- [ ] 11.2 Produce the design in Claude Design and validate against the base design system.
-- [ ] 11.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
+- [x] 11.2 Produce the design in Claude Design and validate against the base design system.
+- [x] 11.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
 - [ ] 11.4 QA: visual responsive + accessibility pass, plus a real Goodreads export and a real StoryGraph export each run through the wizard end-to-end.

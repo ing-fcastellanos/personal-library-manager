@@ -71,6 +71,7 @@ export default function AddPage() {
               onClick={() => setMode("csv")}
               icon={<FileUp className="size-[22px]" aria-hidden="true" />}
               label="Importar CSV"
+              wide
             />
           </div>
           {mode === "photo" && (
@@ -98,11 +99,14 @@ function ModeTab({
   onClick,
   icon,
   label,
+  wide = false,
 }: {
   active: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   label: string;
+  /** Spans both grid columns — used for a 5th tile in an otherwise 2×2 grid. */
+  wide?: boolean;
 }) {
   return (
     <button
@@ -113,6 +117,7 @@ function ModeTab({
       className={cn(
         "flex min-h-[78px] flex-col items-center justify-center gap-2 rounded-xl border-[1.5px] p-3 text-[13px] transition-colors",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        wide && "col-span-2 flex-row",
         active
           ? "border-primary bg-accent font-bold text-accent-foreground"
           : "border-border bg-card font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground",
