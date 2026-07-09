@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { BookPlus, Camera, Pencil, Library, Barcode } from "lucide-react";
+import {
+  BookPlus,
+  Camera,
+  Pencil,
+  Library,
+  Barcode,
+  FileUp,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { WriteCta } from "@/components/auth/write-cta";
@@ -10,13 +17,15 @@ import { AddBook } from "@/components/books/add-book";
 import { AddBookByPhoto } from "@/components/books/add-book-by-photo";
 import { AddBookByShelf } from "@/components/books/add-book-by-shelf";
 import { AddBookByCode } from "@/components/books/add-book-by-code";
+import { AddBookByCsv } from "@/components/books/add-book-by-csv";
 
-type Mode = "photo" | "shelf" | "code" | "manual";
+type Mode = "photo" | "shelf" | "code" | "manual" | "csv";
 
 /**
- * Book add (#14 manual, #20 by photo, #21 by shelf). Write-gated (ADR-0006): a
- * signed-out reader gets the sign-in prompt; a signed-in reader chooses how to add
- * — one photo, a whole shelf (AI batch), or by hand.
+ * Book add (#14 manual, #20 by photo, #21 by shelf, #35 by CSV import). Write-gated
+ * (ADR-0006): a signed-out reader gets the sign-in prompt; a signed-in reader
+ * chooses how to add — one photo, a whole shelf (AI batch), a Goodreads/StoryGraph
+ * CSV bootstrap, by code, or by hand.
  */
 export default function AddPage() {
   const { reader, loading } = useAuth();
@@ -57,6 +66,12 @@ export default function AddPage() {
               icon={<Pencil className="size-[22px]" aria-hidden="true" />}
               label="Manual"
             />
+            <ModeTab
+              active={mode === "csv"}
+              onClick={() => setMode("csv")}
+              icon={<FileUp className="size-[22px]" aria-hidden="true" />}
+              label="Importar CSV"
+            />
           </div>
           {mode === "photo" && (
             <AddBookByPhoto onManual={() => setMode("manual")} />
@@ -64,6 +79,7 @@ export default function AddPage() {
           {mode === "shelf" && <AddBookByShelf />}
           {mode === "code" && <AddBookByCode />}
           {mode === "manual" && <AddBook />}
+          {mode === "csv" && <AddBookByCsv />}
         </>
       ) : (
         <EmptyState
