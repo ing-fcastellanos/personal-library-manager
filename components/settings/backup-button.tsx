@@ -1,14 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { fetchBackup, backupFilename } from "./backup";
 
 /**
  * "Descargar backup" (#36): fetches every collection and downloads a single
- * JSON file — same Blob/`<a download>` mechanic as the CSV export (#34).
+ * JSON file — same Blob/`<a download>` mechanic as the CSV export (#34). Uses
+ * `Button`'s built-in `loading` prop rather than hand-rolling the spinner —
+ * it already disables the button, sets `aria-busy`, and swaps in a spinner
+ * while keeping the label unchanged, exactly what the Claude Design handoff
+ * asked for the "downloading" state.
  */
 export function BackupButton() {
   const { toast } = useToast();
@@ -39,13 +43,9 @@ export function BackupButton() {
       variant="outline"
       className="gap-1.5"
       onClick={download}
-      disabled={loading}
+      loading={loading}
     >
-      {loading ? (
-        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-      ) : (
-        <Download className="size-4" aria-hidden="true" />
-      )}
+      {!loading && <Download className="size-4" aria-hidden="true" />}
       Descargar backup
     </Button>
   );

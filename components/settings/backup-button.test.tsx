@@ -47,6 +47,28 @@ describe("BackupButton", () => {
     expect(parsed.exportedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
+  it("disables the button and sets aria-busy while downloading", async () => {
+    let resolveBooks!: (value: Response) => void;
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === "/api/books") {
+        return new Promise<Response>((resolve) => {
+          resolveBooks = resolve;
+        });
+      }
+      return json([]);
+    }) as unknown as typeof fetch;
+
+    render(<BackupButton />);
+    const button = screen.getByRole("button", { name: /Descargar backup/ });
+    fireEvent.click(button);
+
+    await waitFor(() => expect(button).toBeDisabled());
+    expect(button).toHaveAttribute("aria-busy", "true");
+
+    resolveBooks(await json([]));
+  });
+
   it("names the file backup-biblioteca-<date>.json", async () => {
     render(<BackupButton />);
     fireEvent.click(screen.getByRole("button", { name: /Descargar backup/ }));
