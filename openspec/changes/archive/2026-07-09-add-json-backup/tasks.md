@@ -17,4 +17,4 @@
 - [x] 4.1 Generate the specific Claude Design prompt for the backup card on `/ajustes`: default/downloading/downloaded states, responsive, accessibility, M0 tokens.
 - [x] 4.2 Produce the design in Claude Design and validate against the base design system.
 - [x] 4.3 Integrate the handoff: map markup/code to Next components + tokens/styles.
-- [ ] 4.4 QA: visual responsive + accessibility pass, plus opening a real downloaded backup file to confirm it's valid, complete JSON.
+- [x] 4.4 QA: visual responsive + accessibility pass, plus opening a real downloaded backup file to confirm it's valid, complete JSON.
