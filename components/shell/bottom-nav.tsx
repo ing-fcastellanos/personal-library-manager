@@ -4,14 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS } from "@/components/shell/nav-items";
-
-function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
-}
+import { NAV_ITEMS, navItemActive } from "@/components/shell/nav-items";
 
 /**
- * Mobile bottom navigation (5 sections). Hidden at md+ where the Sidebar takes over.
+ * Mobile bottom navigation (6 sections). Hidden at md+ where the Sidebar takes over.
  * Respects iOS safe-area inset.
  */
 export function BottomNav() {
@@ -25,7 +21,7 @@ export function BottomNav() {
     >
       <ul className="flex items-stretch">
         {NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item.href);
+          const active = navItemActive(item, pathname);
           const Icon = item.icon;
           return (
             <li key={item.id} className="flex-1">

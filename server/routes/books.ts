@@ -9,6 +9,7 @@ import {
 } from "../../services/books/repository";
 import { bookHasCopies } from "../../services/copies/repository";
 import { bookHasEvents } from "../../services/reading-events/repository";
+import { unlinkWishlistItemsByBook } from "../../services/wishlist/repository";
 import { recordChange } from "../../services/audit/repository";
 import { changedFields } from "../../services/audit/diff";
 import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
@@ -89,6 +90,9 @@ router.delete("/books/:id", requireAuth, async (req, res) => {
         .status(409)
         .json({ error: "book has copies or reading events" });
     }
+    // Wishlist items do NOT block: unlink them so they survive as wishes on their
+    // own snapshot, mirroring how a shelf delete unshelves its copies (#37 D10).
+    await unlinkWishlistItemsByBook(id);
     const deleted = await deleteBook(id);
     if (!deleted) return res.status(404).json({ error: "not found" });
     res.status(204).end();

@@ -5,14 +5,10 @@ import { usePathname } from "next/navigation";
 import { BookOpen } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS } from "@/components/shell/nav-items";
-
-function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
-}
+import { NAV_ITEMS, navItemActive } from "@/components/shell/nav-items";
 
 /**
- * Desktop sidebar (md+). Same 5 sections as the mobile bottom nav.
+ * Desktop sidebar (md+). Same 6 sections as the mobile bottom nav.
  * Hidden below md, where BottomNav takes over.
  */
 export function Sidebar() {
@@ -35,7 +31,7 @@ export function Sidebar() {
       <nav aria-label="Navegación principal">
         <ul className="flex flex-col gap-1">
           {NAV_ITEMS.map((item) => {
-            const active = isActive(pathname, item.href);
+            const active = navItemActive(item, pathname);
             const Icon = item.icon;
             return (
               <li key={item.id}>

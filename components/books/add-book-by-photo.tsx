@@ -22,6 +22,7 @@ import {
   type IdentifyResponse,
 } from "./photo-add";
 import { saveImport } from "./import-summary";
+import { AddToWishlistButton } from "@/components/wishlist/add-to-wishlist-button";
 import type { BookData, ExistingBook, Shelf } from "./types";
 
 /**
@@ -555,6 +556,22 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
           Guardar libro
         </button>
       </div>
+
+      {book && book.title.trim() && (
+        <AddToWishlistButton
+          snapshot={{
+            bookTitle: book.title,
+            bookAuthors: book.authors,
+            isbn13: book.isbn13 ?? null,
+            coverUrl: book.coverUrl ?? null,
+          }}
+          addedVia="ai"
+          bookId={duplicate?.id ?? null}
+          ownedCopies={duplicate?.copies ?? 0}
+          variant="ghost"
+          className="w-full"
+        />
+      )}
     </div>
   );
 }

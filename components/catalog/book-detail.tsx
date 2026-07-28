@@ -15,6 +15,7 @@ import { StarRating } from "@/components/reading/star-rating";
 import { ReadingEventCard } from "@/components/reading/reading-event-card";
 import { formatReadingDate } from "@/components/reading/history";
 import { goodreadsSearchUrl } from "@/components/reading/goodreads";
+import { AddToWishlistButton } from "@/components/wishlist/add-to-wishlist-button";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
@@ -144,7 +145,19 @@ export function BookDetail({ bookId }: { bookId: string }) {
                 {book.authors.join(", ")}
               </p>
             </div>
-            <div className="flex shrink-0 gap-1.5">
+            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+              <AddToWishlistButton
+                snapshot={{
+                  bookTitle: book.title,
+                  bookAuthors: book.authors,
+                  isbn13: book.isbn13,
+                  coverUrl: book.coverUrl,
+                }}
+                addedVia="catalog"
+                bookId={book.id}
+                ownedCopies={copies.length}
+                label="A deseos"
+              />
               <Button variant="outline" className="gap-1.5" asChild>
                 <a
                   href={goodreadsSearchUrl(book.isbn13, book.title)}
