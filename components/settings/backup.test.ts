@@ -10,9 +10,12 @@ const copies = [{ id: "c1", bookId: "b1" }];
 const readingEvents = [{ id: "e1", bookId: "b1" }];
 const readers = [{ id: "r1", name: "Sofía", hasPin: true }];
 const shelves = [{ id: "s1", name: "Estante A" }];
+const wishlistItems = [
+  { id: "w1", readerId: "r1", status: "wanted", bookTitle: "Sula" },
+];
 
 describe("fetchBackup", () => {
-  it("assembles all five collections plus a timestamp", async () => {
+  it("assembles all six collections plus a timestamp", async () => {
     global.fetch = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/books") return json(books);
@@ -20,6 +23,7 @@ describe("fetchBackup", () => {
       if (url === "/api/reading-events") return json(readingEvents);
       if (url === "/api/readers") return json(readers);
       if (url === "/api/shelves") return json(shelves);
+      if (url === "/api/wishlist-items") return json(wishlistItems);
       return json({}, false);
     }) as unknown as typeof fetch;
 
@@ -30,6 +34,7 @@ describe("fetchBackup", () => {
     expect(backup.readingEvents).toEqual(readingEvents);
     expect(backup.readers).toEqual(readers);
     expect(backup.shelves).toEqual(shelves);
+    expect(backup.wishlistItems).toEqual(wishlistItems);
     expect(backup.exportedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 

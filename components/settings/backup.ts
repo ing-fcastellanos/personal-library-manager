@@ -3,6 +3,7 @@ import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent } from "@/lib/types/reading-event";
 import type { Reader } from "@/lib/types/reader";
 import type { Shelf } from "@/lib/types/shelf";
+import type { WishlistItem } from "@/lib/types/wishlist-item";
 
 /**
  * Full JSON backup (#36, design D1-D3). Pure client-side aggregation of the
@@ -17,6 +18,7 @@ export interface Backup {
   readingEvents: ReadingEvent[];
   readers: Reader[];
   shelves: Shelf[];
+  wishlistItems: WishlistItem[];
 }
 
 async function listOrEmpty<T>(url: string): Promise<T[]> {
@@ -32,13 +34,15 @@ async function listOrEmpty<T>(url: string): Promise<T[]> {
 
 /** Fetches every collection in parallel and assembles the backup object. */
 export async function fetchBackup(): Promise<Backup> {
-  const [books, copies, readingEvents, readers, shelves] = await Promise.all([
-    listOrEmpty<Book>("/api/books"),
-    listOrEmpty<Copy>("/api/copies"),
-    listOrEmpty<ReadingEvent>("/api/reading-events"),
-    listOrEmpty<Reader>("/api/readers"),
-    listOrEmpty<Shelf>("/api/shelves"),
-  ]);
+  const [books, copies, readingEvents, readers, shelves, wishlistItems] =
+    await Promise.all([
+      listOrEmpty<Book>("/api/books"),
+      listOrEmpty<Copy>("/api/copies"),
+      listOrEmpty<ReadingEvent>("/api/reading-events"),
+      listOrEmpty<Reader>("/api/readers"),
+      listOrEmpty<Shelf>("/api/shelves"),
+      listOrEmpty<WishlistItem>("/api/wishlist-items"),
+    ]);
   return {
     exportedAt: new Date().toISOString(),
     books,
@@ -46,6 +50,7 @@ export async function fetchBackup(): Promise<Backup> {
     readingEvents,
     readers,
     shelves,
+    wishlistItems,
   };
 }
 

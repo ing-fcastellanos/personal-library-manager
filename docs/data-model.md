@@ -25,12 +25,12 @@ es la que hace ganar "simple y derivado" sobre "denormalizado y mantenido".
 ```
  readers ─────────┐  (ya implementada)
                   │
-   ┌──────────────┼───────────────────────────┐
-   │              │                            │
-   ▼ readerId     ▼ bookId                     ▼ shelfId
- readingEvents   books  ◄────bookId──── copies ────────► shelves
-   │ copyId? ─────────────────────────────▲
-   └────────────────────────────────────────┘
+   ┌──────────────┼───────────────┬───────────────────────────┐
+   │              │               │                            │
+   ▼ readerId     ▼ bookId        ▼ readerId                   ▼ shelfId
+ readingEvents   books           wishlistItems  ◄──bookId?──┐  shelves
+   │ copyId? ──────▲ ▲────bookId──── copies ──────────────► │     ▲
+   └───────────────┘ └──────────────────bookId?─────────────┘─────┘
 ```
 
 - `book` ← `copy.bookId` (N copies → 1 book)
@@ -38,6 +38,8 @@ es la que hace ganar "simple y derivado" sobre "denormalizado y mantenido".
 - `reader` ← `readingEvent.readerId` (N events → 1 reader)
 - `copy` ← `readingEvent.copyId?` (opcional)
 - `shelf` ← `copy.shelfId?` (opcional)
+- `reader` ← `wishlistItem.readerId` (N deseos → 1 reader)
+- `book` ← `wishlistItem.bookId?` (**opcional** — un deseo puede no tener edición catalogada)
 
 ### `books`
 
@@ -117,6 +119,45 @@ Ubicación física. Tipo: `lib/types/shelf.ts`.
 | `description`           | string? |               |
 | `createdAt`/`updatedAt` | string  | ISO           |
 
+### `wishlistItems`
+
+Un deseo por lector: un libro que alguien quiere pero que (todavía) no se posee. Tipo:
+`lib/types/wishlist-item.ts`. Vive en su **propia colección** (no como `book` sin
+`copy`) para no contaminar el catálogo — ver la nota al final de esta sección.
+
+| Campo                   | Tipo     | Notas                                                    |
+| ----------------------- | -------- | -------------------------------------------------------- |
+| `id`                    | string   | auto-id                                                  |
+| `readerId`              | string   | **requerido** → `readers`                                |
+| `bookId`                | string?  | **opcional** → `books` (un deseo puede no tener edición) |
+| `status`                | enum     | `wanted` \| `dismissed` (adquirido/leído son derivados)  |
+| `priority`              | enum     | `high` \| `normal` \| `low` (default `normal`)           |
+| `addedVia`              | enum     | `manual` \| `isbn` \| `ai` \| `catalog` (punto de alta)  |
+| `bookTitle`             | string   | **snapshot** del libro deseado                           |
+| `bookAuthors`           | string[] | snapshot                                                 |
+| `isbn13`                | string?  | snapshot                                                 |
+| `coverUrl`              | string?  | snapshot                                                 |
+| `titleKey`              | string?  | slug normalizado — permite matchear sin `bookId`         |
+| `authorKeys`            | string[] | slugs normalizados — idem                                |
+| `createdAt`/`updatedAt` | string   | ISO                                                      |
+
+El snapshot y las `*Keys` cargan en el propio ítem porque, a diferencia de
+`readingEvents`, un `wishlistItem` puede **no** tener `bookId` contra el cual
+resolver la metadata (paralelo a la Decisión C). Dos vistas derivan de esta única
+colección, sin flags almacenados: **"quiero leer"** por lector (ítems `wanted` menos
+los que el lector ya resolvió por `readingEvent`) y **"quiero comprar"** del hogar
+(ítems `wanted` de libros sin `copy`, agrupados por libro). Ambas se auto-mantienen —
+adquirir crea la `Copy` (sale de comprar) y leer crea el `readingEvent` (sale de
+leer), sin tachar nada a mano.
+
+> **Por qué colección propia y no la forma reservada.** Este documento reservaba la
+> Wishlist como _"`book` sin `copy` + marcador por lector"_. Se descartó: el catálogo
+> (`services/catalog`) lista **todos** los `books` sin filtrar por posesión, así que un
+> deseo guardado como `book` sin `copy` aparecería en browse/búsqueda/facetas junto a
+> los poseídos, y ocultarlo exigiría un filtro de posesión en cada una de esas
+> superficies. Una colección dedicada aísla el feature: ninguna ruta de lectura del
+> catálogo cambia. (add-wishlist, decisión D1.)
+
 ## Decisiones (A–F)
 
 - **A — `Book` = edición, entidad única.** Un doc `book` = una edición canónica; no
@@ -149,7 +190,12 @@ readingEvents : (readerId ASC, status ASC, dateFinished DESC)  derivar leído/pe
 copies        : (shelfId  ASC, createdAt DESC)                 "qué hay en este estante"        #18
 copies        : (bookId   ASC)                                  ejemplares de un libro           #16
 books         : single-field sobre isbn13, isbn10, authorKeys[], categoryKeys[], titleKey   #16 #28 #17
+wishlistItems : (readerId ASC, createdAt DESC)                 lista por lector                 #37
 ```
+
+`wishlistItems` necesita un solo índice compuesto: `status` y la posesión se filtran
+**en memoria** en las vistas derivadas (como el catálogo), no por query, así que no hay
+consultas que exijan índices `(readerId, status, …)` ni `(status, …)`.
 
 **Búsqueda (#17):** Firestore no tiene substring/full-text. Se resuelve con filtros +
 prefijo sobre `titleKey` (lowercased). Un índice externo (Algolia/Typesense) queda
@@ -164,7 +210,6 @@ Bocetadas para que encajen sin repintar:
 | ---------------- | --------- | ------------------------------------------------------------------- |
 | Series           | #38       | `book.workKey` + futura colección `series` (orden de tomos)         |
 | Préstamo (Loan)  | #39       | campo/subcolección en `copy` (a quién, fecha, devolución)           |
-| Wishlist         | #37       | `book` sin `copy` + marcador de wishlist por lector                 |
 | AuditLog         | #40       | colección `auditLog` (actor, entidad, ts)                           |
 | ImportSession    | #22 / #35 | colección `importSessions` (resumen de la sesión de alta)           |
 | Metas de lectura | #30       | subdoc en `reader` **o** colección `readingGoals` (se decide en M5) |

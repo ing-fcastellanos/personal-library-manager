@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { createIsbnScanner } from "@/lib/barcode/isbn-scanner";
 import { toIsbn13 } from "@/services/enrichment/normalize";
+import { AddToWishlistButton } from "@/components/wishlist/add-to-wishlist-button";
 import { candidateToBookData, type IdentifyCandidate } from "./photo-add";
 import { duplicatesUrl, shelfIntakePayload } from "./shelf-add";
 import { saveImport, type ImportOutcome } from "./import-summary";
@@ -505,6 +506,22 @@ function ConfirmSheet({
             </button>
           ))}
       </div>
+
+      {candidate && (
+        <AddToWishlistButton
+          snapshot={{
+            bookTitle: candidate.title,
+            bookAuthors: candidate.authors ?? [],
+            isbn13: detail.isbn,
+            coverUrl: candidate.coverUrl,
+          }}
+          addedVia="isbn"
+          bookId={duplicate?.id ?? null}
+          ownedCopies={duplicate?.copies ?? 0}
+          variant="ghost"
+          className="mt-2.5 w-full"
+        />
+      )}
     </div>
   );
 }

@@ -4,13 +4,11 @@ import { usePathname } from "next/navigation";
 
 import { ThemeToggle } from "@/components/shell/theme-toggle";
 import { AuthControl } from "@/components/auth/auth-control";
-import { NAV_ITEMS } from "@/components/shell/nav-items";
+import { NAV_ITEMS, navItemActive } from "@/components/shell/nav-items";
 
 function useCurrentTitle() {
   const pathname = usePathname();
-  const match = NAV_ITEMS.find((item) =>
-    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
-  );
+  const match = NAV_ITEMS.find((item) => navItemActive(item, pathname));
   return match?.label ?? "Mi biblioteca";
 }
 

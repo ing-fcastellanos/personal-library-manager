@@ -9,6 +9,7 @@ import shelvesRouter from "./routes/shelves";
 import booksRouter from "./routes/books";
 import copiesRouter from "./routes/copies";
 import readingEventsRouter from "./routes/reading-events";
+import wishlistRouter from "./routes/wishlist";
 import enrichRouter from "./routes/enrich";
 import duplicatesRouter from "./routes/duplicates";
 import intakeRouter from "./routes/intake";
@@ -47,6 +48,7 @@ async function main() {
   app.use("/api", booksRouter);
   app.use("/api", copiesRouter);
   app.use("/api", readingEventsRouter);
+  app.use("/api", wishlistRouter);
   app.use("/api", enrichRouter);
   app.use("/api", catalogRouter);
   app.use("/api", aiSettingsRouter);
