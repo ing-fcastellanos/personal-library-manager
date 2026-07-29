@@ -14,6 +14,7 @@ import {
 import { recordChange } from "../../services/audit/repository";
 import { changedFields } from "../../services/audit/diff";
 import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Copy API (server-mediated, ADR-0009). Reads are public; writes require a valid
@@ -21,11 +22,11 @@ import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
  */
 const router = Router();
 
-router.get("/copies", async (_req, res) => {
+router.get("/copies", async (req, res) => {
   try {
     res.json(await listCopies());
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -33,8 +34,8 @@ router.get("/copies", async (_req, res) => {
 router.get("/books/:bookId/copies", async (req, res) => {
   try {
     res.json(await listCopiesByBook(req.params.bookId as string));
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -43,8 +44,8 @@ router.get("/copies/:id", async (req, res) => {
     const copy = await getCopy(req.params.id);
     if (!copy) return res.status(404).json({ error: "not found" });
     res.json(copy);
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -61,7 +62,7 @@ router.post("/copies", requireAuth, async (req, res) => {
     if (err instanceof ReferenceNotFoundError) {
       return res.status(400).json({ error: `unknown ${err.field}` });
     }
-    res.status(500).json({ error: "internal" });
+    respondInternal(res, req, err);
   }
 });
 
@@ -89,8 +90,8 @@ router.patch("/copies/:id", requireAuth, async (req, res) => {
       readerId: (req as AuthedRequest).reader!.id,
     });
     res.json(copy);
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -99,8 +100,8 @@ router.delete("/copies/:id", requireAuth, async (req, res) => {
     const deleted = await deleteCopy(req.params.id as string);
     if (!deleted) return res.status(404).json({ error: "not found" });
     res.status(204).end();
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 

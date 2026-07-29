@@ -21,12 +21,15 @@ router.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-router.get("/health/ready", async (_req, res) => {
+router.get("/health/ready", async (req, res) => {
   try {
     // Cheap round-trip to confirm Firestore (or its emulator) is reachable.
     await withTimeout(getAdminFirestore().listCollections(), 2000);
     res.status(200).json({ status: "ready" });
-  } catch {
+  } catch (err) {
+    // Log the cause before the 503 — a mute readiness failure is exactly what made
+    // the #3 Cloud Run deploy hard to diagnose (#65).
+    console.error(`[${req.method} ${req.originalUrl}]`, err);
     res.status(503).json({ status: "unavailable" });
   }
 });

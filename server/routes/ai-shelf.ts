@@ -3,6 +3,7 @@ import { z } from "zod";
 import { identifyBooksFromImage } from "../../services/ai/service";
 import { NoEngineAvailableError } from "../../services/ai/types";
 import { requireAuth } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Shelf identification API (#21a, server-mediated — ADR-0009). Takes a base64
@@ -52,7 +53,7 @@ router.post("/ai/identify-shelf", requireAuth, async (req, res) => {
     if (err instanceof NoEngineAvailableError) {
       return res.status(503).json({ error: "no AI engine available" });
     }
-    res.status(500).json({ error: "internal" });
+    respondInternal(res, req, err);
   }
 });
 

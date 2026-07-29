@@ -13,6 +13,7 @@ import { unlinkWishlistItemsByBook } from "../../services/wishlist/repository";
 import { recordChange } from "../../services/audit/repository";
 import { changedFields } from "../../services/audit/diff";
 import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Book API (server-mediated, ADR-0009). Reads are public; writes require a valid
@@ -20,11 +21,11 @@ import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
  */
 const router = Router();
 
-router.get("/books", async (_req, res) => {
+router.get("/books", async (req, res) => {
   try {
     res.json(await listBooks());
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -33,8 +34,8 @@ router.get("/books/:id", async (req, res) => {
     const book = await getBook(req.params.id);
     if (!book) return res.status(404).json({ error: "not found" });
     res.json(book);
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -47,8 +48,8 @@ router.post("/books", requireAuth, async (req, res) => {
   }
   try {
     res.status(201).json(await createBook(parsed.data));
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -76,8 +77,8 @@ router.patch("/books/:id", requireAuth, async (req, res) => {
       readerId: (req as AuthedRequest).reader!.id,
     });
     res.json(book);
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -96,8 +97,8 @@ router.delete("/books/:id", requireAuth, async (req, res) => {
     const deleted = await deleteBook(id);
     if (!deleted) return res.status(404).json({ error: "not found" });
     res.status(204).end();
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 

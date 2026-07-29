@@ -9,6 +9,7 @@ import {
 } from "../../services/shelves/repository";
 import { unshelveByShelf } from "../../services/copies/repository";
 import { requireAuth } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Shelf API (server-mediated, ADR-0009). Reads are public; writes require a
@@ -16,11 +17,11 @@ import { requireAuth } from "../middleware/require-auth";
  */
 const router = Router();
 
-router.get("/shelves", async (_req, res) => {
+router.get("/shelves", async (req, res) => {
   try {
     res.json(await listShelves());
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -29,8 +30,8 @@ router.get("/shelves/:id", async (req, res) => {
     const shelf = await getShelf(req.params.id);
     if (!shelf) return res.status(404).json({ error: "not found" });
     res.json(shelf);
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -43,8 +44,8 @@ router.post("/shelves", requireAuth, async (req, res) => {
   }
   try {
     res.status(201).json(await createShelf(parsed.data));
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -59,8 +60,8 @@ router.patch("/shelves/:id", requireAuth, async (req, res) => {
     const shelf = await updateShelf(req.params.id as string, parsed.data);
     if (!shelf) return res.status(404).json({ error: "not found" });
     res.json(shelf);
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -72,8 +73,8 @@ router.delete("/shelves/:id", requireAuth, async (req, res) => {
     const deleted = await deleteShelf(id);
     if (!deleted) return res.status(404).json({ error: "not found" });
     res.status(204).end();
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 

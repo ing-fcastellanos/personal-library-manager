@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { enrichByIsbn, searchByText } from "../../services/enrichment/service";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Metadata enrichment API (#13, server-mediated — ADR-0009). A single read
@@ -39,8 +40,8 @@ router.get("/enrich", async (req, res) => {
     }
     const candidates = await searchByText(q as string);
     return res.json({ candidates });
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 

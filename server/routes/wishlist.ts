@@ -18,6 +18,7 @@ import {
   WishlistItemNotFoundError,
 } from "../../services/wishlist/service";
 import { requireAuth } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Wishlist API (#37, server-mediated — ADR-0009). Reads are public; writes require
@@ -29,19 +30,19 @@ const router = Router();
 
 const acquireSchema = copyCreateSchema.omit({ bookId: true }).optional();
 
-router.get("/wishlist-items", async (_req, res) => {
+router.get("/wishlist-items", async (req, res) => {
   try {
     res.json(await listWishlistItems());
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
 router.get("/readers/:readerId/wishlist-items", async (req, res) => {
   try {
     res.json(await listWishlistItemsByReader(req.params.readerId as string));
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -50,8 +51,8 @@ router.get("/wishlist-items/:id", async (req, res) => {
     const item = await getWishlistItem(req.params.id);
     if (!item) return res.status(404).json({ error: "not found" });
     res.json(item);
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -68,7 +69,7 @@ router.post("/wishlist-items", requireAuth, async (req, res) => {
     if (err instanceof ReferenceNotFoundError) {
       return res.status(400).json({ error: `unknown ${err.field}` });
     }
-    res.status(500).json({ error: "internal" });
+    respondInternal(res, req, err);
   }
 });
 
@@ -83,8 +84,8 @@ router.patch("/wishlist-items/:id", requireAuth, async (req, res) => {
     const item = await updateWishlistItem(req.params.id as string, parsed.data);
     if (!item) return res.status(404).json({ error: "not found" });
     res.json(item);
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -93,8 +94,8 @@ router.delete("/wishlist-items/:id", requireAuth, async (req, res) => {
     const deleted = await deleteWishlistItem(req.params.id as string);
     if (!deleted) return res.status(404).json({ error: "not found" });
     res.status(204).end();
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -118,7 +119,7 @@ router.post("/wishlist-items/:id/acquire", requireAuth, async (req, res) => {
     if (err instanceof ReferenceNotFoundError) {
       return res.status(400).json({ error: `unknown ${err.field}` });
     }
-    res.status(500).json({ error: "internal" });
+    respondInternal(res, req, err);
   }
 });
 

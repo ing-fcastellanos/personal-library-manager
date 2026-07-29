@@ -7,6 +7,7 @@ import {
   ReaderEmailConflictError,
 } from "../../services/readers/repository";
 import { requireAuth } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Reader profile API (server-mediated, ADR-0009). Reads are public; writes
@@ -14,11 +15,11 @@ import { requireAuth } from "../middleware/require-auth";
  */
 const router = Router();
 
-router.get("/readers", async (_req, res) => {
+router.get("/readers", async (req, res) => {
   try {
     res.json((await listReaders()).map(toClientReader));
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -27,8 +28,8 @@ router.get("/readers/:id", async (req, res) => {
     const reader = await getReader(req.params.id);
     if (!reader) return res.status(404).json({ error: "not found" });
     res.json(toClientReader(reader));
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -47,7 +48,7 @@ router.patch("/readers/:id", requireAuth, async (req, res) => {
     if (err instanceof ReaderEmailConflictError) {
       return res.status(409).json({ error: "email already in use" });
     }
-    res.status(500).json({ error: "internal" });
+    respondInternal(res, req, err);
   }
 });
 

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { findBookDuplicates } from "../../services/duplicates/service";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Duplicate pre-check API (#16, server-mediated — ADR-0009). A read-only endpoint
@@ -44,8 +45,8 @@ router.get("/books/duplicates", async (req, res) => {
   try {
     const result = await findBookDuplicates({ isbn, title, authors });
     res.json(result);
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 

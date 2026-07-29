@@ -2,6 +2,7 @@ import { Router } from "express";
 import { searchCatalog } from "../../services/catalog/service";
 import type { CatalogSort, SearchParams } from "../../services/catalog/types";
 import type { ReadingStatus } from "../../lib/types/reading-event";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Catalog search API (#17, server-mediated — ADR-0009). Public read. All
@@ -53,8 +54,8 @@ router.get("/catalog/search", async (req, res) => {
   };
   try {
     res.json(await searchCatalog(params));
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
