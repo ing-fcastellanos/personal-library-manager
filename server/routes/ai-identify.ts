@@ -3,6 +3,7 @@ import { z } from "zod";
 import { identifyAndEnrich } from "../../services/ai/identify";
 import { NoEngineAvailableError } from "../../services/ai/types";
 import { requireAuth } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Photo identification API (#20, server-mediated — ADR-0009). Takes a base64
@@ -50,7 +51,7 @@ router.post("/ai/identify", requireAuth, async (req, res) => {
     if (err instanceof NoEngineAvailableError) {
       return res.status(503).json({ error: "no AI engine available" });
     }
-    res.status(500).json({ error: "internal" });
+    respondInternal(res, req, err);
   }
 });
 

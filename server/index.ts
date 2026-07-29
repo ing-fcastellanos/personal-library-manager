@@ -18,6 +18,7 @@ import catalogRouter from "./routes/catalog";
 import aiSettingsRouter from "./routes/ai-settings";
 import aiIdentifyRouter from "./routes/ai-identify";
 import aiShelfRouter from "./routes/ai-shelf";
+import { apiErrorHandler } from "./middleware/error-handler";
 
 config();
 
@@ -54,6 +55,11 @@ async function main() {
   app.use("/api", aiSettingsRouter);
   app.use("/api", aiIdentifyRouter);
   app.use("/api", aiShelfRouter);
+
+  // Central error backstop for the API: logs anything a handler's own catch missed
+  // (sync throws, express.json parse errors) and responds a generic 500 (#65).
+  // Mounted after all /api routers and scoped to /api so it never touches Next SSR.
+  app.use("/api", apiErrorHandler);
 
   // Web layer (Next.js SSR) — handles everything else.
   const handle = await createNextHandler(dev);

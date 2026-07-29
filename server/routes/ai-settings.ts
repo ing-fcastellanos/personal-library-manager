@@ -6,6 +6,7 @@ import {
   testEngine,
 } from "../../services/ai/settings";
 import { requireAuth } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * AI settings API (#19b, server-mediated ADR-0009). Lets an authenticated reader
@@ -28,11 +29,11 @@ const patchSchema = z
 
 const testSchema = z.object({ engine: z.enum(["openai", "gemini"]) });
 
-router.get("/ai/settings", requireAuth, async (_req, res) => {
+router.get("/ai/settings", requireAuth, async (req, res) => {
   try {
     res.json(await readSettings());
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -45,8 +46,8 @@ router.patch("/ai/settings", requireAuth, async (req, res) => {
   }
   try {
     res.json(await writeSettings(parsed.data));
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 
@@ -59,8 +60,8 @@ router.post("/ai/test", requireAuth, async (req, res) => {
   }
   try {
     res.json({ status: await testEngine(parsed.data.engine) });
-  } catch {
-    res.status(500).json({ error: "internal" });
+  } catch (err) {
+    respondInternal(res, req, err);
   }
 });
 

@@ -7,6 +7,7 @@ import {
 } from "../../services/covers/service";
 import { recordChange } from "../../services/audit/repository";
 import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * User cover upload API (#15, server-mediated — ADR-0009). Replaces a book's
@@ -52,7 +53,7 @@ router.post("/books/:id/cover", requireAuth, async (req, res) => {
     if (err instanceof CoverValidationError) {
       return res.status(400).json({ error: err.message });
     }
-    res.status(500).json({ error: "internal" });
+    respondInternal(res, req, err);
   }
 });
 

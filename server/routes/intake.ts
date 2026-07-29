@@ -5,6 +5,7 @@ import { copyCreateSchema } from "../../lib/types/copy";
 import { intakeBook } from "../../services/intake/service";
 import { ReferenceNotFoundError } from "../../services/copies/service";
 import { requireAuth } from "../middleware/require-auth";
+import { respondInternal } from "../lib/errors";
 
 /**
  * Manual book intake API (#14, server-mediated — ADR-0009). Creates a `Book` and
@@ -41,7 +42,7 @@ router.post("/books/intake", requireAuth, async (req, res) => {
     if (err instanceof ReferenceNotFoundError) {
       return res.status(400).json({ error: `unknown ${err.field}` });
     }
-    res.status(500).json({ error: "internal" });
+    respondInternal(res, req, err);
   }
 });
 
