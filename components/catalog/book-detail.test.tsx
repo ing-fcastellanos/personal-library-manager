@@ -28,8 +28,11 @@ vi.mock("next/link", () => ({
     </a>
   ),
 }));
+const useAuthMock = vi.hoisted(() => ({
+  reader: { id: "r1", name: "Frank" } as { id: string; name: string } | null,
+}));
 vi.mock("@/components/auth/auth-provider", () => ({
-  useAuth: () => ({ reader: { id: "r1", name: "Frank" }, loading: false }),
+  useAuth: () => ({ reader: useAuthMock.reader, loading: false }),
 }));
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: vi.fn() }),
@@ -68,6 +71,7 @@ let found = true;
 
 beforeEach(() => {
   found = true;
+  useAuthMock.reader = { id: "r1", name: "Frank" };
   global.fetch = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
     if (url.endsWith("/api/books/b1"))
@@ -336,5 +340,132 @@ describe("BookDetail", () => {
     // the per-reader summary too) appears in both.
     expect(screen.getByText("Primera vuelta.")).toBeInTheDocument();
     expect(screen.getAllByText("Mejor en la relectura.")).toHaveLength(2);
+  });
+});
+
+describe("BookDetail · Préstamos (#39)", () => {
+  it("lending an available copy shows its loan card and the return action", async () => {
+    let posted: Record<string, unknown> | null = null;
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse(copies);
+      if (url.endsWith("/reading-events")) return jsonResponse([]);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      if (url.endsWith("/api/loans") && method === "GET")
+        return jsonResponse([]);
+      if (url.endsWith("/api/loans") && method === "POST") {
+        posted = JSON.parse(String(init?.body));
+        return jsonResponse({
+          id: "l1",
+          ...posted,
+          borrowerKey: "juan-perez",
+          returnedAt: null,
+          bookTitle: book.title,
+          bookAuthors: book.authors,
+          createdAt: "",
+          updatedAt: "",
+        });
+      }
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    fireEvent.click(await screen.findByRole("button", { name: /Prestar/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/Nombre de quien/), {
+      target: { value: "Juan Pérez" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: "Prestar «El nombre del viento»",
+      }),
+    );
+
+    await waitFor(() => expect(posted?.borrowerName).toBe("Juan Pérez"));
+    expect(await screen.findByText("Prestado a")).toBeInTheDocument();
+    expect(screen.getByText("Juan Pérez")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /como devuelto/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a loan card with Devolver for a copy already on loan, and returning it clears the state", async () => {
+    let returned: Record<string, unknown> | null = null;
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse(copies);
+      if (url.endsWith("/reading-events")) return jsonResponse([]);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      if (url.endsWith("/api/loans") && method === "GET")
+        return jsonResponse([
+          {
+            id: "l1",
+            copyId: "c1",
+            borrowerName: "Malena Ruiz",
+            borrowerKey: "malena-ruiz",
+            loanedAt: "2026-07-01",
+            dueDate: null,
+            returnedAt: null,
+            notes: null,
+            bookTitle: book.title,
+            bookAuthors: book.authors,
+            createdAt: "",
+            updatedAt: "",
+          },
+        ]);
+      if (url.endsWith("/return")) {
+        const body = JSON.parse(String(init?.body)) as { returnedAt: string };
+        returned = body;
+        return jsonResponse({
+          id: "l1",
+          copyId: "c1",
+          borrowerName: "Malena Ruiz",
+          borrowerKey: "malena-ruiz",
+          loanedAt: "2026-07-01",
+          dueDate: null,
+          returnedAt: body.returnedAt,
+          notes: null,
+          bookTitle: book.title,
+          bookAuthors: book.authors,
+          createdAt: "",
+          updatedAt: "",
+        });
+      }
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    expect(await screen.findByText("Malena Ruiz")).toBeInTheDocument();
+    expect(screen.getByText("Prestado")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /como devuelto/ }));
+    await waitFor(() => expect(returned).not.toBeNull());
+    expect(
+      await screen.findByRole("button", { name: /Prestar/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Malena Ruiz")).not.toBeInTheDocument();
+  });
+
+  it("gates lending behind a signed-in reader", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse(copies);
+      if (url.endsWith("/reading-events")) return jsonResponse([]);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      if (url.endsWith("/api/loans")) return jsonResponse([]);
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+    useAuthMock.reader = null;
+
+    render(<BookDetail bookId="b1" />);
+    fireEvent.click(await screen.findByRole("button", { name: /Prestar/ }));
+    expect(
+      await screen.findByText("Iniciá sesión para guardar"),
+    ).toBeInTheDocument();
   });
 });

@@ -105,7 +105,10 @@ shelf so the filter panel can populate itself without a second request.
 
 The system SHALL replace the `/catalogo` placeholder with a browse view offering search, a filter
 panel, and results in both list and grid layouts (togglable), with empty, loading, and
-no-results states. Each result SHALL link to the book detail view.
+no-results states. Each result SHALL link to the book detail view. Each result SHALL also show a
+**"prestado" indicator** when one or more of the book's copies is currently on loan, derived from
+the loans (never a stored flag). Because a shelf's contents is this browse filtered by `?shelf=`,
+the same indicator marks a lent copy as "out" on the shelf view.
 
 #### Scenario: Browse and open a book
 
@@ -117,11 +120,25 @@ no-results states. Each result SHALL link to the book detail view.
 - **WHEN** a search/filter combination matches no books
 - **THEN** the view shows a no-results state rather than an empty list
 
+#### Scenario: A lent book shows a prestado indicator
+
+- **WHEN** a book has at least one copy with an open loan
+- **THEN** its browse result shows a "prestado" indicator (reflecting how many of its copies are out
+  when it has more than one)
+
+#### Scenario: A fully-available book shows no indicator
+
+- **WHEN** none of a book's copies has an open loan
+- **THEN** its browse result shows no loan indicator
+
 ### Requirement: Book detail view
 
 The system SHALL provide a read-only book detail view at `/libros/[id]` showing the book's
 metadata, its copies, and its per-reader reading status, with an action to edit the book
-(`/libros/[id]/editar`). The catalog's "view book" navigation (#14) SHALL target this view.
+(`/libros/[id]/editar`). The catalog's "view book" navigation (#14) SHALL target this view. For each
+copy, the detail SHALL show its loan state: an available copy SHALL offer a **Prestar** action, and
+a copy on loan SHALL show a **loan-details card** (borrower, since when, due/overdue) with a
+**Devolver** action. Lending and returning require a session.
 
 #### Scenario: Detail shows copies and reading status
 
@@ -132,3 +149,14 @@ metadata, its copies, and its per-reader reading status, with an action to edit 
 
 - **WHEN** a reader clicks "Editar" on the detail view
 - **THEN** the system navigates to `/libros/<id>/editar`
+
+#### Scenario: Lend an available copy from the detail
+
+- **WHEN** a signed-in reader chooses "Prestar" on an available copy and confirms a borrower and date
+- **THEN** a loan is created and that copy now shows its loan-details card
+
+#### Scenario: A copy on loan shows its details and can be returned
+
+- **WHEN** a reader opens the detail of a book with a copy currently on loan
+- **THEN** that copy shows the borrower, the loan date, and a due/overdue indicator when a due date is set
+- **AND** a signed-in reader can mark it returned from there
