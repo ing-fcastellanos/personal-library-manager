@@ -40,6 +40,7 @@ es la que hace ganar "simple y derivado" sobre "denormalizado y mantenido".
 - `shelf` ← `copy.shelfId?` (opcional)
 - `reader` ← `wishlistItem.readerId` (N deseos → 1 reader)
 - `book` ← `wishlistItem.bookId?` (**opcional** — un deseo puede no tener edición catalogada)
+- `copy` ← `loan.copyId` (N préstamos → 1 ejemplar; el que recibe es texto libre, no un `reader`)
 
 ### `books`
 
@@ -158,6 +159,41 @@ leer), sin tachar nada a mano.
 > superficies. Una colección dedicada aísla el feature: ninguna ruta de lectura del
 > catálogo cambia. (add-wishlist, decisión D1.)
 
+### `loans`
+
+Un préstamo de un **ejemplar** físico a alguien de afuera del hogar. Tipo:
+`lib/types/loan.ts`. Vive en su **propia colección** (no como campo en `copy`) para
+guardar **historial**.
+
+| Campo                   | Tipo     | Notas                                                         |
+| ----------------------- | -------- | ------------------------------------------------------------- |
+| `id`                    | string   | auto-id                                                       |
+| `copyId`                | string   | **requerido** → `copies` (se presta un ejemplar)              |
+| `borrowerName`          | string   | **requerido** — texto libre (NO es un `reader`; es de afuera) |
+| `borrowerKey`           | string   | slug normalizado ← derivado server-side (agrupar/dedup)       |
+| `loanedAt`              | string   | ISO — desde cuándo (requerido)                                |
+| `dueDate`               | string?  | ISO — opcional (sin recordatorios; #41)                       |
+| `returnedAt`            | string?  | ISO — **ausencia = préstamo ABIERTO** (= "prestado")          |
+| `notes`                 | string?  |                                                               |
+| `bookId`                | string?  | snapshot (del `copy` al prestar) — link al libro sin join     |
+| `bookTitle`             | string   | **snapshot**                                                  |
+| `bookAuthors`           | string[] | snapshot                                                      |
+| `coverUrl`              | string?  | snapshot                                                      |
+| `createdAt`/`updatedAt` | string   | ISO                                                           |
+
+Estado derivado, sin flags: un `copy` está **prestado** sii ∃ `loan(copyId)` con
+`returnedAt = null` (a lo sumo **uno abierto por copy**, se valida al prestar);
+**vencido** sii `dueDate` pasó y sigue sin devolver. El que recibe es **texto libre**
+con autocomplete de nombres ya usados (distinct de `loans`) — sin colección de
+contactos, sin `lentBy`. Borrar un `copy` con **cualquier** préstamo (abierto o
+historial) se **bloquea** (integridad).
+
+> **Por qué colección propia y no "campo en `copy`".** El data-model reservaba el
+> Préstamo como _"campo/subcolección en `copy`"_. Se descartó: un campo `loanedTo`
+> solo guarda el préstamo **actual**, y el issue pide historial. Una colección
+> llaveada por `copyId` da historial gratis y el estado "prestado" se deriva — igual
+> que `readingEvents`/`wishlistItems`. (add-loans, decisión D1.)
+
 ## Decisiones (A–F)
 
 - **A — `Book` = edición, entidad única.** Un doc `book` = una edición canónica; no
@@ -191,11 +227,15 @@ copies        : (shelfId  ASC, createdAt DESC)                 "qué hay en este
 copies        : (bookId   ASC)                                  ejemplares de un libro           #16
 books         : single-field sobre isbn13, isbn10, authorKeys[], categoryKeys[], titleKey   #16 #28 #17
 wishlistItems : (readerId ASC, createdAt DESC)                 lista por lector                 #37
+loans         : (copyId   ASC, loanedAt DESC)                 historial por ejemplar + open-loan #39
+loans         : (borrowerKey ASC, loanedAt DESC)              historial por persona              #39
 ```
 
 `wishlistItems` necesita un solo índice compuesto: `status` y la posesión se filtran
 **en memoria** en las vistas derivadas (como el catálogo), no por query, así que no hay
-consultas que exijan índices `(readerId, status, …)` ni `(status, …)`.
+consultas que exijan índices `(readerId, status, …)` ni `(status, …)`. `loans` idem: el
+estado "abierto/prestado" y "vencido" se derivan en memoria; solo se indexan las
+lecturas ordenadas por `copyId` y por `borrowerKey`.
 
 **Búsqueda (#17):** Firestore no tiene substring/full-text. Se resuelve con filtros +
 prefijo sobre `titleKey` (lowercased). Un índice externo (Algolia/Typesense) queda
@@ -209,7 +249,6 @@ Bocetadas para que encajen sin repintar:
 | Futuro           | Issue     | Forma prevista                                                      |
 | ---------------- | --------- | ------------------------------------------------------------------- |
 | Series           | #38       | `book.workKey` + futura colección `series` (orden de tomos)         |
-| Préstamo (Loan)  | #39       | campo/subcolección en `copy` (a quién, fecha, devolución)           |
 | AuditLog         | #40       | colección `auditLog` (actor, entidad, ts)                           |
 | ImportSession    | #22 / #35 | colección `importSessions` (resumen de la sesión de alta)           |
 | Metas de lectura | #30       | subdoc en `reader` **o** colección `readingGoals` (se decide en M5) |

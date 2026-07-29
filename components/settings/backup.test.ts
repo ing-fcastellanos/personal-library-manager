@@ -13,9 +13,12 @@ const shelves = [{ id: "s1", name: "Estante A" }];
 const wishlistItems = [
   { id: "w1", readerId: "r1", status: "wanted", bookTitle: "Sula" },
 ];
+const loans = [
+  { id: "l1", copyId: "c1", borrowerName: "Juan", bookTitle: "Rayuela" },
+];
 
 describe("fetchBackup", () => {
-  it("assembles all six collections plus a timestamp", async () => {
+  it("assembles all seven collections plus a timestamp", async () => {
     global.fetch = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url === "/api/books") return json(books);
@@ -24,6 +27,7 @@ describe("fetchBackup", () => {
       if (url === "/api/readers") return json(readers);
       if (url === "/api/shelves") return json(shelves);
       if (url === "/api/wishlist-items") return json(wishlistItems);
+      if (url === "/api/loans") return json(loans);
       return json({}, false);
     }) as unknown as typeof fetch;
 
@@ -35,6 +39,7 @@ describe("fetchBackup", () => {
     expect(backup.readers).toEqual(readers);
     expect(backup.shelves).toEqual(shelves);
     expect(backup.wishlistItems).toEqual(wishlistItems);
+    expect(backup.loans).toEqual(loans);
     expect(backup.exportedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 

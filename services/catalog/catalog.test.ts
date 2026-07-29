@@ -8,6 +8,7 @@ import type { Book } from "../../lib/types/book";
 import type { Copy } from "../../lib/types/copy";
 import type { ReadingEvent } from "../../lib/types/reading-event";
 import type { Shelf } from "../../lib/types/shelf";
+import type { Loan } from "../../lib/types/loan";
 
 const TS = {
   createdAt: "2026-06-01T00:00:00.000Z",
@@ -51,6 +52,24 @@ function copy(o: Partial<Copy>): Copy {
     ...o,
   };
 }
+function loan(o: Partial<Loan>): Loan {
+  return {
+    id: "l1",
+    copyId: "c1",
+    borrowerName: "Juan",
+    borrowerKey: "juan",
+    loanedAt: "2026-07-01T00:00:00.000Z",
+    dueDate: null,
+    returnedAt: null,
+    notes: null,
+    bookId: "b1",
+    bookTitle: "Cien Años de Soledad",
+    bookAuthors: ["Gabriel García Márquez"],
+    coverUrl: null,
+    ...TS,
+    ...o,
+  };
+}
 function event(o: Partial<ReadingEvent>): ReadingEvent {
   return {
     id: "e1",
@@ -81,6 +100,21 @@ describe("joinCatalog", () => {
     );
     expect(joined[0].shelfIds.sort()).toEqual(["s1", "s2"]);
     expect(joined[0].statusByReader.r1).toEqual(["reading"]);
+  });
+
+  it("folds loan state per book (#39, design D8)", () => {
+    const joined = joinCatalog(
+      [book({})],
+      [copy({ id: "c1" }), copy({ id: "c2" })],
+      [],
+      [loan({ dueDate: "2026-05-01T00:00:00.000Z" })],
+      "2026-06-01",
+    );
+    expect(joined[0].loanState).toEqual({
+      copyCount: 2,
+      loanedCount: 1,
+      overdue: true,
+    });
   });
 });
 
@@ -185,10 +219,29 @@ describe("searchCatalog", () => {
         loadCopies: vi.fn().mockResolvedValue([]),
         loadEvents: vi.fn().mockResolvedValue([]),
         loadShelves: vi.fn().mockResolvedValue([]),
+        loadLoans: vi.fn().mockResolvedValue([]),
       },
     );
     expect(result.items).toHaveLength(2);
     expect(result.total).toBe(5);
     expect(result.page).toBe(1);
+  });
+
+  it("carries each item's loan state (#39)", async () => {
+    const result = await searchCatalog(
+      {},
+      {
+        loadBooks: vi.fn().mockResolvedValue([book({})]),
+        loadCopies: vi.fn().mockResolvedValue([copy({})]),
+        loadEvents: vi.fn().mockResolvedValue([]),
+        loadShelves: vi.fn().mockResolvedValue([]),
+        loadLoans: vi.fn().mockResolvedValue([loan({})]),
+      },
+    );
+    expect(result.items[0].loanState).toEqual({
+      copyCount: 1,
+      loanedCount: 1,
+      overdue: false,
+    });
   });
 });

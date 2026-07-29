@@ -11,6 +11,7 @@ import {
   createCopy,
   ReferenceNotFoundError,
 } from "../../services/copies/service";
+import { copyHasLoans } from "../../services/loans/repository";
 import { recordChange } from "../../services/audit/repository";
 import { changedFields } from "../../services/audit/diff";
 import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
@@ -97,7 +98,13 @@ router.patch("/copies/:id", requireAuth, async (req, res) => {
 
 router.delete("/copies/:id", requireAuth, async (req, res) => {
   try {
-    const deleted = await deleteCopy(req.params.id as string);
+    const id = req.params.id as string;
+    // Block deletion while the copy has any loan (open or history) so loan history
+    // is never orphaned and a lent-out copy can't be discarded (#39 design D7).
+    if (await copyHasLoans(id)) {
+      return res.status(409).json({ error: "copy has loans" });
+    }
+    const deleted = await deleteCopy(id);
     if (!deleted) return res.status(404).json({ error: "not found" });
     res.status(204).end();
   } catch (err) {

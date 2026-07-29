@@ -1,5 +1,6 @@
 import type { Book } from "../../lib/types/book";
 import type { ReadingStatus } from "../../lib/types/reading-event";
+import type { BookLoanState } from "../loans/views";
 
 /**
  * Catalog search (#17). All filtering happens in memory over the household-scale
@@ -35,6 +36,8 @@ export interface JoinedBook {
   shelfIds: string[];
   /** readerId → the reading statuses that reader has for this book. */
   statusByReader: Record<string, ReadingStatus[]>;
+  /** Loan state across the book's copies (#39, design D8). */
+  loanState: BookLoanState;
 }
 
 export interface FacetValue {
@@ -51,7 +54,7 @@ export interface Facets {
 }
 
 export interface SearchResult {
-  items: Book[];
+  items: (Book & { loanState: BookLoanState })[];
   total: number;
   page: number;
   facets: Facets;

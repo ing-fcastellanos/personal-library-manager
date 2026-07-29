@@ -4,6 +4,7 @@ import type { ReadingEvent } from "@/lib/types/reading-event";
 import type { Reader } from "@/lib/types/reader";
 import type { Shelf } from "@/lib/types/shelf";
 import type { WishlistItem } from "@/lib/types/wishlist-item";
+import type { Loan } from "@/lib/types/loan";
 
 /**
  * Full JSON backup (#36, design D1-D3). Pure client-side aggregation of the
@@ -19,6 +20,7 @@ export interface Backup {
   readers: Reader[];
   shelves: Shelf[];
   wishlistItems: WishlistItem[];
+  loans: Loan[];
 }
 
 async function listOrEmpty<T>(url: string): Promise<T[]> {
@@ -34,7 +36,7 @@ async function listOrEmpty<T>(url: string): Promise<T[]> {
 
 /** Fetches every collection in parallel and assembles the backup object. */
 export async function fetchBackup(): Promise<Backup> {
-  const [books, copies, readingEvents, readers, shelves, wishlistItems] =
+  const [books, copies, readingEvents, readers, shelves, wishlistItems, loans] =
     await Promise.all([
       listOrEmpty<Book>("/api/books"),
       listOrEmpty<Copy>("/api/copies"),
@@ -42,6 +44,7 @@ export async function fetchBackup(): Promise<Backup> {
       listOrEmpty<Reader>("/api/readers"),
       listOrEmpty<Shelf>("/api/shelves"),
       listOrEmpty<WishlistItem>("/api/wishlist-items"),
+      listOrEmpty<Loan>("/api/loans"),
     ]);
   return {
     exportedAt: new Date().toISOString(),
@@ -51,6 +54,7 @@ export async function fetchBackup(): Promise<Backup> {
     readers,
     shelves,
     wishlistItems,
+    loans,
   };
 }
 

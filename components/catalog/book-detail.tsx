@@ -2,7 +2,17 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Pencil, ChevronLeft, Check, ExternalLink } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Pencil,
+  ChevronLeft,
+  Check,
+  ExternalLink,
+  Home,
+  ArrowUpRight,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,16 +20,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CoverPreview } from "@/components/books/enrich-skeleton";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useToast } from "@/components/ui/use-toast";
+import { SignInPrompt } from "@/components/auth/sign-in-prompt";
+import { buildNextParam } from "@/lib/auth/next-param";
 import { ConfirmReadingSheet } from "@/components/reading/confirm-reading-sheet";
 import { StarRating } from "@/components/reading/star-rating";
 import { ReadingEventCard } from "@/components/reading/reading-event-card";
 import { formatReadingDate } from "@/components/reading/history";
 import { goodreadsSearchUrl } from "@/components/reading/goodreads";
 import { AddToWishlistButton } from "@/components/wishlist/add-to-wishlist-button";
+import { LendDialog } from "@/components/loans/lend-dialog";
+import { borrowerSuggestions } from "@/components/loans/borrowers";
+import {
+  initials as borrowerInitials,
+  dueLabel,
+} from "@/components/loans/format";
+import { isOverdue } from "@/services/loans/views";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
 import type { Reader } from "@/lib/types/reader";
+import type { Loan } from "@/lib/types/loan";
 
 /**
  * Read-only book detail (#17, Claude Design handoff). Metadata + copies +
@@ -36,20 +57,25 @@ const STATUS_LABEL: Record<ReadingStatus, string> = {
 
 export function BookDetail({ bookId }: { bookId: string }) {
   const { reader } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
   const [book, setBook] = React.useState<Book | null>(null);
   const [copies, setCopies] = React.useState<Copy[]>([]);
   const [events, setEvents] = React.useState<ReadingEvent[]>([]);
   const [readers, setReaders] = React.useState<Reader[]>([]);
+  const [loans, setLoans] = React.useState<Loan[]>([]);
   const [sheet, setSheet] = React.useState<
     { mode: "create" } | { mode: "edit"; event: ReadingEvent } | null
   >(null);
+  const [lendFor, setLendFor] = React.useState<Copy | null>(null);
+  const [signInOpen, setSignInOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
     // A failed fetch (e.g. a 500 returning `{"error":"internal"}`) must not crash
     // the page: only accept ok responses, and coerce list endpoints to arrays so
-    // the book still renders while copies/events/readers degrade to empty.
+    // the book still renders while copies/events/readers/loans degrade to empty.
     const okJson = (r: Response) => (r.ok ? r.json() : null);
     const asArray = <T,>(v: unknown): T[] =>
       Array.isArray(v) ? (v as T[]) : [];
@@ -58,13 +84,15 @@ export function BookDetail({ bookId }: { bookId: string }) {
       fetch(`/api/books/${bookId}/copies`).then(okJson),
       fetch(`/api/books/${bookId}/reading-events`).then(okJson),
       fetch(`/api/readers`).then(okJson),
+      fetch(`/api/loans`).then(okJson),
     ])
-      .then(([b, c, e, rd]) => {
+      .then(([b, c, e, rd, ln]) => {
         if (!alive) return;
         setBook((b as Book | null) ?? null);
         setCopies(asArray<Copy>(c));
         setEvents(asArray<ReadingEvent>(e));
         setReaders(asArray<Reader>(rd));
+        setLoans(asArray<Loan>(ln));
       })
       .catch(() => {})
       .finally(() => alive && setLoading(false));
@@ -72,6 +100,37 @@ export function BookDetail({ bookId }: { bookId: string }) {
       alive = false;
     };
   }, [bookId]);
+
+  function openPrestar(copy: Copy) {
+    if (!reader) {
+      setSignInOpen(true);
+      return;
+    }
+    setLendFor(copy);
+  }
+
+  async function devolver(loan: Loan) {
+    if (!reader) {
+      setSignInOpen(true);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/loans/${loan.id}/return`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ returnedAt: new Date().toISOString() }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const updated = (await res.json()) as Loan;
+      setLoans((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+      toast({ title: `«${updated.bookTitle}» volvió a casa` });
+    } catch {
+      toast({
+        title: "No se pudo registrar la devolución",
+        variant: "destructive",
+      });
+    }
+  }
 
   if (loading) {
     return (
@@ -229,28 +288,115 @@ export function BookDetail({ bookId }: { bookId: string }) {
           <p className="text-sm text-muted-foreground">Sin ejemplares.</p>
         ) : (
           <div className="flex flex-col gap-2.5">
-            {copies.map((c) => (
-              <div key={c.id} className="rounded-xl border bg-card p-3.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold">
-                    {c.shelfId ? "En estante" : "Sin estante"}
-                  </span>
-                  {c.condition && (
-                    <Badge variant="secondary">{c.condition}</Badge>
+            {copies.map((c) => {
+              const openLoan = loans.find(
+                (l) => l.copyId === c.id && !l.returnedAt,
+              );
+              const today = new Date().toISOString().slice(0, 10);
+              const overdue = openLoan ? isOverdue(openLoan, today) : false;
+              return (
+                <div key={c.id} className="rounded-xl border bg-card p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-semibold">
+                      {c.shelfId ? "En estante" : "Sin estante"}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {c.condition && (
+                        <Badge variant="secondary">{c.condition}</Badge>
+                      )}
+                      <Badge variant={overdue ? "destructive" : "secondary"}>
+                        {openLoan ? (
+                          overdue ? (
+                            <AlertTriangle aria-hidden="true" />
+                          ) : (
+                            <ArrowUpRight aria-hidden="true" />
+                          )
+                        ) : (
+                          <Home aria-hidden="true" />
+                        )}
+                        {openLoan
+                          ? overdue
+                            ? "Vencido"
+                            : "Prestado"
+                          : "En casa"}
+                      </Badge>
+                    </div>
+                  </div>
+                  {c.acquiredAt && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Adquirido {c.acquiredAt}
+                    </p>
+                  )}
+                  {c.notes && (
+                    <p className="mt-2 rounded-lg bg-muted px-3 py-2 text-xs leading-relaxed">
+                      {c.notes}
+                    </p>
+                  )}
+
+                  {openLoan ? (
+                    <div className="mt-3 rounded-lg border bg-background p-3">
+                      <div className="flex items-center gap-2.5">
+                        <Avatar className="size-9 shrink-0">
+                          <AvatarFallback>
+                            {borrowerInitials(openLoan.borrowerName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] text-muted-foreground">
+                            Prestado a
+                          </p>
+                          <p className="truncate text-sm font-bold">
+                            {openLoan.borrowerName}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-2.5 flex flex-col gap-1 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock className="size-3.5" aria-hidden="true" />
+                          Prestado desde el{" "}
+                          {formatReadingDate(openLoan.loanedAt)}
+                        </span>
+                        {openLoan.dueDate && (
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1.5",
+                              overdue && "font-bold text-destructive",
+                            )}
+                          >
+                            <Clock className="size-3.5" aria-hidden="true" />
+                            {dueLabel(openLoan.dueDate, overdue, today)}
+                          </span>
+                        )}
+                      </div>
+                      {openLoan.notes && (
+                        <p className="mt-2.5 rounded-md bg-muted px-3 py-2 text-xs leading-relaxed">
+                          {openLoan.notes}
+                        </p>
+                      )}
+                      <Button
+                        variant="outline"
+                        className="mt-3 h-11 w-full"
+                        onClick={() => devolver(openLoan)}
+                        aria-label={`Marcar «${book?.title ?? ""}» como devuelto`}
+                      >
+                        Devolver
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      className="mt-3 h-11 w-full gap-1.5"
+                      onClick={() => openPrestar(c)}
+                      aria-label={`Prestar «${book?.title ?? ""}» · ${
+                        c.shelfId ? "En estante" : "Sin estante"
+                      }`}
+                    >
+                      <ArrowUpRight aria-hidden="true" />
+                      Prestar
+                    </Button>
                   )}
                 </div>
-                {c.acquiredAt && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Adquirido {c.acquiredAt}
-                  </p>
-                )}
-                {c.notes && (
-                  <p className="mt-2 rounded-lg bg-muted px-3 py-2 text-xs leading-relaxed">
-                    {c.notes}
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -405,6 +551,27 @@ export function BookDetail({ bookId }: { bookId: string }) {
           }}
         />
       )}
+
+      {lendFor && book && (
+        <LendDialog
+          open={!!lendFor}
+          onOpenChange={(open) => !open && setLendFor(null)}
+          copyId={lendFor.id}
+          bookTitle={book.title}
+          copyLabel={
+            lendFor.shelfId ? "Ejemplar en estante" : "Ejemplar sin estante"
+          }
+          borrowers={borrowerSuggestions(loans)}
+          onLent={(loan) => setLoans((prev) => [loan, ...prev])}
+        />
+      )}
+
+      <SignInPrompt
+        open={signInOpen}
+        onOpenChange={setSignInOpen}
+        onSignIn={() => router.push(`/login?next=${buildNextParam()}`)}
+        action="prestar o marcar una devolución"
+      />
     </div>
   );
 }

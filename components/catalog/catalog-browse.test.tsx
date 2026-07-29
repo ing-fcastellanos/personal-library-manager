@@ -43,6 +43,7 @@ const emptyFacets = {
   publishers: [],
   shelves: [],
 };
+const noLoan = { copyCount: 1, loanedCount: 0, overdue: false };
 const book = {
   id: "b1",
   title: "El nombre del viento",
@@ -50,19 +51,26 @@ const book = {
   publishedYear: 2007,
   categories: [],
   coverUrl: null,
+  loanState: noLoan,
 };
 
 let lastUrl = "";
 let total = 1;
+let loans: unknown[] = [];
+let searchItems: (typeof book)[] | null = null;
 
 beforeEach(() => {
   total = 1;
   lastUrl = "";
+  loans = [];
+  searchItems = null;
   shelfMock.value = null;
   global.fetch = vi.fn((input: RequestInfo | URL) => {
-    lastUrl = String(input);
+    const url = String(input);
+    lastUrl = url;
+    if (url.includes("/api/loans")) return jsonResponse(loans);
     return jsonResponse({
-      items: total > 0 ? [book] : [],
+      items: searchItems ?? (total > 0 ? [book] : []),
       total,
       page: 1,
       facets: {
@@ -114,5 +122,42 @@ describe("CatalogBrowse", () => {
     expect(
       screen.getByRole("link", { name: /El nombre del viento/ }),
     ).toBeInTheDocument();
+  });
+
+  it("shows no loan badge for a fully-available book (#39)", async () => {
+    render(<CatalogBrowse />);
+    await screen.findByRole("link", { name: /El nombre del viento/ });
+    expect(screen.queryByText("Prestado")).not.toBeInTheDocument();
+    expect(screen.queryByText("Vencido")).not.toBeInTheDocument();
+  });
+
+  it("shows a 'prestado' badge when a copy is on loan (#39, design D8)", async () => {
+    searchItems = [
+      { ...book, loanState: { copyCount: 1, loanedCount: 1, overdue: false } },
+    ];
+    render(<CatalogBrowse />);
+    await screen.findByRole("link", { name: /El nombre del viento/ });
+    expect(screen.getByText("Prestado")).toBeInTheDocument();
+  });
+
+  it("shows a 'N de M prestado' badge across multiple copies", async () => {
+    searchItems = [
+      { ...book, loanState: { copyCount: 2, loanedCount: 1, overdue: false } },
+    ];
+    render(<CatalogBrowse />);
+    expect(await screen.findByText("1 de 2 prestado")).toBeInTheDocument();
+  });
+
+  it("shows the Afuera chip linking to /prestamos when copies are out", async () => {
+    loans = [{ id: "l1", copyId: "c1", returnedAt: null }];
+    render(<CatalogBrowse />);
+    const chip = await screen.findByText("Afuera · 1");
+    expect(chip.closest("a")).toHaveAttribute("href", "/prestamos");
+  });
+
+  it("hides the Afuera chip when nothing is out", async () => {
+    render(<CatalogBrowse />);
+    await screen.findByRole("link", { name: /El nombre del viento/ });
+    expect(screen.queryByText(/Afuera ·/)).not.toBeInTheDocument();
   });
 });

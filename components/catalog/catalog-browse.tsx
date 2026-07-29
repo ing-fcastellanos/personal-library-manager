@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  ArrowUpRight,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,13 +38,17 @@ import {
 import { useAuth } from "@/components/auth/auth-provider";
 import { useShelf } from "@/components/shelf/shelf-context";
 import { CoverPreview } from "@/components/books/enrich-skeleton";
+import { openLoans } from "@/services/loans/views";
+import type { BookLoanState } from "@/services/loans/views";
 import type { Book } from "@/lib/types/book";
+import type { Loan } from "@/lib/types/loan";
 
 /**
- * Catalog browse (#17, Claude Design handoff "Catalog & Book Detail"). Search +
- * facet filters + list/grid results from `GET /api/catalog/search`, each linking
- * to the book detail. Filters are a fixed panel at md+ and a bottom-sheet on
- * mobile. Recreated from the design prototype over the existing `ui` primitives.
+ * Catalog browse (#17, Claude Design handoff "Catalog & Book Detail"; loan badge
+ * per #39 design D8). Search + facet filters + list/grid results from
+ * `GET /api/catalog/search`, each linking to the book detail. Filters are a
+ * fixed panel at md+ and a bottom-sheet on mobile. Recreated from the design
+ * prototype over the existing `ui` primitives.
  */
 
 interface FacetValue {
@@ -56,8 +62,9 @@ interface Facets {
   publishers: FacetValue[];
   shelves: FacetValue[];
 }
+type CatalogBook = Book & { loanState: BookLoanState };
 interface SearchResult {
-  items: Book[];
+  items: CatalogBook[];
   total: number;
   page: number;
   facets: Facets;
@@ -103,6 +110,25 @@ export function CatalogBrowse() {
   const [result, setResult] = React.useState<SearchResult | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [sheetOpen, setSheetOpen] = React.useState(false);
+  const [outCount, setOutCount] = React.useState(0);
+
+  React.useEffect(() => {
+    // Independent of search/filters: how many copies are currently out, for the
+    // "Afuera · N" header chip (design: /prestamos hangs off Catálogo, no 7th
+    // bottom-nav item). Absent or failed fetch just hides the chip.
+    let alive = true;
+    fetch("/api/loans")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: unknown) => {
+        if (!alive) return;
+        const loans = Array.isArray(data) ? (data as Loan[]) : [];
+        setOutCount(openLoans(loans).length);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     const params = new URLSearchParams();
@@ -179,6 +205,16 @@ export function CatalogBrowse() {
       </aside>
 
       <div className="min-w-0 flex-1">
+        {outCount > 0 && (
+          <Link
+            href="/prestamos"
+            aria-label={`Ver los ${outCount} ejemplares prestados`}
+            className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            <ArrowUpRight className="size-3.5" aria-hidden="true" />
+            Afuera · {outCount}
+          </Link>
+        )}
         {/* Search + controls */}
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <div className="relative min-w-48 flex-1">
@@ -458,7 +494,35 @@ function FacetGroup({
   );
 }
 
-function BookCard({ book }: { book: Book }) {
+/** The "prestado"/"vencido" badge, or null when every copy is home (design D8). */
+function loanBadgeLabel(state: BookLoanState): string | null {
+  if (state.loanedCount === 0) return null;
+  if (state.copyCount > 1) {
+    const base = `${state.loanedCount} de ${state.copyCount} prestado`;
+    return state.overdue ? `${base} · vencido` : base;
+  }
+  return state.overdue ? "Vencido" : "Prestado";
+}
+
+function LoanBadge({ state }: { state: BookLoanState }) {
+  const label = loanBadgeLabel(state);
+  if (!label) return null;
+  return (
+    <Badge
+      variant={state.overdue ? "destructive" : "secondary"}
+      className="text-[10px]"
+    >
+      {state.overdue ? (
+        <AlertTriangle aria-hidden="true" />
+      ) : (
+        <ArrowUpRight aria-hidden="true" />
+      )}
+      {label}
+    </Badge>
+  );
+}
+
+function BookCard({ book }: { book: CatalogBook }) {
   return (
     <Link
       href={`/libros/${book.id}`}
@@ -476,20 +540,19 @@ function BookCard({ book }: { book: Book }) {
         {book.authors.join(", ")}
         {book.publishedYear ? ` · ${book.publishedYear}` : ""}
       </p>
-      {(book.categories ?? []).length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
-          {book.categories.slice(0, 2).map((c) => (
-            <Badge key={c} variant="secondary" className="text-[10px]">
-              {c}
-            </Badge>
-          ))}
-        </div>
-      )}
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        <LoanBadge state={book.loanState} />
+        {book.categories.slice(0, 2).map((c) => (
+          <Badge key={c} variant="secondary" className="text-[10px]">
+            {c}
+          </Badge>
+        ))}
+      </div>
     </Link>
   );
 }
 
-function BookRow({ book }: { book: Book }) {
+function BookRow({ book }: { book: CatalogBook }) {
   return (
     <Link
       href={`/libros/${book.id}`}
@@ -506,15 +569,14 @@ function BookRow({ book }: { book: Book }) {
           {book.authors.join(", ")}
           {book.publishedYear ? ` · ${book.publishedYear}` : ""}
         </p>
-        {(book.categories ?? []).length > 0 && (
-          <div className="mt-1.5 flex gap-1">
-            {book.categories.slice(0, 2).map((c) => (
-              <Badge key={c} variant="secondary" className="text-[10px]">
-                {c}
-              </Badge>
-            ))}
-          </div>
-        )}
+        <div className="mt-1.5 flex gap-1">
+          <LoanBadge state={book.loanState} />
+          {book.categories.slice(0, 2).map((c) => (
+            <Badge key={c} variant="secondary" className="text-[10px]">
+              {c}
+            </Badge>
+          ))}
+        </div>
       </div>
     </Link>
   );
