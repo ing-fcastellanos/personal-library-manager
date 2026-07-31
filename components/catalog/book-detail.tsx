@@ -12,6 +12,8 @@ import {
   ArrowUpRight,
   AlertTriangle,
   Clock,
+  Plus,
+  Book as BookIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -36,11 +38,16 @@ import {
   dueLabel,
 } from "@/components/loans/format";
 import { isOverdue } from "@/services/loans/views";
+import { SeriesDialog } from "@/components/series/series-dialog";
+import { LinkSeriesDialog } from "@/components/series/link-series-dialog";
+import { VolumeRow } from "@/components/series/volume-row";
+import { seriesForBook } from "@/services/series/views";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
 import type { Reader } from "@/lib/types/reader";
 import type { Loan } from "@/lib/types/loan";
+import type { Series } from "@/lib/types/series";
 
 /**
  * Read-only book detail (#17, Claude Design handoff). Metadata + copies +
@@ -65,11 +72,14 @@ export function BookDetail({ bookId }: { bookId: string }) {
   const [events, setEvents] = React.useState<ReadingEvent[]>([]);
   const [readers, setReaders] = React.useState<Reader[]>([]);
   const [loans, setLoans] = React.useState<Loan[]>([]);
+  const [seriesList, setSeriesList] = React.useState<Series[]>([]);
   const [sheet, setSheet] = React.useState<
     { mode: "create" } | { mode: "edit"; event: ReadingEvent } | null
   >(null);
   const [lendFor, setLendFor] = React.useState<Copy | null>(null);
   const [signInOpen, setSignInOpen] = React.useState(false);
+  const [seriesDialogOpen, setSeriesDialogOpen] = React.useState(false);
+  const [linkSeriesOpen, setLinkSeriesOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -85,14 +95,16 @@ export function BookDetail({ bookId }: { bookId: string }) {
       fetch(`/api/books/${bookId}/reading-events`).then(okJson),
       fetch(`/api/readers`).then(okJson),
       fetch(`/api/loans`).then(okJson),
+      fetch(`/api/series`).then(okJson),
     ])
-      .then(([b, c, e, rd, ln]) => {
+      .then(([b, c, e, rd, ln, sr]) => {
         if (!alive) return;
         setBook((b as Book | null) ?? null);
         setCopies(asArray<Copy>(c));
         setEvents(asArray<ReadingEvent>(e));
         setReaders(asArray<Reader>(rd));
         setLoans(asArray<Loan>(ln));
+        setSeriesList(asArray<Series>(sr));
       })
       .catch(() => {})
       .finally(() => alive && setLoading(false));
@@ -179,6 +191,11 @@ export function BookDetail({ bookId }: { bookId: string }) {
     ["Idioma", book.language],
     ["Páginas", book.pageCount],
   ].filter(([, v]) => v != null && v !== "") as [string, string | number][];
+
+  const mySeries = seriesForBook(book.id, seriesList);
+  const sortedVolumes = mySeries
+    ? [...mySeries.volumes].sort((a, b) => a.position - b.position)
+    : [];
 
   return (
     <div className="mx-auto max-w-3xl space-y-7">
@@ -401,6 +418,58 @@ export function BookDetail({ bookId }: { bookId: string }) {
         )}
       </section>
 
+      {/* Serie (#38) */}
+      <section>
+        {mySeries ? (
+          <>
+            <div className="mb-3 flex items-end justify-between gap-2">
+              <SectionTitle className="mb-0">
+                Serie · {mySeries.name}
+              </SectionTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5"
+                onClick={() => setSeriesDialogOpen(true)}
+              >
+                <Pencil className="size-3.5" />
+                Editar
+              </Button>
+            </div>
+            <ul className="flex flex-col gap-2.5">
+              {sortedVolumes.map((v) => (
+                <VolumeRow
+                  key={v.position}
+                  volume={v}
+                  highlight={v.bookId === book.id}
+                />
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <SectionTitle>Serie</SectionTitle>
+            <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed p-4">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                  <BookIcon className="size-4" />
+                </span>
+                <p className="text-sm text-muted-foreground">
+                  Este libro no forma parte de ninguna serie todavía
+                </p>
+              </div>
+              <Button
+                className="h-11 w-full gap-1.5"
+                onClick={() => setLinkSeriesOpen(true)}
+              >
+                <Plus className="size-4" />
+                Agregar a una serie
+              </Button>
+            </div>
+          </>
+        )}
+      </section>
+
       {/* Lectura */}
       <section>
         <SectionTitle>Lectura</SectionTitle>
@@ -565,6 +634,41 @@ export function BookDetail({ bookId }: { bookId: string }) {
           onLent={(loan) => setLoans((prev) => [loan, ...prev])}
         />
       )}
+
+      {mySeries && (
+        <SeriesDialog
+          open={seriesDialogOpen}
+          onOpenChange={setSeriesDialogOpen}
+          series={mySeries}
+          highlightBookId={book.id}
+          onUpdated={(updated) =>
+            setSeriesList((prev) =>
+              prev.map((s) => (s.id === updated.id ? updated : s)),
+            )
+          }
+        />
+      )}
+
+      <LinkSeriesDialog
+        open={linkSeriesOpen}
+        onOpenChange={setLinkSeriesOpen}
+        book={{
+          id: book.id,
+          title: book.title,
+          authors: book.authors,
+          isbn13: book.isbn13,
+          coverUrl: book.coverUrl,
+        }}
+        existingSeries={seriesList}
+        onLinked={(series) =>
+          setSeriesList((prev) => {
+            const exists = prev.some((s) => s.id === series.id);
+            return exists
+              ? prev.map((s) => (s.id === series.id ? series : s))
+              : [series, ...prev];
+          })
+        }
+      />
 
       <SignInPrompt
         open={signInOpen}

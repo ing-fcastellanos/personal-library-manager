@@ -55,6 +55,20 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Series</CardTitle>
+          <CardDescription>
+            Seguí qué tomos de una saga tenés y cuáles faltan.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link href="/ajustes/series">Ver mis series</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Backup</CardTitle>
           <CardDescription>
             Descargá un JSON completo de tu biblioteca (libros, ejemplares,

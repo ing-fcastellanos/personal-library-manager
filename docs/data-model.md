@@ -41,6 +41,8 @@ es la que hace ganar "simple y derivado" sobre "denormalizado y mantenido".
 - `reader` ← `wishlistItem.readerId` (N deseos → 1 reader)
 - `book` ← `wishlistItem.bookId?` (**opcional** — un deseo puede no tener edición catalogada)
 - `copy` ← `loan.copyId` (N préstamos → 1 ejemplar; el que recibe es texto libre, no un `reader`)
+- `series.volumes[].bookId?` → `book` (**opcional**, dirección invertida: la serie referencia
+  libros, el `book` no sabe nada de series — un volumen sin `bookId` es un tomo faltante)
 
 ### `books`
 
@@ -194,6 +196,36 @@ historial) se **bloquea** (integridad).
 > llaveada por `copyId` da historial gratis y el estado "prestado" se deriva — igual
 > que `readingEvents`/`wishlistItems`. (add-loans, decisión D1.)
 
+### `series`
+
+Una saga curada a mano: nombre + lista **ordenada** de tomos. Tipo: `lib/types/series.ts`.
+Vive en su **propia colección**; el `book` no tiene ninguna referencia de vuelta —la
+pertenencia se descubre escaneando `series` en memoria por un volumen cuyo `bookId`
+coincida (mismo join en memoria que `services/catalog` ya usa para estantes/lectura).
+
+| Campo                   | Tipo             | Notas                                                          |
+| ----------------------- | ---------------- | -------------------------------------------------------------- |
+| `id`                    | string           | auto-id                                                        |
+| `name`                  | string           | **requerido**                                                  |
+| `volumes`               | `SeriesVolume[]` | ordenado por `position` (no necesariamente el orden del array) |
+| `createdAt`/`updatedAt` | string           | ISO                                                            |
+
+`SeriesVolume`: `{ position: number, title: string, authors: string[], isbn13?: string, coverUrl?: string, bookId?: string }`
+— snapshot completo (igual que `wishlistItems`/`loans`) para que un tomo faltante se
+renderice sin depender de un `book` que todavía no existe. `bookId` ausente/null = **tomo
+faltante**; con `bookId` = el hogar lo tiene. Editar una serie (renombrar, agregar/quitar/
+reordenar tomos, vincular un `bookId`) reemplaza el array `volumes` completo — sin
+sub-colección por tomo, dado el tamaño chico por serie a esta escala.
+
+> **Por qué colección propia con link inverso, y no `book.workKey` + colección.** El
+> data-model reservaba Series como _"`book.workKey` + futura colección `series`"_.
+> Se descartó: `workKey` agrupa **ediciones del mismo tomo** (tapa dura vs. bolsillo),
+> no **tomos distintos** de una saga — son agrupaciones ortogonales, y ningún código
+> llegó a poblar `workKey` (grep del repo: cero escritores fuera de su propio tipo).
+> Que la serie referencie `bookId` directamente es más simple, no exige que un libro
+> pertenezca a una sola serie, y no toca `book` en absoluto. (add-series-tracking,
+> decisión D1.)
+
 ## Decisiones (A–F)
 
 - **A — `Book` = edición, entidad única.** Un doc `book` = una edición canónica; no
@@ -235,7 +267,9 @@ loans         : (borrowerKey ASC, loanedAt DESC)              historial por pers
 **en memoria** en las vistas derivadas (como el catálogo), no por query, así que no hay
 consultas que exijan índices `(readerId, status, …)` ni `(status, …)`. `loans` idem: el
 estado "abierto/prestado" y "vencido" se derivan en memoria; solo se indexan las
-lecturas ordenadas por `copyId` y por `borrowerKey`.
+lecturas ordenadas por `copyId` y por `borrowerKey`. `series` no necesita **ningún**
+índice compuesto: se carga la colección entera (household-scale) y la pertenencia de un
+libro se resuelve en memoria, igual patrón.
 
 **Búsqueda (#17):** Firestore no tiene substring/full-text. Se resuelve con filtros +
 prefijo sobre `titleKey` (lowercased). Un índice externo (Algolia/Typesense) queda
@@ -248,7 +282,6 @@ Bocetadas para que encajen sin repintar:
 
 | Futuro           | Issue     | Forma prevista                                                      |
 | ---------------- | --------- | ------------------------------------------------------------------- |
-| Series           | #38       | `book.workKey` + futura colección `series` (orden de tomos)         |
 | AuditLog         | #40       | colección `auditLog` (actor, entidad, ts)                           |
 | ImportSession    | #22 / #35 | colección `importSessions` (resumen de la sesión de alta)           |
 | Metas de lectura | #30       | subdoc en `reader` **o** colección `readingGoals` (se decide en M5) |

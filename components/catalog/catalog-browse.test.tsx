@@ -57,18 +57,21 @@ const book = {
 let lastUrl = "";
 let total = 1;
 let loans: unknown[] = [];
+let series: unknown[] = [];
 let searchItems: (typeof book)[] | null = null;
 
 beforeEach(() => {
   total = 1;
   lastUrl = "";
   loans = [];
+  series = [];
   searchItems = null;
   shelfMock.value = null;
   global.fetch = vi.fn((input: RequestInfo | URL) => {
     const url = String(input);
     lastUrl = url;
     if (url.includes("/api/loans")) return jsonResponse(loans);
+    if (url.includes("/api/series")) return jsonResponse(series);
     return jsonResponse({
       items: searchItems ?? (total > 0 ? [book] : []),
       total,
@@ -159,5 +162,25 @@ describe("CatalogBrowse", () => {
     render(<CatalogBrowse />);
     await screen.findByRole("link", { name: /El nombre del viento/ });
     expect(screen.queryByText(/Afuera ·/)).not.toBeInTheDocument();
+  });
+
+  it("shows a Serie indicator when the book is linked as a volume (#38)", async () => {
+    series = [
+      {
+        id: "s1",
+        name: "Saga",
+        volumes: [
+          { position: 1, title: book.title, authors: [], bookId: "b1" },
+        ],
+      },
+    ];
+    render(<CatalogBrowse />);
+    expect(await screen.findByText("Serie")).toBeInTheDocument();
+  });
+
+  it("shows no Serie indicator for a book in no tracked series", async () => {
+    render(<CatalogBrowse />);
+    await screen.findByRole("link", { name: /El nombre del viento/ });
+    expect(screen.queryByText("Serie")).not.toBeInTheDocument();
   });
 });

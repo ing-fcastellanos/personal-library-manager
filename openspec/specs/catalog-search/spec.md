@@ -107,8 +107,10 @@ The system SHALL replace the `/catalogo` placeholder with a browse view offering
 panel, and results in both list and grid layouts (togglable), with empty, loading, and
 no-results states. Each result SHALL link to the book detail view. Each result SHALL also show a
 **"prestado" indicator** when one or more of the book's copies is currently on loan, derived from
-the loans (never a stored flag). Because a shelf's contents is this browse filtered by `?shelf=`,
-the same indicator marks a lent copy as "out" on the shelf view.
+the loans (never a stored flag), and a **"Serie" indicator** when the book is a volume of a tracked
+series (#38) — informational, like the "prestado" indicator, not a separate click target;
+opening/editing that series happens from the book detail. Because a shelf's contents is this
+browse filtered by `?shelf=`, the same loan indicator marks a lent copy as "out" on the shelf view.
 
 #### Scenario: Browse and open a book
 
@@ -131,6 +133,11 @@ the same indicator marks a lent copy as "out" on the shelf view.
 - **WHEN** none of a book's copies has an open loan
 - **THEN** its browse result shows no loan indicator
 
+#### Scenario: A book in a series shows the series indicator
+
+- **WHEN** a book is linked as a volume of a tracked series
+- **THEN** its browse result shows a "Serie" indicator
+
 ### Requirement: Book detail view
 
 The system SHALL provide a read-only book detail view at `/libros/[id]` showing the book's
@@ -138,7 +145,9 @@ metadata, its copies, and its per-reader reading status, with an action to edit 
 (`/libros/[id]/editar`). The catalog's "view book" navigation (#14) SHALL target this view. For each
 copy, the detail SHALL show its loan state: an available copy SHALL offer a **Prestar** action, and
 a copy on loan SHALL show a **loan-details card** (borrower, since when, due/overdue) with a
-**Devolver** action. Lending and returning require a session.
+**Devolver** action. Lending and returning require a session. When the book is a volume of a
+tracked series (#38), the detail SHALL show that series' full volume list with owned/missing status;
+when it isn't, the detail SHALL offer creating a series (or joining an existing one).
 
 #### Scenario: Detail shows copies and reading status
 
@@ -160,3 +169,8 @@ a copy on loan SHALL show a **loan-details card** (borrower, since when, due/ove
 - **WHEN** a reader opens the detail of a book with a copy currently on loan
 - **THEN** that copy shows the borrower, the loan date, and a due/overdue indicator when a due date is set
 - **AND** a signed-in reader can mark it returned from there
+
+#### Scenario: Detail shows the book's series
+
+- **WHEN** a reader opens the detail of a book that is a volume of a tracked series
+- **THEN** the detail shows the series' volumes in order with each one's owned/missing status

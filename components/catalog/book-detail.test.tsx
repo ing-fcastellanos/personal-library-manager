@@ -469,3 +469,126 @@ describe("BookDetail · Préstamos (#39)", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("BookDetail · Series (#38)", () => {
+  it("shows the Serie section with owned/missing volumes for a book in a series", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse(copies);
+      if (url.endsWith("/reading-events")) return jsonResponse([]);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      if (url.endsWith("/api/loans")) return jsonResponse([]);
+      if (url.endsWith("/api/series"))
+        return jsonResponse([
+          {
+            id: "s1",
+            name: "El Señor de los Anillos",
+            volumes: [
+              {
+                position: 1,
+                title: book.title,
+                authors: book.authors,
+                bookId: "b1",
+              },
+              {
+                position: 2,
+                title: "Las Dos Torres",
+                authors: [],
+                bookId: null,
+              },
+            ],
+            createdAt: "",
+            updatedAt: "",
+          },
+        ]);
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    expect(
+      await screen.findByText("Serie · El Señor de los Anillos"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Tenés")).toBeInTheDocument();
+    expect(screen.getByText("Las Dos Torres")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Agregar «Las Dos Torres» a deseos" }),
+    ).toBeInTheDocument();
+  });
+
+  it("adding a missing volume to the wishlist creates the item from its snapshot", async () => {
+    const posted: Record<string, unknown>[] = [];
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse(copies);
+      if (url.endsWith("/reading-events")) return jsonResponse([]);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      if (url.endsWith("/api/loans")) return jsonResponse([]);
+      if (url.endsWith("/api/series") && method === "GET")
+        return jsonResponse([
+          {
+            id: "s1",
+            name: "Saga",
+            volumes: [
+              {
+                position: 1,
+                title: book.title,
+                authors: book.authors,
+                bookId: "b1",
+              },
+              {
+                position: 2,
+                title: "El Retorno del Rey",
+                authors: ["Tolkien"],
+                isbn13: "9780007121066",
+                bookId: null,
+              },
+            ],
+            createdAt: "",
+            updatedAt: "",
+          },
+        ]);
+      if (url.includes("/api/books/duplicates"))
+        return jsonResponse(null, false);
+      if (url.endsWith("/api/wishlist-items") && method === "POST") {
+        posted.push(JSON.parse(String(init?.body)));
+        return jsonResponse({ id: "w1" }, true);
+      }
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Agregar «El Retorno del Rey» a deseos",
+      }),
+    );
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0].bookTitle).toBe("El Retorno del Rey");
+    expect(posted[0].isbn13).toBe("9780007121066");
+  });
+
+  it("a book in no series offers to add it to one", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse(copies);
+      if (url.endsWith("/reading-events")) return jsonResponse([]);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      if (url.endsWith("/api/loans")) return jsonResponse([]);
+      if (url.endsWith("/api/series")) return jsonResponse([]);
+      return jsonResponse({}, false);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    const addBtn = await screen.findByRole("button", {
+      name: "Agregar a una serie",
+    });
+    fireEvent.click(addBtn);
+    expect(
+      await screen.findByText(`Agregar «${book.title}» a una serie`),
+    ).toBeInTheDocument();
+  });
+});
