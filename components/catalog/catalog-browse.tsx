@@ -14,6 +14,7 @@ import {
   X,
   ArrowUpRight,
   AlertTriangle,
+  Book as BookIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ import { openLoans } from "@/services/loans/views";
 import type { BookLoanState } from "@/services/loans/views";
 import type { Book } from "@/lib/types/book";
 import type { Loan } from "@/lib/types/loan";
+import type { Series } from "@/lib/types/series";
 
 /**
  * Catalog browse (#17, Claude Design handoff "Catalog & Book Detail"; loan badge
@@ -111,6 +113,9 @@ export function CatalogBrowse() {
   const [loading, setLoading] = React.useState(true);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [outCount, setOutCount] = React.useState(0);
+  const [bookIdsInSeries, setBookIdsInSeries] = React.useState<Set<string>>(
+    new Set(),
+  );
 
   React.useEffect(() => {
     // Independent of search/filters: how many copies are currently out, for the
@@ -123,6 +128,27 @@ export function CatalogBrowse() {
         if (!alive) return;
         const loans = Array.isArray(data) ? (data as Loan[]) : [];
         setOutCount(openLoans(loans).length);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    // Every bookId linked as a volume of any series, for the informational
+    // "Serie" indicator (#38) — same pattern as the loans "Afuera" fetch above.
+    let alive = true;
+    fetch("/api/series")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: unknown) => {
+        if (!alive) return;
+        const series = Array.isArray(data) ? (data as Series[]) : [];
+        const ids = new Set<string>();
+        for (const s of series) {
+          for (const v of s.volumes) if (v.bookId) ids.add(v.bookId);
+        }
+        setBookIdsInSeries(ids);
       })
       .catch(() => {});
     return () => {
@@ -326,13 +352,21 @@ export function CatalogBrowse() {
         ) : view === "grid" ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {result!.items.map((b) => (
-              <BookCard key={b.id} book={b} />
+              <BookCard
+                key={b.id}
+                book={b}
+                inSeries={bookIdsInSeries.has(b.id)}
+              />
             ))}
           </div>
         ) : (
           <div className="flex flex-col gap-2.5">
             {result!.items.map((b) => (
-              <BookRow key={b.id} book={b} />
+              <BookRow
+                key={b.id}
+                book={b}
+                inSeries={bookIdsInSeries.has(b.id)}
+              />
             ))}
           </div>
         )}
@@ -522,7 +556,23 @@ function LoanBadge({ state }: { state: BookLoanState }) {
   );
 }
 
-function BookCard({ book }: { book: CatalogBook }) {
+/** Informational only (design D4) — not a click target; same as the "prestado" badge. */
+function SeriesBadge() {
+  return (
+    <Badge variant="outline" className="text-[10px]">
+      <BookIcon aria-hidden="true" />
+      Serie
+    </Badge>
+  );
+}
+
+function BookCard({
+  book,
+  inSeries,
+}: {
+  book: CatalogBook;
+  inSeries: boolean;
+}) {
   return (
     <Link
       href={`/libros/${book.id}`}
@@ -542,6 +592,7 @@ function BookCard({ book }: { book: CatalogBook }) {
       </p>
       <div className="mt-1.5 flex flex-wrap gap-1">
         <LoanBadge state={book.loanState} />
+        {inSeries && <SeriesBadge />}
         {book.categories.slice(0, 2).map((c) => (
           <Badge key={c} variant="secondary" className="text-[10px]">
             {c}
@@ -552,7 +603,7 @@ function BookCard({ book }: { book: CatalogBook }) {
   );
 }
 
-function BookRow({ book }: { book: CatalogBook }) {
+function BookRow({ book, inSeries }: { book: CatalogBook; inSeries: boolean }) {
   return (
     <Link
       href={`/libros/${book.id}`}
@@ -571,6 +622,7 @@ function BookRow({ book }: { book: CatalogBook }) {
         </p>
         <div className="mt-1.5 flex gap-1">
           <LoanBadge state={book.loanState} />
+          {inSeries && <SeriesBadge />}
           {book.categories.slice(0, 2).map((c) => (
             <Badge key={c} variant="secondary" className="text-[10px]">
               {c}
