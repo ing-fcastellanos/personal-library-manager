@@ -69,6 +69,20 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Actividad</CardTitle>
+          <CardDescription>
+            Quién agregó, editó o borró qué, y cuándo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link href="/ajustes/actividad">Ver actividad reciente</Link>
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Backup</CardTitle>
           <CardDescription>
             Descargá un JSON completo de tu biblioteca (libros, ejemplares,

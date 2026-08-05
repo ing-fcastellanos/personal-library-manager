@@ -47,7 +47,15 @@ router.post("/books", requireAuth, async (req, res) => {
       .json({ error: "validation", details: parsed.error.flatten() });
   }
   try {
-    res.status(201).json(await createBook(parsed.data));
+    const book = await createBook(parsed.data);
+    await recordChange({
+      action: "create",
+      entityType: "book",
+      entityId: book.id,
+      entityLabel: book.title,
+      readerId: (req as AuthedRequest).reader!.id,
+    });
+    res.status(201).json(book);
   } catch (err) {
     respondInternal(res, req, err);
   }
@@ -66,10 +74,12 @@ router.patch("/books/:id", requireAuth, async (req, res) => {
     if (!existing) return res.status(404).json({ error: "not found" });
     const book = await updateBook(id, parsed.data);
     if (!book) return res.status(404).json({ error: "not found" });
-    // Minimal change log (#15 D7): record which fields changed and by whom.
+    // Minimal change log (#15 D7, extended #40): record which fields changed and by whom.
     await recordChange({
-      entity: "book",
+      action: "update",
+      entityType: "book",
       entityId: id,
+      entityLabel: book.title,
       changedFields: changedFields(
         existing as unknown as Record<string, unknown>,
         parsed.data as Record<string, unknown>,
@@ -85,6 +95,8 @@ router.patch("/books/:id", requireAuth, async (req, res) => {
 router.delete("/books/:id", requireAuth, async (req, res) => {
   try {
     const id = req.params.id as string;
+    const existing = await getBook(id);
+    if (!existing) return res.status(404).json({ error: "not found" });
     // Block deletion while the book still has copies or reading events (#12 D3).
     if ((await bookHasCopies(id)) || (await bookHasEvents(id))) {
       return res
@@ -96,6 +108,13 @@ router.delete("/books/:id", requireAuth, async (req, res) => {
     await unlinkWishlistItemsByBook(id);
     const deleted = await deleteBook(id);
     if (!deleted) return res.status(404).json({ error: "not found" });
+    await recordChange({
+      action: "delete",
+      entityType: "book",
+      entityId: id,
+      entityLabel: existing.title,
+      readerId: (req as AuthedRequest).reader!.id,
+    });
     res.status(204).end();
   } catch (err) {
     respondInternal(res, req, err);

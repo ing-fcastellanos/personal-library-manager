@@ -42,12 +42,15 @@ import { SeriesDialog } from "@/components/series/series-dialog";
 import { LinkSeriesDialog } from "@/components/series/link-series-dialog";
 import { VolumeRow } from "@/components/series/volume-row";
 import { seriesForBook } from "@/services/series/views";
+import { ActivityRow } from "@/components/audit/activity-row";
+import { fetchBookActivity } from "@/components/audit/activity";
 import type { Book } from "@/lib/types/book";
 import type { Copy } from "@/lib/types/copy";
 import type { ReadingEvent, ReadingStatus } from "@/lib/types/reading-event";
 import type { Reader } from "@/lib/types/reader";
 import type { Loan } from "@/lib/types/loan";
 import type { Series } from "@/lib/types/series";
+import type { AuditLogEntry } from "@/lib/types/audit-log";
 
 /**
  * Read-only book detail (#17, Claude Design handoff). Metadata + copies +
@@ -80,6 +83,7 @@ export function BookDetail({ bookId }: { bookId: string }) {
   const [signInOpen, setSignInOpen] = React.useState(false);
   const [seriesDialogOpen, setSeriesDialogOpen] = React.useState(false);
   const [linkSeriesOpen, setLinkSeriesOpen] = React.useState(false);
+  const [activity, setActivity] = React.useState<AuditLogEntry[]>([]);
 
   React.useEffect(() => {
     let alive = true;
@@ -112,6 +116,23 @@ export function BookDetail({ bookId }: { bookId: string }) {
       alive = false;
     };
   }, [bookId]);
+
+  React.useEffect(() => {
+    // The household's mental model is "what happened to this book" — its own
+    // edits plus its copies' and reading events' (#40, design D5).
+    if (!book) return;
+    let alive = true;
+    fetchBookActivity(
+      book.id,
+      copies.map((c) => c.id),
+      events.map((e) => e.id),
+    ).then((a) => {
+      if (alive) setActivity(a);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [book, copies, events]);
 
   function openPrestar(copy: Copy) {
     if (!reader) {
@@ -593,6 +614,26 @@ export function BookDetail({ bookId }: { bookId: string }) {
               />
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Actividad (#40): distinct from "Historial de lecturas" above — this is
+          who touched the book/its copies/its readings, not what was read. */}
+      {activity.length > 0 && (
+        <section>
+          <SectionTitle className="mb-0.5">Actividad</SectionTitle>
+          <p className="mb-2 text-xs text-muted-foreground">
+            Este libro, sus ejemplares y sus lecturas
+          </p>
+          <ul className="flex flex-col">
+            {activity.map((a) => (
+              <ActivityRow
+                key={a.id}
+                entry={a}
+                readerName={readerName.get(a.readerId) ?? "Alguien"}
+              />
+            ))}
+          </ul>
         </section>
       )}
 

@@ -21,6 +21,7 @@ class CoverValidationError extends Error {}
 const uploadCover = vi.fn();
 const getBook = vi.fn();
 const updateBook = vi.fn();
+const recordChange = vi.fn();
 let authed = true;
 
 vi.mock("../../services/covers/service", () => ({
@@ -32,7 +33,7 @@ vi.mock("../../services/books/repository", () => ({
   updateBook: (...a: unknown[]) => updateBook(...a),
 }));
 vi.mock("../../services/audit/repository", () => ({
-  recordChange: vi.fn().mockResolvedValue(undefined),
+  recordChange: (...a: unknown[]) => recordChange(...a),
 }));
 vi.mock("../middleware/require-auth", () => ({
   requireAuth: (
@@ -67,6 +68,7 @@ beforeEach(() => {
   uploadCover.mockReset();
   getBook.mockReset();
   updateBook.mockReset();
+  recordChange.mockReset();
 });
 
 async function post(id: string, body: unknown) {
@@ -81,7 +83,7 @@ const validBody = { imageBase64: "Zm9v", contentType: "image/png" };
 
 describe("POST /api/books/:id/cover", () => {
   it("uploads and returns the new coverUrl (200)", async () => {
-    getBook.mockResolvedValueOnce({ id: "b1" });
+    getBook.mockResolvedValueOnce({ id: "b1", title: "Rayuela" });
     uploadCover.mockResolvedValueOnce("https://storage/covers/b1.png");
     updateBook.mockResolvedValueOnce({ id: "b1" });
     const res = await post("b1", validBody);
@@ -91,6 +93,15 @@ describe("POST /api/books/:id/cover", () => {
       coverUrl: "https://storage/covers/b1.png",
       coverSource: "user",
     });
+    expect(recordChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "update",
+        entityType: "book",
+        entityId: "b1",
+        entityLabel: "Rayuela",
+        changedFields: ["coverUrl", "coverSource"],
+      }),
+    );
   });
 
   it("rejects an invalid body with 400", async () => {

@@ -4,7 +4,8 @@ import { bookCreateSchema } from "../../lib/types/book";
 import { copyCreateSchema } from "../../lib/types/copy";
 import { intakeBook } from "../../services/intake/service";
 import { ReferenceNotFoundError } from "../../services/copies/service";
-import { requireAuth } from "../middleware/require-auth";
+import { recordChange } from "../../services/audit/repository";
+import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
 import { respondInternal } from "../lib/errors";
 
 /**
@@ -36,6 +37,21 @@ router.post("/books/intake", requireAuth, async (req, res) => {
       book: parsed.data.book,
       copy: parsed.data.copy,
       coverSourceUrl: parsed.data.coverSourceUrl ?? null,
+    });
+    const readerId = (req as AuthedRequest).reader!.id;
+    await recordChange({
+      action: "create",
+      entityType: "book",
+      entityId: result.book.id,
+      entityLabel: result.book.title,
+      readerId,
+    });
+    await recordChange({
+      action: "create",
+      entityType: "copy",
+      entityId: result.copy.id,
+      entityLabel: `${result.book.title} · ejemplar`,
+      readerId,
     });
     res.status(201).json(result);
   } catch (err) {

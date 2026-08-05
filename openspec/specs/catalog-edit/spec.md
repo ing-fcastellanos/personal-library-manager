@@ -74,10 +74,11 @@ the diff by default so re-enriching does not overwrite a user-uploaded cover.
 
 ### Requirement: Minimal change log
 
-On persisting an edit to a `Book` or `Copy`, the system SHALL append a record to an `auditLog`
-collection capturing the entity kind, the entity id, the list of changed field names, the acting
-`readerId` (from the session), and a timestamp. This change SHALL NOT include an audit query UI —
-that is deferred to the M8 audit feature.
+On creating, editing, or deleting a `Book` or `Copy`, the system SHALL append a record to an
+`auditLog` collection capturing the entity kind, the entity id, a label snapshot, the action
+(create/update/delete), the list of changed field names (for updates), the acting `readerId` (from
+the session), and a timestamp. A query UI over this log is provided by the `audit-log` capability
+(#40).
 
 #### Scenario: Edit writes an audit record
 
@@ -89,3 +90,9 @@ that is deferred to the M8 audit feature.
 
 - **WHEN** a save is submitted with no changed fields
 - **THEN** no `auditLog` record is required for that save
+
+#### Scenario: Create and delete are also logged
+
+- **WHEN** a reader creates or deletes a `Book` or `Copy`
+- **THEN** an `auditLog` document is written with the corresponding `action` and a label snapshot,
+  independent of the changed-fields list
