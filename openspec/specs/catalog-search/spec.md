@@ -147,7 +147,10 @@ copy, the detail SHALL show its loan state: an available copy SHALL offer a **Pr
 a copy on loan SHALL show a **loan-details card** (borrower, since when, due/overdue) with a
 **Devolver** action. Lending and returning require a session. When the book is a volume of a
 tracked series (#38), the detail SHALL show that series' full volume list with owned/missing status;
-when it isn't, the detail SHALL offer creating a series (or joining an existing one).
+when it isn't, the detail SHALL offer creating a series (or joining an existing one). The detail
+SHALL also show an **"Actividad"** section (#40) listing the audit entries for the book itself, its
+copies, and its reading events together, distinct from the existing "Historial de lecturas" (#26)
+section on the same page.
 
 #### Scenario: Detail shows copies and reading status
 
@@ -170,7 +173,8 @@ when it isn't, the detail SHALL offer creating a series (or joining an existing 
 - **THEN** that copy shows the borrower, the loan date, and a due/overdue indicator when a due date is set
 - **AND** a signed-in reader can mark it returned from there
 
-#### Scenario: Detail shows the book's series
+#### Scenario: Actividad aggregates the book, its copies, and its reading events
 
-- **WHEN** a reader opens the detail of a book that is a volume of a tracked series
-- **THEN** the detail shows the series' volumes in order with each one's owned/missing status
+- **WHEN** a reader opens the detail of a book that has been edited, and one of its copies has been
+  edited or a reading event created for it
+- **THEN** the "Actividad" section lists all of those entries together, most recent first

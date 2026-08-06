@@ -12,25 +12,33 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
 /**
- * Endpoint tests for `POST /api/books/intake` (#14). The intake service and the
- * auth middleware are mocked so these exercise routing, validation, and the auth
- * gate without an emulator (node lane).
+ * Endpoint tests for `POST /api/books/intake` (#14, audit coverage #40). The
+ * intake service, audit log, and auth middleware are mocked so these exercise
+ * routing, validation, and the auth gate without an emulator (node lane).
  */
 
 const intakeBook = vi.fn();
+const recordChange = vi.fn();
 let authed = true;
 
 vi.mock("../../services/intake/service", () => ({
   intakeBook: (...args: unknown[]) => intakeBook(...args),
 }));
 
+vi.mock("../../services/audit/repository", () => ({
+  recordChange: (...args: unknown[]) => recordChange(...args),
+}));
+
 vi.mock("../middleware/require-auth", () => ({
   requireAuth: (
-    _req: unknown,
+    req: { reader?: unknown },
     res: { status: (n: number) => { json: (b: unknown) => void } },
     next: () => void,
   ) => {
-    if (authed) return next();
+    if (authed) {
+      req.reader = { id: "r1" };
+      return next();
+    }
     res.status(401).json({ error: "unauthenticated" });
   },
 }));
@@ -54,6 +62,7 @@ afterAll(() => server.close());
 beforeEach(() => {
   authed = true;
   intakeBook.mockReset();
+  recordChange.mockReset();
 });
 
 async function post(body: unknown) {
@@ -80,6 +89,22 @@ describe("POST /api/books/intake", () => {
     expect(body.book.id).toBe("b1");
     expect(body.copy.bookId).toBe("b1");
     expect(intakeBook).toHaveBeenCalledOnce();
+    // Both the book and the copy it creates are logged (#40 design D4).
+    expect(recordChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "create",
+        entityType: "book",
+        entityId: "b1",
+        entityLabel: "Cien Años de Soledad",
+      }),
+    );
+    expect(recordChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "create",
+        entityType: "copy",
+        entityId: "c1",
+      }),
+    );
   });
 
   it("rejects an invalid book with 400 and does not call the service", async () => {

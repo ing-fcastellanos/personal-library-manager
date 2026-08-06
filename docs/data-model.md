@@ -226,6 +226,33 @@ sub-colección por tomo, dado el tamaño chico por serie a esta escala.
 > pertenezca a una sola serie, y no toca `book` en absoluto. (add-series-tracking,
 > decisión D1.)
 
+### `auditLog`
+
+Quién agregó/editó/borró un `book`, `copy` o `readingEvent`, y cuándo. Tipo:
+`lib/types/audit-log.ts`. Colección **append-only**, sin estado derivado — se ordena
+por `createdAt` y listo.
+
+| Campo           | Tipo                             | Notas                                                                                                                   |
+| --------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `id`            | string                           | auto-id                                                                                                                 |
+| `readerId`      | string                           | **requerido** — actor; se resuelve el nombre en vivo contra `readers`, no se snapshotea (a diferencia de `entityLabel`) |
+| `action`        | `"create"\|"update"\|"delete"`   | **requerido**                                                                                                           |
+| `entityType`    | `"book"\|"copy"\|"readingEvent"` | **requerido**                                                                                                           |
+| `entityId`      | string                           | **requerido**                                                                                                           |
+| `entityLabel`   | string                           | **snapshot** — el registro sigue siendo legible después de borrar la entidad                                            |
+| `changedFields` | string[]?                        | solo en `update`; ausente en `create`/`delete`                                                                          |
+| `createdAt`     | string                           | ISO                                                                                                                     |
+
+Un `update` sin campos cambiados no se guarda; un `create`/`delete` **siempre** se
+guarda, aunque no tenga `changedFields`.
+
+> **Ya estaba parcialmente implementado.** #15 (edit-book) introdujo
+> `services/audit/repository.ts` como base ("the foundation for the M8 audit
+> feature") pero solo cubría `PATCH` de `book`/`copy`, sin `create`/`delete`, sin
+> `readingEvent`, sin `entityLabel` y sin lectura — este documento nunca se
+> actualizó para reflejar que la colección ya existía. add-audit-log (#40) extendió
+> ese mismo escritor (no lo reemplazó) y agregó el lado de lectura.
+
 ## Decisiones (A–F)
 
 - **A — `Book` = edición, entidad única.** Un doc `book` = una edición canónica; no
@@ -269,7 +296,9 @@ consultas que exijan índices `(readerId, status, …)` ni `(status, …)`. `loa
 estado "abierto/prestado" y "vencido" se derivan en memoria; solo se indexan las
 lecturas ordenadas por `copyId` y por `borrowerKey`. `series` no necesita **ningún**
 índice compuesto: se carga la colección entera (household-scale) y la pertenencia de un
-libro se resuelve en memoria, igual patrón.
+libro se resuelve en memoria, igual patrón. `auditLog` idem: `listAuditLog` ordena por
+`createdAt` (índice de campo simple, automático) y filtra `entityType`/`entityId` en
+memoria sobre la colección completa.
 
 **Búsqueda (#17):** Firestore no tiene substring/full-text. Se resuelve con filtros +
 prefijo sobre `titleKey` (lowercased). Un índice externo (Algolia/Typesense) queda
@@ -282,7 +311,6 @@ Bocetadas para que encajen sin repintar:
 
 | Futuro           | Issue     | Forma prevista                                                      |
 | ---------------- | --------- | ------------------------------------------------------------------- |
-| AuditLog         | #40       | colección `auditLog` (actor, entidad, ts)                           |
 | ImportSession    | #22 / #35 | colección `importSessions` (resumen de la sesión de alta)           |
 | Metas de lectura | #30       | subdoc en `reader` **o** colección `readingGoals` (se decide en M5) |
 

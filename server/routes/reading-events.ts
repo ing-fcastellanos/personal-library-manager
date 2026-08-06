@@ -15,7 +15,9 @@ import {
   createReadingEvent,
   ReferenceNotFoundError,
 } from "../../services/reading-events/service";
-import { requireAuth } from "../middleware/require-auth";
+import { recordChange } from "../../services/audit/repository";
+import { changedFields } from "../../services/audit/diff";
+import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
 import { respondInternal } from "../lib/errors";
 
 /**
@@ -68,7 +70,15 @@ router.post("/reading-events", requireAuth, async (req, res) => {
       .json({ error: "validation", details: parsed.error.flatten() });
   }
   try {
-    res.status(201).json(await createReadingEvent(parsed.data));
+    const event = await createReadingEvent(parsed.data);
+    await recordChange({
+      action: "create",
+      entityType: "readingEvent",
+      entityId: event.id,
+      entityLabel: `${event.bookTitle} · lectura`,
+      readerId: (req as AuthedRequest).reader!.id,
+    });
+    res.status(201).json(event);
   } catch (err) {
     if (err instanceof ReferenceNotFoundError) {
       return res.status(400).json({ error: `unknown ${err.field}` });
@@ -85,11 +95,22 @@ router.patch("/reading-events/:id", requireAuth, async (req, res) => {
       .json({ error: "validation", details: parsed.error.flatten() });
   }
   try {
-    const event = await updateReadingEvent(
-      req.params.id as string,
-      parsed.data,
-    );
+    const id = req.params.id as string;
+    const existing = await getReadingEvent(id);
+    if (!existing) return res.status(404).json({ error: "not found" });
+    const event = await updateReadingEvent(id, parsed.data);
     if (!event) return res.status(404).json({ error: "not found" });
+    await recordChange({
+      action: "update",
+      entityType: "readingEvent",
+      entityId: id,
+      entityLabel: `${event.bookTitle} · lectura`,
+      changedFields: changedFields(
+        existing as unknown as Record<string, unknown>,
+        parsed.data as Record<string, unknown>,
+      ),
+      readerId: (req as AuthedRequest).reader!.id,
+    });
     res.json(event);
   } catch (err) {
     respondInternal(res, req, err);
@@ -98,8 +119,18 @@ router.patch("/reading-events/:id", requireAuth, async (req, res) => {
 
 router.delete("/reading-events/:id", requireAuth, async (req, res) => {
   try {
-    const deleted = await deleteReadingEvent(req.params.id as string);
+    const id = req.params.id as string;
+    const existing = await getReadingEvent(id);
+    if (!existing) return res.status(404).json({ error: "not found" });
+    const deleted = await deleteReadingEvent(id);
     if (!deleted) return res.status(404).json({ error: "not found" });
+    await recordChange({
+      action: "delete",
+      entityType: "readingEvent",
+      entityId: id,
+      entityLabel: `${existing.bookTitle} · lectura`,
+      readerId: (req as AuthedRequest).reader!.id,
+    });
     res.status(204).end();
   } catch (err) {
     respondInternal(res, req, err);

@@ -43,8 +43,10 @@ router.post("/books/:id/cover", requireAuth, async (req, res) => {
     );
     await updateBook(id, { coverUrl, coverSource: "user" });
     await recordChange({
-      entity: "book",
+      action: "update",
+      entityType: "book",
       entityId: id,
+      entityLabel: existing.title,
       changedFields: ["coverUrl", "coverSource"],
       readerId: (req as AuthedRequest).reader!.id,
     });

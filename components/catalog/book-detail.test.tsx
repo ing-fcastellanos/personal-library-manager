@@ -592,3 +592,67 @@ describe("BookDetail · Series (#38)", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("BookDetail · Actividad (#40)", () => {
+  it("shows activity for the book and its copies/events, most recent first", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse(copies);
+      if (url.endsWith("/reading-events")) return jsonResponse(events);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      if (url.endsWith("/api/loans")) return jsonResponse([]);
+      if (url.endsWith("/api/series")) return jsonResponse([]);
+      if (url.includes("entityType=book"))
+        return jsonResponse([
+          {
+            id: "a1",
+            readerId: "r1",
+            action: "update",
+            entityType: "book",
+            entityId: "b1",
+            entityLabel: book.title,
+            changedFields: ["publisher"],
+            createdAt: "2026-08-01T00:00:00.000Z",
+          },
+        ]);
+      if (url.includes("entityType=copy"))
+        return jsonResponse([
+          {
+            id: "a2",
+            readerId: "r1",
+            action: "create",
+            entityType: "copy",
+            entityId: "c1",
+            entityLabel: `${book.title} · ejemplar`,
+            changedFields: null,
+            createdAt: "2026-08-02T00:00:00.000Z",
+          },
+        ]);
+      return jsonResponse([]);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    expect(await screen.findByText("Actividad")).toBeInTheDocument();
+    expect(screen.getByText(/editó/)).toBeInTheDocument();
+    expect(screen.getByText(/agregó/)).toBeInTheDocument();
+    expect(screen.getAllByText("Frank").length).toBeGreaterThan(0);
+  });
+
+  it("shows no Actividad section when nothing is logged", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/books/b1")) return jsonResponse(book);
+      if (url.endsWith("/copies")) return jsonResponse(copies);
+      if (url.endsWith("/reading-events")) return jsonResponse(events);
+      if (url.endsWith("/api/readers")) return jsonResponse(readers);
+      if (url.endsWith("/api/loans")) return jsonResponse([]);
+      if (url.endsWith("/api/series")) return jsonResponse([]);
+      return jsonResponse([]);
+    }) as unknown as typeof fetch;
+
+    render(<BookDetail bookId="b1" />);
+    await screen.findByRole("heading", { name: book.title });
+    expect(screen.queryByText("Actividad")).not.toBeInTheDocument();
+  });
+});
