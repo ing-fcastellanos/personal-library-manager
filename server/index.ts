@@ -22,6 +22,7 @@ import aiSettingsRouter from "./routes/ai-settings";
 import aiIdentifyRouter from "./routes/ai-identify";
 import aiShelfRouter from "./routes/ai-shelf";
 import { apiErrorHandler } from "./middleware/error-handler";
+import { writeRateLimit } from "./middleware/rate-limit";
 
 config();
 
@@ -40,6 +41,9 @@ async function main() {
   app.use("/api/ai/identify-shelf", express.json({ limit: "8mb" }));
   app.use("/api", express.json());
   app.use("/api", cookieParser());
+  // Write rate-limiting (#42) — mounted before every router so it covers all
+  // of them uniformly, including auth/session. GETs are skipped internally.
+  app.use("/api", writeRateLimit);
   app.use("/api", healthRouter);
   app.use("/api", authRouter);
   app.use("/api", readersRouter);
