@@ -14,7 +14,13 @@ import type { AICandidate, AIImage, AIProvider } from "./types";
  * Keys are never sent to the browser.
  */
 
-const MODEL = process.env.GEMINI_VISION_MODEL ?? "gemini-2.0-flash";
+// gemini-2.0-flash was retired by Google, and its direct successor
+// (gemini-2.5-flash) turned out to already be restricted for this project's
+// key too — pinning to another dated snapshot would just repeat the same
+// failure down the line. `gemini-flash-latest` is Google's own rolling alias
+// for its current flash-tier model, verified reachable for this key directly
+// against the API before adopting it here.
+const MODEL = process.env.GEMINI_VISION_MODEL ?? "gemini-flash-latest";
 
 export function createGeminiProvider(): AIProvider {
   const apiKey = process.env.GEMINI_API_KEY ?? "";
