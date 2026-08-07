@@ -5,6 +5,7 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 import { ShelfProvider } from "@/components/shelf/shelf-context";
 import { LockProvider, LockGate } from "@/components/auth/lock-context";
 import { AppShell } from "@/components/shell/app-shell";
+import { ServiceWorkerRegister } from "@/components/shell/sw-register";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
   description: "AI-assisted personal library management system",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Library" },
+  icons: { apple: "/apple-touch-icon.png" },
 };
 
 export const viewport: Viewport = {
@@ -41,6 +43,7 @@ export default function RootLayout({
               </LockProvider>
             </ShelfProvider>
           </AuthProvider>
+          <ServiceWorkerRegister />
           <Toaster />
         </ThemeProvider>
       </body>
