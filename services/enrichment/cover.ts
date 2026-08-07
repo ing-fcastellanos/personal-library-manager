@@ -1,12 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { getAdminStorage, storageObjectUrl } from "../../lib/firebase/admin";
+import { normalizeCoverImage } from "../covers/normalize";
 
 /**
  * Cover re-hosting (#13, design D6). When an enriched book is *persisted*, the
  * server downloads the candidate's external cover and uploads it to Firebase
  * Storage via the Admin SDK (which bypasses `storage.rules` — no client upload
  * path is opened, #3 stays closed). The stored `Book.coverUrl` then references
- * the internal Storage URL instead of the fragile external source URL.
+ * the internal Storage URL instead of the fragile external source URL. Resized
+ * and normalized to WebP before storing (#50) — a source image that can't be
+ * decoded falls into the same "no re-hosted cover" outcome as a download
+ * failure, since it's normalized inside the same try/catch.
  *
  * This is NOT invoked on the `?q=` search path — search responses keep the
  * external preview URL and trigger no upload (design D6).
@@ -16,6 +20,7 @@ import { getAdminStorage, storageObjectUrl } from "../../lib/firebase/admin";
 
 const COVER_PREFIX = "covers";
 const DEFAULT_TIMEOUT_MS = 8000;
+const OUTPUT_CONTENT_TYPE = "image/webp";
 
 export interface RehostCoverDeps {
   fetchImpl?: typeof fetch;
@@ -23,20 +28,12 @@ export interface RehostCoverDeps {
   timeoutMs?: number;
 }
 
-/** Maps a content type to a file extension; defaults to `jpg`. */
-function extensionFor(contentType: string | null): string {
-  if (!contentType) return "jpg";
-  if (contentType.includes("png")) return "png";
-  if (contentType.includes("webp")) return "webp";
-  if (contentType.includes("gif")) return "gif";
-  return "jpg";
-}
-
 /**
  * Downloads the cover at `externalUrl` and uploads it to
- * `covers/<isbn13>.<ext>` in the default bucket, returning the internal Storage
- * URL. Returns `null` if there is no URL or the download fails (the book can
- * still be persisted without a re-hosted cover).
+ * `covers/<isbn13>.webp` in the default bucket, returning the internal Storage
+ * URL. Returns `null` if there is no URL, the download fails, or the
+ * downloaded bytes can't be decoded as an image (the book can still be
+ * persisted without a re-hosted cover).
  */
 export async function rehostCover(
   externalUrl: string | null | undefined,
@@ -55,16 +52,16 @@ export async function rehostCover(
   try {
     const res = await fetchImpl(externalUrl, { signal: controller.signal });
     if (!res.ok) return null;
-    const contentType = res.headers.get("content-type");
     const buffer = Buffer.from(await res.arrayBuffer());
+    const normalized = await normalizeCoverImage(buffer);
 
     const storage = deps.storage ?? getAdminStorage();
     const bucket = storage.bucket();
-    const path = `${COVER_PREFIX}/${isbn13}.${extensionFor(contentType)}`;
+    const path = `${COVER_PREFIX}/${isbn13}.webp`;
     const file = bucket.file(path);
     const token = randomUUID();
-    await file.save(buffer, {
-      contentType: contentType ?? "image/jpeg",
+    await file.save(normalized, {
+      contentType: OUTPUT_CONTENT_TYPE,
       resumable: false,
       metadata: { metadata: { firebaseStorageDownloadTokens: token } },
     });
