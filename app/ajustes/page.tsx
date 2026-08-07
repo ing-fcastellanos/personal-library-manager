@@ -12,6 +12,7 @@ import { ShelvesManager } from "@/components/shelves/shelves-manager";
 import { AISettingsManager } from "@/components/ai-settings/ai-settings-manager";
 import { PinSection } from "@/components/auth/pin-section";
 import { BackupButton } from "@/components/settings/backup-button";
+import { RestoreDialog } from "@/components/settings/restore-dialog";
 
 export default function SettingsPage() {
   return (
@@ -86,11 +87,13 @@ export default function SettingsPage() {
           <CardTitle>Backup</CardTitle>
           <CardDescription>
             Descargá un JSON completo de tu biblioteca (libros, ejemplares,
-            lecturas, lectores y estantes) para tu propio resguardo.
+            lecturas, lectores, estantes, deseos, préstamos y series) para tu
+            propio resguardo, o restaurala desde uno de estos archivos.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-wrap gap-2">
           <BackupButton />
+          <RestoreDialog />
         </CardContent>
       </Card>
 

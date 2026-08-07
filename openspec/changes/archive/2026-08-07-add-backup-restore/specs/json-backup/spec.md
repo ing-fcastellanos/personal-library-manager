@@ -1,10 +1,4 @@
-# json-backup Specification
-
-## Purpose
-
-TBD - created by archiving change add-json-backup. Update Purpose after archive.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Download a full JSON backup
 
@@ -29,21 +23,3 @@ The system SHALL let any visitor download a single JSON file containing every bo
 
 - **WHEN** a backup is downloaded and at least one series exists
 - **THEN** that series appears in the backup's `series` array with its name and volumes
-
-### Requirement: Backup excludes authentication secrets
-
-The system SHALL NOT include any reader's PIN hash in the backup file.
-
-#### Scenario: Reader entries omit the PIN hash
-
-- **WHEN** a backup is downloaded and a reader has a PIN configured
-- **THEN** that reader's entry in the backup's `readers` array has no `pinHash` field (only the derived `hasPin` boolean, matching the app's normal client-facing reader shape)
-
-### Requirement: Backup is timestamped
-
-The system SHALL record when a backup was generated.
-
-#### Scenario: Export timestamp is present
-
-- **WHEN** a backup is downloaded
-- **THEN** the JSON file includes an `exportedAt` field with the ISO timestamp of the export
