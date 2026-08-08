@@ -103,3 +103,48 @@ author against the candidate's author (`classifyProcessed` in
 `components/books/shelf-add.ts` currently only checks `isbnMatch || titleAgrees`,
 ignoring author entirely) — accepted as a known limitation for now rather than
 building that out speculatively; revisit if it shows up again in practice.
+
+### `MAX_SHELF_EDGE` recall measurement (#63)
+
+Re-ran the same three shelf photos twice each — once at the current
+`MAX_SHELF_EDGE = 2048` (`components/books/photo-add.ts`) and once at `3600`,
+the top of the range #63 proposed — and compared total identified (auto +
+review) against the previous run and against the expected spine count.
+
+| Shelf                    | 2048px          | 3600px          |
+| ------------------------- | --------------- | --------------- |
+| shelf-02.jpg (Sira, ~17)  | 17 auto, 1 review = 18 | 18 auto, 1 review = 19 |
+| shelf-03.jpg (Enríquez, ~22) | 20 auto, 4 review = 24 | 21 auto, 4 review = 25 |
+| shelf-04.jpg (Saramago, ~16–17) | 14 auto, 4 review = 18 | 13 auto, 3 review = 16 |
+| **Total**                 | **60**          | **60**          |
+
+Net identical across the three shelves, with per-shelf deltas (+1, +1, −2)
+smaller than the run-to-run noise already visible in the *same* condition: the
+review items themselves are a useful noise probe, since they mostly recur
+identically across all runs regardless of resolution — the same hallucinated
+"Churchill" spine, "El Conde de Montecristo", the Carver/"amor" mismatch, and
+"Tsunamis en la Región del Biobío" show up in review call after call — but two
+outcomes changed between conditions that are worth flagging explicitly:
+
+- On shelf-03 at 3600px, a hallucinated title ("El robo de la mona lisa", not
+  on the shelf) crossed from **review into auto** — a precision regression in
+  this one trial, not a recall win. Single occurrence, can't rule out plain
+  non-determinism, but it's evidence resolution isn't a free lever.
+- On shelf-04 at 3600px, two marginal spines detected at 2048px (the unclear
+  grey spine, one ambiguous-authorship spine) weren't detected at all — recall
+  went *down* for this shelf at the higher resolution.
+
+**Conclusion: no change to `MAX_SHELF_EDGE`, no tiling.** The measured effect
+of resolution is within the model's own run-to-run noise floor, in both
+directions (gains on two shelves, a loss on the third), while the cost is real
+(bigger payload → slower + more expensive AI calls on every shelf photo, not
+just the hard ones). Tiling is a larger, more complex lever aimed at the same
+problem; there's no evidence here that the problem (illegible spine text at
+the current resolution) is actually costing recall often enough to justify it
+— across all 6 runs, total identified consistently landed within 0–2 of the
+expected spine count, and the one clearly attributable miss from #62 (grey
+spine, shelf-04) is a single-photo occurrence, not a pattern. The existing
+"uncertain → review, never dropped or wrongly auto-added" design (#61) is
+already doing the real work of containing recall loss; revisit resolution or
+tiling if a wider before/after log across many real shelves ever shows a
+consistent pattern this small sample couldn't detect.
