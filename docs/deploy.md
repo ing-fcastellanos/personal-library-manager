@@ -304,6 +304,38 @@ Start-Process $HOSTING_URL                       # the app loads, identical to t
 Rollback: `firebase hosting:disable --project $PROJECT_ID`, or simply keep using the
 Cloud Run URL — the Cloud Run service and its `*.run.app` URL are unaffected either way.
 
+### Custom domain (optional)
+
+Firebase Hosting supports a custom domain on top of the `*.web.app` one (**Hosting →
+Add custom domain** in the console, or `firebase hosting:sites` for multi-site setups).
+Point the domain's DNS at the IP/records Firebase gives you; `DOMAIN_ACTIVE` status with
+`DNS_MATCH` means it's connected (the managed SSL cert can show `CERT_PROPAGATING` for a
+while after that — the domain already serves correctly during propagation, so this alone
+isn't a blocker). This project uses `library.fcastellanos.dev`.
+
+**Every custom domain must also be added to Authentication → Settings → Authorized
+domains** — same requirement as the `*.web.app` domain above, easy to forget for a domain
+added later. Symptom if it's missing: email-link sign-in fails (surfaces as
+`auth/unauthorized-continue-uri`, which can look like a CORS/network error in the
+browser console since the failure happens on the cross-origin call to Identity Toolkit).
+
+```powershell
+# Check current authorized domains:
+$TOKEN = gcloud auth print-access-token
+Invoke-RestMethod -Headers @{ Authorization = "Bearer $TOKEN"; "x-goog-user-project" = $PROJECT_ID } `
+  "https://identitytoolkit.googleapis.com/admin/v2/projects/$($PROJECT_ID)/config" |
+  Select-Object -ExpandProperty authorizedDomains
+
+# Add a domain (repeat the full existing list plus the new one — this call replaces the array):
+Invoke-RestMethod -Method Patch `
+  -Headers @{ Authorization = "Bearer $TOKEN"; "x-goog-user-project" = $PROJECT_ID; "Content-Type" = "application/json" } `
+  "https://identitytoolkit.googleapis.com/admin/v2/projects/$($PROJECT_ID)/config?updateMask=authorizedDomains" `
+  -Body (@{ authorizedDomains = @("localhost", "$($PROJECT_ID).firebaseapp.com", "$($PROJECT_ID).web.app", "<cloud-run-url-host>", "library.fcastellanos.dev") } | ConvertTo-Json)
+```
+
+(The same list is editable from the console at **Authentication → Settings → Authorized
+domains** — the API call above is just the scriptable equivalent.)
+
 ## Notes & troubleshooting
 
 - **`--startup-probe` rejected by an older gcloud**: drop that line from the deploy step —
