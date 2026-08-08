@@ -257,6 +257,53 @@ Verify (after seeding, `/api/readers` lists them):
 Invoke-RestMethod "$($URL)/api/readers"
 ```
 
+## 10. Firebase Hosting (proxy in front of Cloud Run)
+
+Optional, one-time. Adds a Firebase-managed front door (`*.web.app`, free global CDN,
+managed SSL) in front of the existing Cloud Run service — the server itself doesn't move;
+Hosting only rewrites every request to it (`firebase.json`'s `hosting.rewrites`, ADR-0001
+update). This step is manual and not part of the GitHub Actions pipeline, since it only
+needs to run again if `firebase.json`'s `hosting` block changes.
+
+```powershell
+gcloud services enable firebasehosting.googleapis.com --project $PROJECT_ID
+```
+
+Verify Firebase Hosting can invoke the Cloud Run service. The service already serves
+public web traffic unauthenticated, so this is normally already satisfied — check rather
+than assume:
+
+```powershell
+gcloud run services get-iam-policy $SERVICE --region $REGION --project $PROJECT_ID
+# Look for a binding granting roles/run.invoker to allUsers.
+# If it's missing, grant it (same access level the service already needs to serve the app publicly):
+gcloud run services add-iam-policy-binding $SERVICE `
+  --region $REGION --project $PROJECT_ID `
+  --member="allUsers" --role="roles/run.invoker"
+```
+
+Deploy Hosting:
+
+```powershell
+npx firebase deploy --only hosting --project $PROJECT_ID
+```
+
+The command prints the Hosting URL (`https://$PROJECT_ID.web.app`). Add it to
+**Authentication → Settings → Authorized domains** (same console section as step 2c) —
+otherwise email-link sign-in fails with `unauthorized-continue-uri` when accessed through
+the Hosting domain.
+
+Verify:
+
+```powershell
+$HOSTING_URL = "https://$($PROJECT_ID).web.app"
+Invoke-RestMethod "$($HOSTING_URL)/api/health"   # → @{ status = ok }
+Start-Process $HOSTING_URL                       # the app loads, identical to the Cloud Run URL
+```
+
+Rollback: `firebase hosting:disable --project $PROJECT_ID`, or simply keep using the
+Cloud Run URL — the Cloud Run service and its `*.run.app` URL are unaffected either way.
+
 ## Notes & troubleshooting
 
 - **`--startup-probe` rejected by an older gcloud**: drop that line from the deploy step —
