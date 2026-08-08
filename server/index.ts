@@ -23,6 +23,7 @@ import aiIdentifyRouter from "./routes/ai-identify";
 import aiShelfRouter from "./routes/ai-shelf";
 import { apiErrorHandler } from "./middleware/error-handler";
 import { writeRateLimit } from "./middleware/rate-limit";
+import { createCanonicalHostRedirect } from "./middleware/canonical-host";
 
 config();
 
@@ -31,6 +32,12 @@ const port = parseInt(process.env.PORT ?? "3000", 10);
 
 async function main() {
   const app = express();
+
+  // Canonicalize on the custom domain (if configured) before anything else —
+  // a stale *.run.app bookmark or an old magic-link continueUrl must never
+  // reach a handler on the "wrong" origin, since the session cookie set on
+  // one origin doesn't apply on the other.
+  app.use(createCanonicalHostRedirect(process.env.CANONICAL_HOST));
 
   // API layer (Express) — mounted before the Next.js catch-all.
   // Cover uploads carry a base64 image (#15 D4): parse this path with a higher
