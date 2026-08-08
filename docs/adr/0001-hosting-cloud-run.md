@@ -36,3 +36,14 @@ Federation** (sin claves JSON en el repo) y **Secret Manager** para credenciales
   servidor Express monolítico; descartado.
 - **Vercel** — excelente para Next, gratis, pero no es infra Google; descartado por
   preferencia de stack.
+
+## Actualización (2026-08-08): Firebase Hosting como proxy delante de Cloud Run
+
+La opción descartada arriba era **Firebase Hosting solo** (sin backend), que en efecto no
+puede correr el servidor Express/Next. Distinto es usar Firebase Hosting como **proxy**
+delante del servicio de Cloud Run existente (`hosting.rewrites[].run`): Cloud Run sigue
+corriendo el mismo contenedor Express/Next sin cambios; Hosting solo agrega un front door
+gestionado (CDN global gratis, SSL administrado, dominio `*.web.app`) que reenvía el 100%
+del tráfico al mismo servicio. Esta variante no estaba contemplada en la decisión original
+y es compatible con ella — se adopta (`add-firebase-hosting-proxy`) sin reabrir la decisión
+de hosting del servidor en sí.
