@@ -1,17 +1,23 @@
 # Personal Library Manager
 
+[![CI](https://github.com/ing-fcastellanos/personal-library-manager/actions/workflows/ci.yml/badge.svg)](https://github.com/ing-fcastellanos/personal-library-manager/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ing-fcastellanos/personal-library-manager)](https://github.com/ing-fcastellanos/personal-library-manager/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D22.12.0-brightgreen)](.nvmrc)
+
 AI-assisted system to manage a personal home library: catalog books (manually,
 by ISBN/barcode, or by AI photo analysis of shelves), track readers and reading
 events, view a dashboard with stats, and print QR codes for quick actions.
 
-> Status: **early scaffolding** (issue #1). See the [roadmap](#roadmap) below.
+> Status: all 9 planned milestones (M0–M8) shipped — see the
+> [roadmap](#roadmap) below. Live on Cloud Run.
 
 ## Tech stack
 
 - **Next.js 15/16** (App Router) for the web UI, rendered by a
 - **custom Express server** (TypeScript) that also serves the `/api/*` surface,
 - packaged as a single container for **Google Cloud Run**,
-- with **Firestore** as the datastore (coming in #2).
+- with **Firestore** as the datastore.
 
 Architecture decisions are recorded in [`docs/adr/`](./docs/adr/).
 
@@ -116,6 +122,18 @@ with `/opsx:archive`. Change artifacts live under `openspec/changes/`.
 
 ## Roadmap
 
-Work is tracked as GitHub issues grouped into 9 milestones (M0–M8): foundations,
-auth & readers, catalog/CRUD, AI book ingestion, reading log, dashboard, QR
-codes, export/Goodreads, and extras.
+All 9 planned milestones (M0–M8) are complete: foundations, auth & readers,
+catalog/CRUD, AI book ingestion, reading log, dashboard, QR codes,
+export/Goodreads, and extras. Work was tracked as GitHub issues grouped into
+those milestones; see [closed milestones](../../milestones?state=closed) for
+the full history.
+
+## Contributing
+
+Solo-maintained personal project, shared as a portfolio piece — see
+[CONTRIBUTING.md](./CONTRIBUTING.md) for how the repo works and how to report
+an issue.
+
+## License
+
+[MIT](./LICENSE) © Francisco Castellanos
