@@ -228,7 +228,11 @@ export function BookDetail({ bookId }: { bookId: string }) {
           className="h-40 w-28 shrink-0 sm:h-44 sm:w-32"
         />
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
+          {/* Stacked on mobile, side-by-side from `sm`. The actions used to sit
+              beside the title at every width with `shrink-0`, so on a phone they
+              refused to give up space: the title was squeezed to roughly one word
+              per line and the last button still overflowed off-screen. */}
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
             <div className="min-w-0">
               <h2 className="text-xl font-bold leading-tight tracking-tight">
                 {book.title}
@@ -242,7 +246,7 @@ export function BookDetail({ bookId }: { bookId: string }) {
                 {book.authors.join(", ")}
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+            <div className="flex w-full flex-wrap gap-1.5 sm:w-auto sm:shrink-0 sm:justify-end">
               <AddToWishlistButton
                 snapshot={{
                   bookTitle: book.title,
