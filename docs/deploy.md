@@ -308,6 +308,16 @@ Start-Process $HOSTING_URL                       # the app loads, identical to t
 Rollback: `firebase hosting:disable --project $PROJECT_ID`, or simply keep using the
 Cloud Run URL — the Cloud Run service and its `*.run.app` URL are unaffected either way.
 
+> **Cookies: only `__session` survives the proxy.** Firebase Hosting strips every cookie
+> from a forwarded request except one named exactly `__session`. That is why the session
+> cookie is named `__session` (`lib/auth/session.ts`, guarded by `session.test.ts`) — any
+> other name is set by the browser and then dropped in transit, so sign-in appears to work
+> and every later request looks signed-out, with no error anywhere. Verified against
+> production: a request carrying `pl_session=…; csrf=…` reached the server with no cookies
+> at all, while `__session=…` came through. Note this only bites on requests Hosting may
+> cache — `POST`s pass their cookies through, which is why the CSRF double-submit check on
+> `POST /api/auth/session` kept succeeding while `GET /api/auth/me` saw nothing.
+
 ### Custom domain (optional)
 
 Firebase Hosting supports a custom domain on top of the `*.web.app` one (**Hosting →
