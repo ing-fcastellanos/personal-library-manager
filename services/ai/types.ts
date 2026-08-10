@@ -68,11 +68,31 @@ export interface RawIdentification {
   confidence?: number | null;
 }
 
-/** Thrown when no engine can answer (default and secondary both unavailable). */
+/** One engine's failure, kept so an exhausted chain can still be diagnosed. */
+export interface EngineFailure {
+  engine: AIEngine;
+  error: unknown;
+}
+
+/**
+ * Thrown when no engine can answer — either none was configured, or every
+ * configured one failed.
+ *
+ * `failures` carries the per-engine causes. Without it the orchestrator would
+ * have to choose between correct HTTP semantics (routes map this type to `503`,
+ * since an exhausted upstream is not an internal bug) and keeping the concrete
+ * provider error for the logs. It keeps both.
+ */
 export class NoEngineAvailableError extends Error {
-  constructor(message = "No AI engine available to answer the request") {
+  readonly failures: EngineFailure[];
+
+  constructor(
+    message = "No AI engine available to answer the request",
+    failures: EngineFailure[] = [],
+  ) {
     super(message);
     this.name = "NoEngineAvailableError";
+    this.failures = failures;
   }
 }
 

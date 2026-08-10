@@ -10,6 +10,7 @@ import {
 import express from "express";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { NoEngineAvailableError } from "../../services/ai/types";
 
 /**
  * Endpoint tests for `POST /api/ai/identify-shelf` (#21a). The AI service and the
@@ -17,14 +18,13 @@ import type { AddressInfo } from "node:net";
  * and error mapping without an emulator or real API keys (node lane).
  */
 
-class NoEngineAvailableError extends Error {}
+// Real error class, not a stand-in — see the note in `ai-identify.test.ts`.
 const identifyBooksFromImage = vi.fn();
 let authed = true;
 
 vi.mock("../../services/ai/service", () => ({
   identifyBooksFromImage: (...a: unknown[]) => identifyBooksFromImage(...a),
 }));
-vi.mock("../../services/ai/types", () => ({ NoEngineAvailableError }));
 vi.mock("../middleware/require-auth", () => ({
   requireAuth: (
     req: { reader?: unknown },

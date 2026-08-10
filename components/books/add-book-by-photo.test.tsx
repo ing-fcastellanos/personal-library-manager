@@ -93,4 +93,64 @@ describe("AddBookByPhoto", () => {
     });
     expect(push).toHaveBeenCalledWith("/agregar/resumen");
   });
+
+  /**
+   * A depleted/unavailable AI layer used to render as "la foto salió borrosa …
+   * probá con más luz", sending the reader to retake photos forever for a
+   * condition no photo can fix. These lock the distinction in.
+   */
+  describe("when identification fails", () => {
+    function identifyReturns(status: number) {
+      global.fetch = vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/api/shelves")) return jsonResponse([]);
+        if (url.endsWith("/api/ai/identify")) return jsonResponse({}, status);
+        return jsonResponse({});
+      }) as unknown as typeof fetch;
+    }
+
+    it("says the service is unavailable on 503, and never blames the photo", async () => {
+      identifyReturns(503);
+      render(<AddBookByPhoto />);
+      capturePhoto();
+
+      await screen.findByText(/El servicio no está disponible/);
+      expect(screen.getByText(/No es tu foto/)).toBeInTheDocument();
+      expect(screen.queryByText(/borrosa/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/más luz/i)).not.toBeInTheDocument();
+    });
+
+    it("reports a connection problem on any other failure", async () => {
+      identifyReturns(500);
+      render(<AddBookByPhoto />);
+      capturePhoto();
+
+      await screen.findByText(/No pudimos procesar la foto/);
+      expect(screen.getByText(/problema de conexión/i)).toBeInTheDocument();
+    });
+  });
+
+  it("says the book wasn't recognized when the AI returns no candidate", async () => {
+    // This is the one case where the photo really is the likely culprit, so it
+    // is the only place that should suggest retaking it.
+    global.fetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/shelves")) return jsonResponse([]);
+      if (url.endsWith("/api/ai/identify"))
+        return jsonResponse({
+          aiConfidence: null,
+          sourceProvider: "gemini",
+          best: null,
+          alternatives: [],
+        });
+      return jsonResponse({});
+    }) as unknown as typeof fetch;
+
+    render(<AddBookByPhoto />);
+    capturePhoto();
+
+    expect(
+      await screen.findByText(/No reconocimos el libro/, {}, { timeout: 3000 }),
+    ).toBeInTheDocument();
+  });
 });

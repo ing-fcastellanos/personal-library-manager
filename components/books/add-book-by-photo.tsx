@@ -36,10 +36,21 @@ import type { BookData, ExistingBook, Shelf } from "./types";
  */
 type Phase = "capture" | "analyzing" | "review" | "saving" | "error";
 
+/**
+ * Why the request failed, which decides what to tell the reader.
+ * `unavailable` = the AI layer answered 503 (every engine failed, or none is
+ * configured) — a retake cannot help. `failed` = anything else (network drop,
+ * unexpected status), where retrying is reasonable. Neither is the photo's
+ * fault: an unreadable photo never reaches this screen, it comes back as a
+ * successful response with no candidate and lands in the review form.
+ */
+type ErrorKind = "unavailable" | "failed";
+
 export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
   const router = useRouter();
   const { toast } = useToast();
   const [phase, setPhase] = React.useState<Phase>("capture");
+  const [errorKind, setErrorKind] = React.useState<ErrorKind>("failed");
   const [photo, setPhoto] = React.useState<{
     dataUrl: string;
     base64: string;
@@ -78,13 +89,21 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ imageBase64: base64, contentType }),
       });
-      if (!res.ok) throw new Error(`identify failed: ${res.status}`);
+      if (!res.ok) {
+        // 503 means the AI layer itself is unavailable — every engine failed or
+        // none is configured. That is never something a better photo fixes, so
+        // it must not be reported as one (see the error phase below).
+        setErrorKind(res.status === 503 ? "unavailable" : "failed");
+        setPhase("error");
+        return;
+      }
       const data = (await res.json()) as IdentifyResponse;
       setResult(data);
       setBook(data.best ? candidateToBookData(data.best) : null);
       setSelectedAlt(null);
       setPhase("review");
     } catch {
+      setErrorKind("failed");
       setPhase("error");
     }
   }
@@ -289,11 +308,14 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
           <CameraOff className="size-8" strokeWidth={1.8} aria-hidden="true" />
         </span>
         <p className="mt-5 text-lg font-bold">
-          No pudimos identificar el libro
+          {errorKind === "unavailable"
+            ? "El servicio no está disponible"
+            : "No pudimos procesar la foto"}
         </p>
         <p className="mt-2 max-w-[250px] text-sm leading-relaxed text-muted-foreground">
-          La foto salió borrosa o el motor no está disponible. Probá con más luz
-          o enfocando la tapa.
+          {errorKind === "unavailable"
+            ? "La identificación por IA no está funcionando en este momento. No es tu foto — probá de nuevo más tarde, o cargá el libro a mano."
+            : "Hubo un problema de conexión al analizar la foto. Probá de nuevo."}
         </p>
         <label className="mt-6 inline-flex h-[50px] w-full max-w-[280px] cursor-pointer items-center justify-center gap-2 rounded-2xl bg-primary text-[15px] font-bold text-primary-foreground focus-within:outline-none focus-within:ring-2 focus-within:ring-ring">
           <Camera className="size-[18px]" aria-hidden="true" />
@@ -326,7 +348,22 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
 
   return (
     <div className="space-y-4">
-      {lowConf && (
+      {/* The AI ran and recognized nothing — the one case where the photo IS
+          the likely culprit, and the only place worth suggesting a retake. */}
+      {result && !result.best && (
+        <div
+          role="status"
+          className="flex items-center gap-2.5 rounded-xl border border-warning/40 bg-warning-bg p-2.5"
+        >
+          <Info className="size-4 shrink-0 text-warning" aria-hidden="true" />
+          <span className="text-xs font-semibold text-warning">
+            No reconocimos el libro — completá los datos o sacá otra foto con
+            más luz
+          </span>
+        </div>
+      )}
+
+      {lowConf && result?.best && (
         <div
           role="status"
           className="flex items-center gap-2.5 rounded-xl border border-warning/40 bg-warning-bg p-2.5"
