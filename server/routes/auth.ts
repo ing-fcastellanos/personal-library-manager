@@ -110,6 +110,16 @@ router.get("/auth/me", async (req, res) => {
   try {
     const decoded = await verifySessionCookie(cookie);
     const me = await findReaderByUid(decoded.uid);
+    if (!me) {
+      // Cookie verified fine (valid signature, right project, not expired)
+      // but no `readers` doc has this uid — a distinct failure mode from a
+      // rejected cookie: the session is genuine, the reader linkage isn't
+      // there (or points at a different uid). Doesn't throw, so the catch
+      // below never sees it — log it here instead.
+      console.error(
+        `GET /api/auth/me: session cookie verified for uid=${decoded.uid} but no reader is linked to it`,
+      );
+    }
     res.json({ reader: me ? toClientReader(me) : null });
   } catch (err) {
     // A present-but-rejected cookie (bad signature, revoked, wrong project,
