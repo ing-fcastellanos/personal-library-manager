@@ -217,6 +217,10 @@ gh variable set NEXT_PUBLIC_FIREBASE_PROJECT_ID          --body "$PROJECT_ID"
 gh variable set NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET      --body "$($PROJECT_ID).firebasestorage.app"
 gh variable set NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID --body "633756061013"
 gh variable set NEXT_PUBLIC_FIREBASE_APP_ID              --body "1:633756061013:web:dad9cba93983caa71d33dc"
+
+# Optional — only if a custom domain is set up (see section 10). Canonicalizes
+# a raw *.run.app request to this host instead of serving it directly.
+gh variable set CANONICAL_HOST --body "library.fcastellanos.dev"
 ```
 
 ## 8. First deploy & verify
@@ -335,6 +339,23 @@ Invoke-RestMethod -Method Patch `
 
 (The same list is editable from the console at **Authentication → Settings → Authorized
 domains** — the API call above is just the scriptable equivalent.)
+
+**The raw `*.run.app` URL keeps working after a custom domain is added** — Cloud Run
+doesn't know about the custom domain and serves it directly. That means a stale bookmark,
+or a magic-link whose `continueUrl` was baked from whichever origin the "send link" click
+happened on, can land a session on the _wrong_ origin — and since cookies are host-scoped,
+a session started on `*.run.app` doesn't carry over to the custom domain (looks like
+"login doesn't stick" when switching between the two). Set `CANONICAL_HOST` (section 7) to
+have the server 301-redirect any request that hits the raw Cloud Run host straight to the
+custom domain, so there's only ever one live origin in practice:
+
+```powershell
+gh variable set CANONICAL_HOST --body "library.fcastellanos.dev"
+```
+
+Takes effect on the next deploy (redeploy `main`, or re-run the workflow). No redirect
+loop risk: the check only fires for a `*.run.app` host, never for the canonical domain
+itself, `localhost`, or the emulator.
 
 ## Notes & troubleshooting
 
