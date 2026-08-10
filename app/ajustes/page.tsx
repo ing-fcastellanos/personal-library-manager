@@ -13,6 +13,7 @@ import { AISettingsManager } from "@/components/ai-settings/ai-settings-manager"
 import { PinSection } from "@/components/auth/pin-section";
 import { BackupButton } from "@/components/settings/backup-button";
 import { RestoreDialog } from "@/components/settings/restore-dialog";
+import { FactoryResetDialog } from "@/components/settings/factory-reset-dialog";
 
 export default function SettingsPage() {
   return (
@@ -94,6 +95,22 @@ export default function SettingsPage() {
         <CardContent className="flex flex-wrap gap-2">
           <BackupButton />
           <RestoreDialog />
+        </CardContent>
+      </Card>
+
+      {/* Destructive, and deliberately last: separated from Backup above so
+          "Vaciar biblioteca" is never clicked by proximity to "Restaurar". */}
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle>Zona de peligro</CardTitle>
+          <CardDescription>
+            Borrá todos los libros, ejemplares, lecturas, deseos, préstamos,
+            series y estantes de un saque. Los lectores y su acceso no se tocan.
+            No se puede deshacer — descargá un backup antes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FactoryResetDialog />
         </CardContent>
       </Card>
 
