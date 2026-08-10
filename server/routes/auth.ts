@@ -104,15 +104,10 @@ router.delete("/auth/session", async (req, res) => {
 router.get("/auth/me", async (req, res) => {
   const cookie = cookies(req)[sessionCookieName];
   if (!cookie) {
-    // The one branch the earlier diagnostics left silent — and by elimination
-    // the likeliest one, since a live repro produced no log from either of the
-    // "cookie present" paths below. Names only, never values: a session cookie
-    // is a bearer credential and must not reach the logs.
-    console.error(
-      `GET /api/auth/me: no ${sessionCookieName} cookie on the request; cookies received: ${
-        Object.keys(cookies(req)).join(", ") || "(none)"
-      }`,
-    );
+    // Not an error: every anonymous visitor lands here. (This branch briefly
+    // logged the cookie names received, which is what caught Firebase Hosting
+    // stripping everything but `__session` — see `lib/auth/session.ts`. That
+    // was scaffolding; leaving it in would log on every logged-out page load.)
     res.json({ reader: null });
     return;
   }
