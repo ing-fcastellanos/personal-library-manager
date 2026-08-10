@@ -184,7 +184,26 @@ export function AddBookByShelf() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ imageBase64: base64, contentType }),
       });
-      if (!res.ok) throw new Error(`identify-shelf ${res.status}`);
+      if (!res.ok) {
+        // Same distinction as add-by-photo: 503 means the AI layer is down or
+        // out of quota, which no retake fixes.
+        setPhase("capture");
+        toast(
+          res.status === 503
+            ? {
+                title: "El servicio de IA no está disponible",
+                description:
+                  "No es tu foto — probá más tarde o cargá los libros a mano.",
+                variant: "destructive",
+              }
+            : {
+                title: "No se pudo analizar el estante",
+                description: "Hubo un problema de conexión. Probá de nuevo.",
+                variant: "destructive",
+              },
+        );
+        return;
+      }
       const { books } = (await res.json()) as { books: ShelfAICandidate[] };
       if (books.length === 0) {
         setBuckets({ auto: [], queue: [], duplicates: [] });

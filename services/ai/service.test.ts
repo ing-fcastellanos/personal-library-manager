@@ -142,8 +142,14 @@ describe("AI orchestrator — no engine available", () => {
     ).rejects.toBeInstanceOf(NoEngineAvailableError);
   });
 
-  it("rethrows the last error when all configured engines fail", async () => {
-    await expect(
+  // Previously this asserted the last raw error was rethrown. That contradicted
+  // both the spec ("the secondary is also not configured *or also fails* →
+  // raises a typed 'no engine available' error") and this module's own
+  // docblock, and it made the routes' `instanceof` check miss, so an exhausted
+  // upstream was answered `500 internal` instead of `503`. The typed error now
+  // carries the causes, so nothing is lost by raising it.
+  it("raises the typed error, carrying every cause, when all configured engines fail", async () => {
+    const failing = () =>
       identifyBookFromImage(IMG, {
         config: config("openai", true),
         providers: {
@@ -158,7 +164,71 @@ describe("AI orchestrator — no engine available", () => {
             },
           }),
         },
-      }),
-    ).rejects.toThrow("gemini down");
+      });
+
+    await expect(failing()).rejects.toBeInstanceOf(NoEngineAvailableError);
+
+    const err = await failing().then(
+      () => {
+        throw new Error("expected the call to reject");
+      },
+      (e: unknown) => e as NoEngineAvailableError,
+    );
+    expect(err.failures.map((f) => f.engine)).toEqual(["openai", "gemini"]);
+    expect(err.failures.map((f) => (f.error as Error).message)).toEqual([
+      "openai down",
+      "gemini down",
+    ]);
+  });
+
+  it("logs every failure in an exhausted chain, not just the last", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await identifyBookFromImage(IMG, {
+        config: config("openai", true),
+        providers: {
+          openai: fakeProvider("openai", {
+            book: async () => {
+              throw new Error("openai down");
+            },
+          }),
+          gemini: fakeProvider("gemini", {
+            book: async () => {
+              throw new Error("gemini down");
+            },
+          }),
+        },
+      }).catch(() => {});
+      const messages = logged.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes('"openai"'))).toBe(true);
+      expect(messages.some((m) => m.includes('"gemini"'))).toBe(true);
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it("logs a failure the fallback goes on to cover", async () => {
+    // The request succeeds, so nothing else would ever surface that the
+    // default engine is down — this log is the only signal.
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const result = await identifyBookFromImage(IMG, {
+        config: config("openai", true),
+        providers: {
+          openai: fakeProvider("openai", {
+            book: async () => {
+              throw new Error("openai down");
+            },
+          }),
+          gemini: fakeProvider("gemini", {}),
+        },
+      });
+      expect(result).not.toBeNull();
+      expect(
+        logged.mock.calls.some((c) => String(c[0]).includes('"openai"')),
+      ).toBe(true);
+    } finally {
+      logged.mockRestore();
+    }
   });
 });

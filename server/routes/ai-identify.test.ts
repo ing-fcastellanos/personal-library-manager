@@ -10,6 +10,7 @@ import {
 import express from "express";
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { NoEngineAvailableError } from "../../services/ai/types";
 
 /**
  * Endpoint tests for `POST /api/ai/identify` (#20). The identify service and the
@@ -17,14 +18,16 @@ import type { AddressInfo } from "node:net";
  * and error mapping without an emulator or real API keys (node lane).
  */
 
-class NoEngineAvailableError extends Error {}
+// The real error class, not a stand-in: the route's `instanceof` check missing
+// the type the orchestrator actually throws is the bug this guards against, and
+// a mocked class would map fine while production still answered 500. Safe to
+// import — `types.ts` has no runtime imports.
 const identifyAndEnrich = vi.fn();
 let authed = true;
 
 vi.mock("../../services/ai/identify", () => ({
   identifyAndEnrich: (...a: unknown[]) => identifyAndEnrich(...a),
 }));
-vi.mock("../../services/ai/types", () => ({ NoEngineAvailableError }));
 vi.mock("../middleware/require-auth", () => ({
   requireAuth: (
     req: { reader?: unknown },
@@ -100,6 +103,21 @@ describe("POST /api/ai/identify", () => {
 
   it("maps NoEngineAvailableError to 503", async () => {
     identifyAndEnrich.mockRejectedValueOnce(new NoEngineAvailableError());
+    const res = await post(validBody);
+    expect(res.status).toBe(503);
+  });
+
+  it("maps an exhausted engine chain to 503, not 500", async () => {
+    // The shape the orchestrator raises when every engine fails — carrying the
+    // causes. This is the path that used to arrive as a raw provider error and
+    // fall through to `respondInternal`, reporting a depleted upstream as an
+    // internal server error.
+    identifyAndEnrich.mockRejectedValueOnce(
+      new NoEngineAvailableError("Every AI engine failed: openai, gemini", [
+        { engine: "openai", error: new Error("429 no credits") },
+        { engine: "gemini", error: new Error("429 RESOURCE_EXHAUSTED") },
+      ]),
+    );
     const res = await post(validBody);
     expect(res.status).toBe(503);
   });

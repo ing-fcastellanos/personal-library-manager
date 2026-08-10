@@ -7,6 +7,7 @@ import {
   type AIEngine,
   type AIImage,
   type AIProvider,
+  type EngineFailure,
 } from "./types";
 
 /**
@@ -82,7 +83,13 @@ function engineOrder(config: AIConfig): AIEngine[] {
  * returns its result. An engine that is not configured is skipped; one that
  * throws or times out advances to the next. When every candidate engine is
  * exhausted, the last error is re-thrown if fallback was disabled, otherwise a
- * `NoEngineAvailableError` is raised.
+ * `NoEngineAvailableError` is raised, carrying every engine's failure.
+ *
+ * Each failure is logged where it is caught rather than only at exhaustion —
+ * otherwise a default engine that is down but covered by the fallback stays
+ * invisible until it becomes a full outage, which is exactly when it is worth
+ * noticing. The routes rely on the typed error to answer `503`: an upstream
+ * that is out of quota or unreachable is not an internal server error.
  */
 async function runWithFallback<T>(
   deps: AIServiceDeps,
@@ -92,24 +99,27 @@ async function runWithFallback<T>(
   const timeoutMs = deps.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const order = engineOrder(config);
 
-  let lastError: unknown = null;
-  let attempted = false;
+  const failures: EngineFailure[] = [];
 
   for (const engine of order) {
     const provider = resolveProvider(engine, deps.providers);
     if (!provider.isConfigured()) continue;
-    attempted = true;
     try {
       return await withTimeout(engine, timeoutMs, () => call(provider));
     } catch (err) {
-      lastError = err;
+      console.error(`AI engine "${engine}" failed:`, err);
+      failures.push({ engine, error: err });
       // Fallback disabled: surface the default engine's error directly.
       if (!config.fallbackEnabled) throw err;
     }
   }
 
-  if (attempted && lastError) throw lastError;
-  throw new NoEngineAvailableError();
+  throw new NoEngineAvailableError(
+    failures.length > 0
+      ? `Every AI engine failed: ${failures.map((f) => f.engine).join(", ")}`
+      : undefined,
+    failures,
+  );
 }
 
 /**
