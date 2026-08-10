@@ -79,7 +79,8 @@ router.post("/auth/session", async (req, res) => {
     const cookie = await createSessionCookie(idToken);
     res.cookie(sessionCookieName, cookie, sessionCookieOptions(dev));
     res.json({ reader: toClientReader({ ...reader, uid: decoded.uid }) });
-  } catch {
+  } catch (err) {
+    console.error("POST /api/auth/session: token exchange failed:", err);
     res.status(401).json({ error: "invalid token" });
   }
 });
@@ -110,7 +111,12 @@ router.get("/auth/me", async (req, res) => {
     const decoded = await verifySessionCookie(cookie);
     const me = await findReaderByUid(decoded.uid);
     res.json({ reader: me ? toClientReader(me) : null });
-  } catch {
+  } catch (err) {
+    // A present-but-rejected cookie (bad signature, revoked, wrong project,
+    // clock skew) looks identical to "no cookie at all" from the response
+    // alone — log the real reason so a "login doesn't stick" report is
+    // diagnosable from server logs instead of guesswork.
+    console.error("GET /api/auth/me: session cookie present but invalid:", err);
     res.json({ reader: null });
   }
 });
