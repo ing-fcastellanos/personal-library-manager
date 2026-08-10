@@ -104,6 +104,15 @@ router.delete("/auth/session", async (req, res) => {
 router.get("/auth/me", async (req, res) => {
   const cookie = cookies(req)[sessionCookieName];
   if (!cookie) {
+    // The one branch the earlier diagnostics left silent — and by elimination
+    // the likeliest one, since a live repro produced no log from either of the
+    // "cookie present" paths below. Names only, never values: a session cookie
+    // is a bearer credential and must not reach the logs.
+    console.error(
+      `GET /api/auth/me: no ${sessionCookieName} cookie on the request; cookies received: ${
+        Object.keys(cookies(req)).join(", ") || "(none)"
+      }`,
+    );
     res.json({ reader: null });
     return;
   }
