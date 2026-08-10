@@ -46,7 +46,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     let active = true;
+    // onAuthStateChanged can fire more than once in quick succession (initial
+    // restore + a settled state right after) — each firing runs this async
+    // chain independently, so a slower EARLIER firing can resolve AFTER a
+    // faster LATER one and clobber its result. Only the most recently
+    // *started* firing is allowed to write state; a stale one is dropped.
+    let latestCall = 0;
     const unsub = onAuthStateChanged(getClientAuth(), async (user) => {
+      const call = ++latestCall;
       let me = await fetchMe();
       if (!me && user) {
         // Remembered device: re-mint the server session from a fresh ID token.
@@ -58,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // fall through as signed-out
         }
       }
-      if (active) {
+      if (active && call === latestCall) {
         setReader(me);
         setLoading(false);
       }
