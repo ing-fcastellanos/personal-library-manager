@@ -33,7 +33,14 @@ export default function CallbackPage() {
         window.localStorage.removeItem("plm:next");
         // Full navigation so the AuthProvider re-reads the new server session.
         window.location.assign(next);
-      } catch {
+      } catch (err) {
+        // Swallowed into a generic "invalid link" card for the user (message
+        // stays vague on purpose — no need to leak auth internals), but the
+        // real Firebase error code (e.g. auth/invalid-email,
+        // auth/expired-action-code) is what actually distinguishes "opened on
+        // another device" from "link expired" from "already used" — keep it
+        // in the console so a report of "login doesn't work" is diagnosable.
+        console.error("Magic-link sign-in failed:", err);
         setState("error");
       }
     })();
