@@ -393,4 +393,110 @@ describe("AddBookByShelf", () => {
       screen.getByText("Un lugar llamado Carmen Martín Gaite"),
     ).toBeInTheDocument();
   });
+
+  /**
+   * The shelf photo used to be discarded the moment it was sent, so a reader
+   * judging a result had nothing to check it against.
+   */
+  describe("shelf photo reference", () => {
+    // Anchored: once expanded, the zoom control is also named for the photo.
+    const toggle = () =>
+      screen.getByRole("button", { name: /^Foto del estante$/ });
+
+    it("offers the photo on the results screen, collapsed", async () => {
+      render(<AddBookByShelf />);
+      capture();
+
+      const button = await screen.findByRole(
+        "button",
+        { name: /Foto del estante/ },
+        { timeout: 4000 },
+      );
+      // Offered, but not expanded — the buckets must stay visible.
+      expect(button).toHaveAttribute("aria-expanded", "false");
+      expect(
+        screen.queryByAltText(/Foto del estante que se analizó$/),
+      ).toBeNull();
+    });
+
+    it("expands and collapses on demand", async () => {
+      render(<AddBookByShelf />);
+      capture();
+      await screen.findByRole(
+        "button",
+        { name: /Foto del estante/ },
+        { timeout: 4000 },
+      );
+
+      fireEvent.click(toggle());
+      expect(toggle()).toHaveAttribute("aria-expanded", "true");
+      expect(
+        screen.getByAltText("Foto del estante que se analizó"),
+      ).toBeInTheDocument();
+
+      fireEvent.click(toggle());
+      expect(toggle()).toHaveAttribute("aria-expanded", "false");
+      expect(
+        screen.queryByAltText(/Foto del estante que se analizó$/),
+      ).toBeNull();
+    });
+
+    it("opens the photo full screen", async () => {
+      render(<AddBookByShelf />);
+      capture();
+      await screen.findByRole(
+        "button",
+        { name: /Foto del estante/ },
+        { timeout: 4000 },
+      );
+      fireEvent.click(toggle());
+      fireEvent.click(screen.getByRole("button", { name: /más grande/ }));
+
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+      expect(
+        screen.getByAltText("Foto del estante que se analizó, ampliada"),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the new photo after a retake, not the previous one", async () => {
+      render(<AddBookByShelf />);
+      capture();
+      await screen.findByRole(
+        "button",
+        { name: /^Foto del estante$/ },
+        { timeout: 4000 },
+      );
+      fireEvent.click(toggle());
+      const first = screen
+        .getByAltText("Foto del estante que se analizó")
+        .getAttribute("src");
+
+      // Retake with different bytes, so a stale photo is distinguishable from
+      // the new one rather than both rendering an identical data URL.
+      const inputs = Array.from(
+        document.querySelectorAll('input[type="file"]'),
+      ) as HTMLInputElement[];
+      fireEvent.change(inputs[inputs.length - 1], {
+        target: {
+          files: [
+            new File(["contenido distinto"], "otra.jpg", {
+              type: "image/jpeg",
+            }),
+          ],
+        },
+      });
+
+      await screen.findByRole(
+        "button",
+        { name: /^Foto del estante$/ },
+        { timeout: 4000 },
+      );
+      fireEvent.click(toggle());
+      expect(
+        screen
+          .getByAltText("Foto del estante que se analizó")
+          .getAttribute("src"),
+      ).not.toBe(first);
+    });
+  });
 });

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { ShelfBookDialog } from "./shelf-book-dialog";
+import { ShelfPhotoPanel } from "./shelf-photo-panel";
 import { saveImport, type ImportOutcome } from "./import-summary";
 import {
   candidateToBookData,
@@ -74,6 +75,8 @@ export function AddBookByShelf() {
   const [excluded, setExcluded] = React.useState<Set<number>>(new Set());
   // The candidate shown in the full-metadata detail dialog (null = closed).
   const [detail, setDetail] = React.useState<IdentifyCandidate | null>(null);
+  // The captured shelf photo, kept for reference while reading the results.
+  const [photo, setPhoto] = React.useState<string | null>(null);
   // Per-book outcomes accumulated across the batch, handed to the import summary.
   const outcomesRef = React.useRef<ImportOutcome[]>([]);
   const navigatedRef = React.useRef(false);
@@ -179,6 +182,11 @@ export function AddBookByShelf() {
     setPhase("analyzing");
     try {
       const { base64, contentType } = await prepareImage(file, MAX_SHELF_EDGE);
+      // Kept so the reader can check a result against what was actually in
+      // frame. Only the assembled data URL: unlike add-by-photo, nothing here
+      // re-sends the bytes, so holding the raw base64 too would double the
+      // memory for a value nothing reads. Replaced on every retake.
+      setPhoto(`data:${contentType};base64,${base64}`);
       const res = await fetch("/api/ai/identify-shelf", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -429,6 +437,11 @@ export function AddBookByShelf() {
             Probá con más luz o enfocando los lomos.
           </p>
           <RetakeButton onChange={onCapture} className="mt-5" />
+          {/* The advice above is guesswork until the reader can see the shot —
+              a dark or badly framed photo explains an empty result instantly. */}
+          {photo && (
+            <ShelfPhotoPanel src={photo} className="mt-6 w-full text-left" />
+          )}
         </div>
       );
     }
@@ -436,6 +449,8 @@ export function AddBookByShelf() {
     return (
       <div className="space-y-4">
         <ShelfPicker shelves={shelves} value={shelfId} onChange={setShelfId} />
+
+        {photo && <ShelfPhotoPanel src={photo} />}
 
         {progressedNote && (
           <div className="flex items-center gap-2 rounded-xl border border-success/30 bg-success-bg px-3 py-2.5 text-sm">
