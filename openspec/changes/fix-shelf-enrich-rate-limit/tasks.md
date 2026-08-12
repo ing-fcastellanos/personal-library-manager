@@ -4,7 +4,7 @@
       (extends `Error`).
 - [x] 1.2 In `fetchVolumes`, when `res.status === 429`, throw `GoogleBooksRateLimitError` instead
       of the current generic `Error(\`Google Books responded ${res.status}\`)`. Keep the generic
-    `Error` for every other non-`ok` status.
+  `Error` for every other non-`ok` status.
 - [x] 1.3 Update/add unit tests in `services/enrichment/google-books.test.ts` (or the closest
       existing test file) asserting a `429` response throws `GoogleBooksRateLimitError` and any
       other non-ok status still throws the existing generic error.
@@ -37,6 +37,8 @@
       Google Books enrichment will run under the stricter anonymous quota.
 - [x] 3.2 Update the comment in `.env.example` around `GOOGLE_BOOKS_API_KEY` if needed so it
       reflects the new startup notice (kept consistent, not duplicated).
+
+## 4. Verification
 
 - [x] 4.1 Run the full test suite (`npm test`) and confirm the new/updated enrichment tests pass
       alongside the existing ones. `services/enrichment/google-books.test.ts` (new) passes 4/4 in
