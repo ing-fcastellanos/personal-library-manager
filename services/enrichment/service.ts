@@ -1,4 +1,8 @@
-import { googleBooksByIsbn, googleBooksSearch } from "./google-books";
+import {
+  googleBooksByIsbn,
+  googleBooksSearch,
+  GoogleBooksRateLimitError,
+} from "./google-books";
 import { openLibraryByIsbn, openLibrarySearch } from "./open-library";
 import { mergeCandidates } from "./merge";
 import { rankCandidates } from "./rank";
@@ -34,6 +38,8 @@ export interface EnrichDeps {
   openByIsbn?: typeof openLibraryByIsbn;
   googleSearch?: typeof googleBooksSearch;
   openSearch?: typeof openLibrarySearch;
+  /** Backoff sleep, injectable so retry tests run without real waits. */
+  delayImpl?: (ms: number) => Promise<void>;
 }
 
 const SEARCH_LIMIT = 5;
@@ -44,6 +50,37 @@ async function safe<T>(fn: () => Promise<T>): Promise<T | null> {
     return await fn();
   } catch {
     return null;
+  }
+}
+
+/** Backoff delays (ms) between the 2 retries a rate-limited call gets (design D3). */
+const RATE_LIMIT_RETRY_DELAYS_MS = [500, 1500];
+
+async function defaultDelay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Retries `fn` on `GoogleBooksRateLimitError` with backoff, up to
+ * `RATE_LIMIT_RETRY_DELAYS_MS.length` extra attempts. Any other error propagates
+ * immediately — only a real 429 is worth waiting out (design D5).
+ */
+async function withRateLimitRetry<T>(
+  fn: () => Promise<T>,
+  delayImpl: (ms: number) => Promise<void>,
+): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (
+        !(err instanceof GoogleBooksRateLimitError) ||
+        attempt >= RATE_LIMIT_RETRY_DELAYS_MS.length
+      ) {
+        throw err;
+      }
+      await delayImpl(RATE_LIMIT_RETRY_DELAYS_MS[attempt]);
+    }
   }
 }
 
@@ -65,8 +102,9 @@ export async function enrichByIsbn(
 
   const googleByIsbn = deps.googleByIsbn ?? googleBooksByIsbn;
   const openByIsbn = deps.openByIsbn ?? openLibraryByIsbn;
+  const delayImpl = deps.delayImpl ?? defaultDelay;
   const [gb, ol] = await Promise.all([
-    safe(() => googleByIsbn(isbn13)),
+    safe(() => withRateLimitRetry(() => googleByIsbn(isbn13), delayImpl)),
     safe(() => openByIsbn(isbn13)),
   ]);
 
@@ -92,7 +130,11 @@ export async function searchByText(
   if (cached !== null) return cached;
 
   const googleSearch = deps.googleSearch ?? googleBooksSearch;
-  let found = (await safe(() => googleSearch(query))) ?? [];
+  const delayImpl = deps.delayImpl ?? defaultDelay;
+  let found =
+    (await safe(() =>
+      withRateLimitRetry(() => googleSearch(query), delayImpl),
+    )) ?? [];
   if (found.length === 0) {
     // Google Books returned nothing (or failed) — fall back to Open Library
     // search so a flaky/unavailable Google Books doesn't break text lookup (#20).

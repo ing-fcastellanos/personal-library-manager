@@ -30,6 +30,15 @@ config();
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT ?? "3000", 10);
 
+// Enrichment (#13) works without a key, but Google's anonymous quota is strict
+// and undocumented — surface the degraded configuration at startup rather than
+// letting it show up only as downstream 429s during a shelf import.
+if (!process.env.GOOGLE_BOOKS_API_KEY) {
+  console.warn(
+    "GOOGLE_BOOKS_API_KEY is not set — Google Books enrichment will run under the stricter anonymous quota.",
+  );
+}
+
 async function main() {
   const app = express();
 

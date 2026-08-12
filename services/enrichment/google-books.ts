@@ -19,6 +19,17 @@ export interface GoogleBooksOptions {
   timeoutMs?: number;
 }
 
+/**
+ * Thrown when Google Books responds `429` (quota exceeded) — distinct from other
+ * failures so the orchestration layer can retry it and only it (design D1).
+ */
+export class GoogleBooksRateLimitError extends Error {
+  constructor() {
+    super("Google Books responded 429 (rate limited)");
+    this.name = "GoogleBooksRateLimitError";
+  }
+}
+
 interface GoogleVolumesResponse {
   items?: { volumeInfo?: GoogleVolumeInfo }[];
 }
@@ -40,6 +51,9 @@ async function fetchVolumes(
     const keyParam = apiKey ? `&key=${encodeURIComponent(apiKey)}` : "";
     const url = `${GOOGLE_BOOKS_URL}?q=${encodeURIComponent(query)}&maxResults=${SEARCH_MAX_RESULTS}${keyParam}`;
     const res = await fetchImpl(url, { signal: controller.signal });
+    if (res.status === 429) {
+      throw new GoogleBooksRateLimitError();
+    }
     if (!res.ok) {
       throw new Error(`Google Books responded ${res.status}`);
     }
