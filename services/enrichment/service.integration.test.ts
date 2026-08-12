@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { enrichByIsbn, searchByText } from "./service";
+import { GoogleBooksRateLimitError } from "./google-books";
 import type { Candidate } from "./types";
 
 /**
@@ -80,5 +81,80 @@ describe("enrichment service caching (emulator)", () => {
 
     const result = await enrichByIsbn(ISBN, { googleByIsbn, openByIsbn });
     expect(result?.title).toBe("From OL");
+  });
+});
+
+describe("enrichment service rate-limit retry (emulator)", () => {
+  it("retries an ISBN lookup that hits the rate limit, then succeeds", async () => {
+    const isbn = "9780143127550";
+    const googleByIsbn = vi
+      .fn()
+      .mockRejectedValueOnce(new GoogleBooksRateLimitError())
+      .mockResolvedValueOnce(candidate("Retried OK"));
+    const openByIsbn = vi.fn().mockResolvedValue(null);
+    const delayImpl = vi.fn().mockResolvedValue(undefined);
+
+    const result = await enrichByIsbn(isbn, {
+      googleByIsbn,
+      openByIsbn,
+      delayImpl,
+    });
+
+    expect(result?.title).toBe("Retried OK");
+    expect(googleByIsbn).toHaveBeenCalledTimes(2);
+    expect(delayImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives up after exhausting retries on a sustained rate limit", async () => {
+    const isbn = "9781400079988";
+    const googleByIsbn = vi
+      .fn()
+      .mockRejectedValue(new GoogleBooksRateLimitError());
+    const openByIsbn = vi.fn().mockResolvedValue(candidate("From OL fallback"));
+    const delayImpl = vi.fn().mockResolvedValue(undefined);
+
+    const result = await enrichByIsbn(isbn, {
+      googleByIsbn,
+      openByIsbn,
+      delayImpl,
+    });
+
+    expect(result?.title).toBe("From OL fallback");
+    expect(googleByIsbn).toHaveBeenCalledTimes(3); // initial attempt + 2 retries
+    expect(delayImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a non-rate-limit failure", async () => {
+    const isbn = "9780061120084";
+    const googleByIsbn = vi.fn().mockRejectedValue(new Error("boom"));
+    const openByIsbn = vi.fn().mockResolvedValue(candidate("From OL only"));
+    const delayImpl = vi.fn().mockResolvedValue(undefined);
+
+    const result = await enrichByIsbn(isbn, {
+      googleByIsbn,
+      openByIsbn,
+      delayImpl,
+    });
+
+    expect(result?.title).toBe("From OL only");
+    expect(googleByIsbn).toHaveBeenCalledTimes(1);
+    expect(delayImpl).not.toHaveBeenCalled();
+  });
+
+  it("retries a text search that hits the rate limit, then succeeds", async () => {
+    const googleSearch = vi
+      .fn()
+      .mockRejectedValueOnce(new GoogleBooksRateLimitError())
+      .mockResolvedValueOnce([candidate("Retried Search")]);
+    const delayImpl = vi.fn().mockResolvedValue(undefined);
+
+    const result = await searchByText("unique rate limit retry query", {
+      googleSearch,
+      delayImpl,
+    });
+
+    expect(result[0]?.title).toBe("Retried Search");
+    expect(googleSearch).toHaveBeenCalledTimes(2);
+    expect(delayImpl).toHaveBeenCalledTimes(1);
   });
 });
