@@ -8,7 +8,10 @@ import type { Candidate } from "../enrichment/types";
  * (`toBookCreateInput`) without a translation layer.
  */
 
-/** The interchangeable AI engines (design D2). OpenAI is the default. */
+/**
+ * The interchangeable AI engines (design D2). Gemini is the default — OpenAI is
+ * unfunded and kept only as a dormant, manually-reactivatable option.
+ */
 export type AIEngine = "openai" | "gemini";
 
 /**

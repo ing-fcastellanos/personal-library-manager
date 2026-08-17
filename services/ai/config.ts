@@ -16,10 +16,15 @@ export interface AIConfig {
   fallbackEnabled: boolean;
 }
 
-/** Used when `settings/ai` is absent or a field is missing/invalid (design D4). */
+/**
+ * Used when `settings/ai` is absent or a field is missing/invalid (design D4).
+ * Gemini is the default: OpenAI is unfunded (no billing credits) and not expected
+ * to be reactivated, so fallback stays off rather than wasting latency on a call
+ * that is guaranteed to fail.
+ */
 export const DEFAULT_AI_CONFIG: AIConfig = {
-  defaultEngine: "openai",
-  fallbackEnabled: true,
+  defaultEngine: "gemini",
+  fallbackEnabled: false,
 };
 
 const KNOWN_ENGINES: readonly AIEngine[] = ["openai", "gemini"];
