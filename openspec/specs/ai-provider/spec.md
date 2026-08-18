@@ -39,9 +39,11 @@ never on a concrete vendor.
 The system SHALL read the active engine configuration from a Firestore `settings/ai`
 document containing `defaultEngine` (`"openai"` or `"gemini"`) and `fallbackEnabled`
 (boolean). When the document is absent the system SHALL default to
-`defaultEngine: "openai"` and `fallbackEnabled: true`, so the layer is usable before
-the settings screen exists. This configuration is non-sensitive and contains no API
-keys.
+`defaultEngine: "gemini"` and `fallbackEnabled: false`, so the layer is usable before
+the settings screen exists. OpenAI is unfunded and not expected to regain credits, so
+the documented default no longer routes through it, and fallback stays off rather than
+spending latency on a call known to fail. This configuration is non-sensitive and
+contains no API keys.
 
 #### Scenario: Default engine drives the primary attempt
 
@@ -51,7 +53,7 @@ keys.
 #### Scenario: Missing config falls back to documented defaults
 
 - **WHEN** no `settings/ai` document exists and an identification is requested
-- **THEN** the system uses OpenAI as the default engine with fallback enabled
+- **THEN** the system uses Gemini as the default engine with fallback disabled
 
 ### Requirement: Automatic fallback to the secondary engine
 
@@ -184,3 +186,29 @@ required.
 
 - **WHEN** an operator sets a model override in the server environment
 - **THEN** the Gemini engine uses that model instead of the default alias
+
+### Requirement: Gemini retries its own transient failures
+
+Because Gemini is the default engine with no funded secondary to fall back to, the
+Gemini engine SHALL retry a request that fails with a transient `ApiError` (HTTP `429`
+rate-limited or `503` unavailable) with backoff, up to a fixed number of extra
+attempts, before letting the failure propagate. A non-transient error (any other
+status, or an error that is not an `ApiError`) SHALL propagate immediately without
+retrying.
+
+#### Scenario: A transient failure is retried and recovers
+
+- **WHEN** a Gemini request fails with a `429` or `503` `ApiError` and a retry attempt
+  remains
+- **THEN** the engine waits a backoff interval and retries the request
+
+#### Scenario: Retries are exhausted
+
+- **WHEN** a Gemini request keeps failing with a transient `ApiError` past the last
+  retry attempt
+- **THEN** the engine lets that final error propagate to the orchestrator
+
+#### Scenario: A non-transient failure is not retried
+
+- **WHEN** a Gemini request fails with a non-transient error
+- **THEN** the engine lets it propagate immediately without waiting or retrying
