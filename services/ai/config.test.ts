@@ -7,7 +7,7 @@ describe("getAIConfig", () => {
     expect(config).toEqual(DEFAULT_AI_CONFIG);
     expect(config).toEqual({
       defaultEngine: "gemini",
-      fallbackEnabled: false,
+      fallbackEnabled: true,
     });
   });
 
@@ -16,6 +16,13 @@ describe("getAIConfig", () => {
       read: async () => ({ defaultEngine: "gemini", fallbackEnabled: false }),
     });
     expect(config).toEqual({ defaultEngine: "gemini", fallbackEnabled: false });
+  });
+
+  it("accepts groq as a known engine", async () => {
+    const config = await getAIConfig({
+      read: async () => ({ defaultEngine: "groq" }),
+    });
+    expect(config.defaultEngine).toBe("groq");
   });
 
   it("falls back to default engine when the stored value is unknown", async () => {
@@ -33,7 +40,7 @@ describe("getAIConfig", () => {
     });
     expect(config).toEqual({
       defaultEngine: "openai",
-      fallbackEnabled: false,
+      fallbackEnabled: true,
     });
   });
 
@@ -42,6 +49,6 @@ describe("getAIConfig", () => {
       // @ts-expect-error simulating a corrupt value
       read: async () => ({ fallbackEnabled: "yes" }),
     });
-    expect(config.fallbackEnabled).toBe(false);
+    expect(config.fallbackEnabled).toBe(true);
   });
 });

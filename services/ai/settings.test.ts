@@ -16,24 +16,27 @@ const config =
 const providers = (
   openaiKey: boolean,
   geminiKey: boolean,
+  groqKey = false,
 ): SettingsDeps["providers"] => ({
   openai: { isConfigured: () => openaiKey },
   gemini: { isConfigured: () => geminiKey },
+  groq: { isConfigured: () => groqKey },
 });
 
 describe("readSettings", () => {
   it("returns the effective config and a cheap per-engine status", async () => {
     const view = await readSettings({
       config: config("openai", true),
-      providers: providers(true, false),
+      providers: providers(true, false, true),
     });
     expect(view.config).toEqual({
       defaultEngine: "openai",
       fallbackEnabled: true,
     });
     expect(view.engines).toEqual([
-      { engine: "openai", status: "connected" },
       { engine: "gemini", status: "not_configured" },
+      { engine: "groq", status: "connected" },
+      { engine: "openai", status: "connected" },
     ]);
   });
 
@@ -41,7 +44,7 @@ describe("readSettings", () => {
     const probe = vi.fn();
     await readSettings({
       config: config("gemini", false),
-      providers: providers(true, true),
+      providers: providers(true, true, true),
       probe,
     });
     expect(probe).not.toHaveBeenCalled();
@@ -105,5 +108,13 @@ describe("testEngine", () => {
       timeoutMs: 20,
     });
     expect(status).toBe("error");
+  });
+
+  it("returns connected on a successful groq probe", async () => {
+    const status = await testEngine("groq", {
+      providers: providers(false, false, true),
+      probe: async () => {},
+    });
+    expect(status).toBe("connected");
   });
 });

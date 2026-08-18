@@ -1,6 +1,7 @@
 import { getAIConfig, type AIConfig } from "./config";
 import { createOpenAIProvider } from "./openai";
 import { createGeminiProvider } from "./gemini";
+import { createGroqProvider } from "./groq";
 import {
   NoEngineAvailableError,
   type AICandidate,
@@ -13,15 +14,18 @@ import {
 /**
  * AI identification orchestrator (#19, design D2). Selects the configured default
  * engine and, on failure/timeout/not-configured with fallback enabled,
- * automatically retries the secondary engine — sequentially, never in parallel
- * (resilience, not consensus). The engine that answered is recorded on every
- * candidate as `sourceProvider` during normalization.
+ * automatically retries the remaining engines in order — sequentially, never in
+ * parallel (resilience, not consensus). The engine that answered is recorded on
+ * every candidate as `sourceProvider` during normalization.
  *
  * Engines, config, and the clock are injectable (matching `EnrichDeps`) so the
  * orchestrator is fully unit-tested with no network and no real API keys.
  */
 
-const ALL_ENGINES: readonly AIEngine[] = ["openai", "gemini"];
+// Order matters: it is the fallback sequence once the default engine is
+// removed from the front (see `engineOrder`). Groq comes before OpenAI so an
+// unfunded, guaranteed-to-fail OpenAI is only ever tried last, if at all.
+const ALL_ENGINES: readonly AIEngine[] = ["gemini", "groq", "openai"];
 
 /** Default per-call timeout (ms); a hang becomes a fallback trigger (design D2). */
 export const DEFAULT_TIMEOUT_MS = 30_000;
@@ -65,12 +69,15 @@ function resolveProvider(
 ): AIProvider {
   const override = overrides?.[engine];
   if (override) return override;
-  return engine === "openai" ? createOpenAIProvider() : createGeminiProvider();
+  if (engine === "openai") return createOpenAIProvider();
+  if (engine === "groq") return createGroqProvider();
+  return createGeminiProvider();
 }
 
 /**
- * Builds the ordered engine list: the default first, then the secondary when
- * fallback is enabled. With fallback disabled, only the default is attempted.
+ * Builds the ordered engine list: the default first, then the remaining known
+ * engines (in `ALL_ENGINES` order) when fallback is enabled. With fallback
+ * disabled, only the default is attempted.
  */
 function engineOrder(config: AIConfig): AIEngine[] {
   if (!config.fallbackEnabled) return [config.defaultEngine];

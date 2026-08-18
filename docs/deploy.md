@@ -13,12 +13,12 @@ The workflow is keyless: GitHub authenticates to GCP via **Workload Identity Fed
 
 ## Config model
 
-| Plane             | What                                                       | Where it enters                                                                                            |
-| ----------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Public web config | `NEXT_PUBLIC_FIREBASE_*` (6)                               | **Build args**, from GitHub Actions **variables** (public, inlined into the client bundle at `next build`) |
-| Runtime secrets   | `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_BOOKS_API_KEY` | **Secret Manager** → Cloud Run `--set-secrets` (never in the image)                                        |
-| Admin credentials | Firestore / Storage / Auth                                 | **ADC** from the runtime service account — nothing to inject                                               |
-| Non-secret env    | `GOOGLE_CLOUD_PROJECT`, `NODE_ENV`                         | Cloud Run `--set-env-vars`                                                                                 |
+| Plane             | What                                                                       | Where it enters                                                                                            |
+| ----------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Public web config | `NEXT_PUBLIC_FIREBASE_*` (6)                                               | **Build args**, from GitHub Actions **variables** (public, inlined into the client bundle at `next build`) |
+| Runtime secrets   | `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GROQ_API_KEY`, `GOOGLE_BOOKS_API_KEY` | **Secret Manager** → Cloud Run `--set-secrets` (never in the image)                                        |
+| Admin credentials | Firestore / Storage / Auth                                                 | **ADC** from the runtime service account — nothing to inject                                               |
+| Non-secret env    | `GOOGLE_CLOUD_PROJECT`, `NODE_ENV`                                         | Cloud Run `--set-env-vars`                                                                                 |
 
 ## Prerequisites
 
@@ -172,12 +172,12 @@ Write-Output "projects/$($PROJECT_NUMBER)/locations/global/workloadIdentityPools
 
 ## 6. Secret Manager secrets
 
-Create the three runtime secrets and grant the runtime SA read access. (Use a `-` value for
+Create the four runtime secrets and grant the runtime SA read access. (Use a `-` value for
 any AI key you are not using; an engine with no key just reports "not configured".) The temp
 file is written with **no trailing newline** so the secret value is exact.
 
 ```powershell
-foreach ($s in "OPENAI_API_KEY","GEMINI_API_KEY","GOOGLE_BOOKS_API_KEY") {
+foreach ($s in "OPENAI_API_KEY","GEMINI_API_KEY","GROQ_API_KEY","GOOGLE_BOOKS_API_KEY") {
   $tmp = New-TemporaryFile
   [IO.File]::WriteAllText($tmp, "REPLACE_WITH_REAL_VALUE_OR_DASH")
   gcloud secrets create $s --replication-policy=automatic --data-file="$tmp"

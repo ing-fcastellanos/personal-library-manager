@@ -4,6 +4,7 @@ import { getAdminFirestore } from "../../lib/firebase/admin";
 import { getAIConfig, type AIConfig } from "./config";
 import { createOpenAIProvider } from "./openai";
 import { createGeminiProvider } from "./gemini";
+import { createGroqProvider, GROQ_BASE_URL } from "./groq";
 import type { AIEngine, AIProvider } from "./types";
 
 /**
@@ -18,7 +19,7 @@ import type { AIEngine, AIProvider } from "./types";
  * settings page load never spends an API call.
  */
 
-export const ALL_ENGINES: readonly AIEngine[] = ["openai", "gemini"];
+export const ALL_ENGINES: readonly AIEngine[] = ["gemini", "groq", "openai"];
 
 export type EngineConnectionStatus = "connected" | "not_configured" | "error";
 
@@ -65,7 +66,9 @@ function providerFor(
 ): Pick<AIProvider, "isConfigured"> {
   const override = overrides?.[engine];
   if (override) return override;
-  return engine === "openai" ? createOpenAIProvider() : createGeminiProvider();
+  if (engine === "openai") return createOpenAIProvider();
+  if (engine === "groq") return createGroqProvider();
+  return createGeminiProvider();
 }
 
 /** Cheapest authenticated call per SDK, purely to verify the credential works. */
@@ -73,6 +76,11 @@ const defaultProbe = async (engine: AIEngine): Promise<void> => {
   if (engine === "openai") {
     await new OpenAI({
       apiKey: process.env.OPENAI_API_KEY ?? "",
+    }).models.list();
+  } else if (engine === "groq") {
+    await new OpenAI({
+      apiKey: process.env.GROQ_API_KEY ?? "",
+      baseURL: GROQ_BASE_URL,
     }).models.list();
   } else {
     await new GoogleGenAI({
