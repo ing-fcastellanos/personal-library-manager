@@ -18,16 +18,17 @@ export interface AIConfig {
 
 /**
  * Used when `settings/ai` is absent or a field is missing/invalid (design D4).
- * Gemini is the default: OpenAI is unfunded (no billing credits) and not expected
- * to be reactivated, so fallback stays off rather than wasting latency on a call
- * that is guaranteed to fail.
+ * Gemini is the default, with fallback on: Groq is a real free-tier secondary
+ * for when Gemini is saturated. OpenAI is unfunded (no billing credits) and not
+ * expected to be reactivated, but stays last in the chain as a dormant option
+ * rather than being removed outright.
  */
 export const DEFAULT_AI_CONFIG: AIConfig = {
   defaultEngine: "gemini",
-  fallbackEnabled: false,
+  fallbackEnabled: true,
 };
 
-const KNOWN_ENGINES: readonly AIEngine[] = ["openai", "gemini"];
+const KNOWN_ENGINES: readonly AIEngine[] = ["openai", "gemini", "groq"];
 
 const COLLECTION = "settings";
 const DOC_ID = "ai";

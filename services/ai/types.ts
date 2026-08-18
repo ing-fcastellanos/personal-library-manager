@@ -9,10 +9,11 @@ import type { Candidate } from "../enrichment/types";
  */
 
 /**
- * The interchangeable AI engines (design D2). Gemini is the default — OpenAI is
- * unfunded and kept only as a dormant, manually-reactivatable option.
+ * The interchangeable AI engines (design D2). Gemini is the default, Groq is
+ * its free-tier fallback for when Gemini is saturated — OpenAI is unfunded and
+ * kept only as a dormant, manually-reactivatable option.
  */
-export type AIEngine = "openai" | "gemini";
+export type AIEngine = "openai" | "gemini" | "groq";
 
 /**
  * An image handed to an engine for identification. `base64` is the raw image

@@ -19,7 +19,7 @@ const router = Router();
 
 const patchSchema = z
   .object({
-    defaultEngine: z.enum(["openai", "gemini"]).optional(),
+    defaultEngine: z.enum(["openai", "gemini", "groq"]).optional(),
     fallbackEnabled: z.boolean().optional(),
   })
   .refine(
@@ -27,7 +27,7 @@ const patchSchema = z
     { message: "at least one field is required" },
   );
 
-const testSchema = z.object({ engine: z.enum(["openai", "gemini"]) });
+const testSchema = z.object({ engine: z.enum(["openai", "gemini", "groq"]) });
 
 router.get("/ai/settings", requireAuth, async (req, res) => {
   try {

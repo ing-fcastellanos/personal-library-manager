@@ -18,7 +18,7 @@ per-engine connection status. The response SHALL NOT include any API key value.
 - **WHEN** an authenticated reader requests `GET /api/ai/settings` and no `settings/ai`
   document has been written
 - **THEN** the system responds `200` with `defaultEngine: "gemini"` and
-  `fallbackEnabled: false` plus the per-engine status list
+  `fallbackEnabled: true` plus the per-engine status list
 
 #### Scenario: No key value is ever returned
 
@@ -44,8 +44,8 @@ rejected.
 #### Scenario: Fallback toggle persisted
 
 - **WHEN** an authenticated reader `PATCH`es `{ "fallbackEnabled": false }`
-- **THEN** the system persists the toggle and the provider layer no longer tries the
-  secondary engine on a default-engine failure
+- **THEN** the system persists the toggle and the provider layer no longer tries any
+  other engine on a default-engine failure
 
 #### Scenario: Invalid engine rejected
 

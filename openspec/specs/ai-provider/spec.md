@@ -11,8 +11,8 @@ TBD - created by archiving change add-ai-provider-layer. Update Purpose after ar
 The system SHALL define an `AIProvider` interface for vision-based book
 identification with two methods: `identifyBookFromImage` (a single cover/spine image
 → at most one identification candidate) and `identifyBooksFromImage` (one shelf photo
-containing multiple books → a list of identification candidates). Both OpenAI and
-Gemini SHALL implement this interface, so callers depend only on the interface and
+containing multiple books → a list of identification candidates). OpenAI, Gemini, and
+Groq SHALL implement this interface, so callers depend only on the interface and
 never on a concrete vendor.
 
 #### Scenario: Single-book identification returns one candidate
@@ -27,9 +27,9 @@ never on a concrete vendor.
 - **THEN** it returns a list of normalized candidates, one per recognized book, each with
   its own `confidence` score
 
-#### Scenario: Both engines satisfy the same interface
+#### Scenario: Every engine satisfies the same interface
 
-- **WHEN** either the OpenAI or the Gemini implementation is used through the `AIProvider`
+- **WHEN** the OpenAI, Gemini, or Groq implementation is used through the `AIProvider`
   interface
 - **THEN** the caller obtains identically shaped normalized candidates regardless of which
   engine produced them
@@ -37,13 +37,14 @@ never on a concrete vendor.
 ### Requirement: Engine selection from configuration
 
 The system SHALL read the active engine configuration from a Firestore `settings/ai`
-document containing `defaultEngine` (`"openai"` or `"gemini"`) and `fallbackEnabled`
-(boolean). When the document is absent the system SHALL default to
-`defaultEngine: "gemini"` and `fallbackEnabled: false`, so the layer is usable before
-the settings screen exists. OpenAI is unfunded and not expected to regain credits, so
-the documented default no longer routes through it, and fallback stays off rather than
-spending latency on a call known to fail. This configuration is non-sensitive and
-contains no API keys.
+document containing `defaultEngine` (`"openai"`, `"gemini"`, or `"groq"`) and
+`fallbackEnabled` (boolean). When the document is absent the system SHALL default to
+`defaultEngine: "gemini"` and `fallbackEnabled: true`, so the layer is usable before
+the settings screen exists. Gemini is the default vision engine; Groq is its free-tier
+fallback for when Gemini is saturated. OpenAI is unfunded and not expected to regain
+credits, so it stays last in the automatic fallback order — reachable, but never the
+first (or effectively only) attempt. This configuration is non-sensitive and contains
+no API keys.
 
 #### Scenario: Default engine drives the primary attempt
 
@@ -53,15 +54,18 @@ contains no API keys.
 #### Scenario: Missing config falls back to documented defaults
 
 - **WHEN** no `settings/ai` document exists and an identification is requested
-- **THEN** the system uses Gemini as the default engine with fallback disabled
+- **THEN** the system uses Gemini as the default engine with fallback enabled
 
-### Requirement: Automatic fallback to the secondary engine
+### Requirement: Automatic fallback to the remaining engines
 
-The system SHALL automatically retry the same request with the secondary engine when
-fallback is enabled and the default engine fails through an error, a timeout, or
-reporting itself not configured. The system SHALL record on the result which engine
-ultimately answered. When fallback is disabled, a default-engine failure SHALL surface
-the error without trying the secondary.
+The system SHALL automatically retry the same request with the next configured engine,
+in order, when fallback is enabled and the current engine fails through an error, a
+timeout, or reporting itself not configured — continuing until an engine answers or
+every known engine has been attempted. The documented order is Gemini, then Groq, then
+OpenAI, so a request only reaches the unfunded OpenAI engine after both funded engines
+have failed. The system SHALL record on the result which engine ultimately answered.
+When fallback is disabled, a default-engine failure SHALL surface the error without
+trying any other engine.
 
 The system SHALL log every engine failure at the moment it occurs, identifying the engine,
 before attempting the next one — including a failure that a later engine goes on to cover.
@@ -75,6 +79,12 @@ concrete cause remains available for diagnosis.
 - **WHEN** the default engine throws or times out and `fallbackEnabled` is true
 - **THEN** the system completes the identification with the secondary engine and the result
   records `sourceProvider` as the secondary engine
+
+#### Scenario: Fallback proceeds through multiple engines in order
+
+- **WHEN** Gemini (the default) and Groq both fail and `fallbackEnabled` is true
+- **THEN** the system attempts OpenAI third, in that fixed order, before raising "no engine
+  available"
 
 #### Scenario: Provider that answered is recorded
 
@@ -107,8 +117,8 @@ concrete cause remains available for diagnosis.
 
 #### Scenario: Every failure in an exhausted chain is logged
 
-- **WHEN** two engines are attempted and both fail
-- **THEN** both failures are logged, each identifying its engine — not only the last one
+- **WHEN** multiple engines are attempted and all fail
+- **THEN** every failure is logged, each identifying its engine — not only the last one
 
 ### Requirement: API keys read server-side from Secret Manager
 
@@ -133,8 +143,8 @@ orchestrator can fall back.
 
 The system SHALL normalize each engine's raw output into the shared enrichment
 `Candidate` field shape extended with `confidence` (a number in `0–1`, mapped/clamped
-consistently across engines) and `sourceProvider` (`"openai"` or `"gemini"`). The
-candidate's `source` provenance SHALL be `"ai"`. When an engine returns no confidence
+consistently across engines) and `sourceProvider` (`"openai"`, `"gemini"`, or `"groq"`).
+The candidate's `source` provenance SHALL be `"ai"`. When an engine returns no confidence
 signal, the system SHALL assign a neutral default. The normalized shape SHALL be
 compatible with the existing intake path so an AI candidate can be persisted without a
 separate translation layer.
@@ -189,12 +199,13 @@ required.
 
 ### Requirement: Gemini retries its own transient failures
 
-Because Gemini is the default engine with no funded secondary to fall back to, the
-Gemini engine SHALL retry a request that fails with a transient `ApiError` (HTTP `429`
-rate-limited or `503` unavailable) with backoff, up to a fixed number of extra
-attempts, before letting the failure propagate. A non-transient error (any other
-status, or an error that is not an `ApiError`) SHALL propagate immediately without
-retrying.
+The Gemini engine SHALL retry a request that fails with a transient `ApiError` (HTTP
+`429` rate-limited or `503` unavailable) with backoff, up to a fixed number of extra
+attempts, before letting the failure propagate. Recovering in-place is preferred over
+an immediate fallback to Groq: it keeps the default (and generally strongest) engine's
+result, and absorbs a hiccup that a short backoff would have cleared anyway before
+paying the cost of a full engine switch. A non-transient error (any other status, or an
+error that is not an `ApiError`) SHALL propagate immediately without retrying.
 
 #### Scenario: A transient failure is retried and recovers
 
@@ -212,3 +223,22 @@ retrying.
 
 - **WHEN** a Gemini request fails with a non-transient error
 - **THEN** the engine lets it propagate immediately without waiting or retrying
+
+### Requirement: Groq vision engine as a free-tier fallback
+
+The system SHALL implement a Groq `AIProvider` using Groq's OpenAI-compatible chat
+completions API, so it reuses the same request/response shape as the OpenAI engine.
+The default model SHALL be a currently-available, production (non-preview) vision
+model. An operator MAY override the model via environment configuration.
+
+#### Scenario: Groq answers when Gemini is unavailable
+
+- **WHEN** Gemini fails or times out, `fallbackEnabled` is true, and Groq is configured
+- **THEN** the system completes the identification with Groq and the result records
+  `sourceProvider: "groq"`
+
+#### Scenario: Groq without a key reports not configured
+
+- **WHEN** `GROQ_API_KEY` is absent from the server environment
+- **THEN** the Groq engine reports itself "not configured" and the orchestrator skips it
+  rather than attempting a request
