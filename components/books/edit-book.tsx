@@ -12,7 +12,8 @@ import type { Copy } from "@/lib/types/copy";
  * Connected edit-book container (#15). Wires the presentational `EditBookForm`
  * (Claude Design handoff) to the real catalog APIs: load Book + Copy (#12),
  * re-enrich diff (#13), cover upload (#15), and PATCH persistence (#12). Cover
- * provenance (`coverSource`) is tracked so re-enrich preserves a user upload.
+ * provenance (`coverSource`) is tracked so re-enrich preserves a deliberate
+ * user upload but still offers to replace an "ai-photo" cover (#20).
  */
 
 const LANGUAGE_LABELS: Record<string, string> = {
@@ -57,7 +58,9 @@ export function EditBook({ bookId }: { bookId: string }) {
   const router = useRouter();
   const [shelves, setShelves] = React.useState<Shelf[]>([]);
   const copyId = React.useRef<string | null>(null);
-  const coverSource = React.useRef<"metadata" | "user" | null>(null);
+  const coverSource = React.useRef<"metadata" | "user" | "ai-photo" | null>(
+    null,
+  );
 
   React.useEffect(() => {
     fetch("/api/shelves")
@@ -170,7 +173,9 @@ export function EditBook({ bookId }: { bookId: string }) {
       );
       list("authors", "Autores", book.authors, candidate.authors);
       list("categories", "Categorías", book.categories, candidate.categories);
-      // A user-uploaded cover is preserved (#15 D5): not offered in the diff.
+      // A deliberately user-uploaded cover is preserved (#15 D5): not offered
+      // in the diff. An "ai-photo" cover was never a deliberate choice — just
+      // how that add flow captures the book — so it stays eligible (#20).
       if (coverSource.current !== "user" && candidate.coverUrl) {
         const src = String(candidate.coverUrl);
         if (src !== (book.coverUrl ?? "")) {
@@ -180,6 +185,7 @@ export function EditBook({ bookId }: { bookId: string }) {
             mine: book.coverUrl ? "Actual" : "—",
             source: "De la fuente",
             sourceValue: src,
+            isCover: coverSource.current === "ai-photo",
           });
         }
       }
@@ -187,6 +193,10 @@ export function EditBook({ bookId }: { bookId: string }) {
     },
     [],
   );
+
+  const onCoverReplaced = React.useCallback(() => {
+    coverSource.current = "metadata";
+  }, []);
 
   const onSave = React.useCallback(
     async (id: string, book: BookData, copy: CopyData): Promise<void> => {
@@ -203,10 +213,11 @@ export function EditBook({ bookId }: { bookId: string }) {
         pageCount: book.pages ? Number(book.pages) : null,
         description: book.description?.trim() || null,
         coverUrl: book.coverUrl ?? null,
+        // Null when the cover was removed; otherwise whatever this session's
+        // tracked provenance is — the loaded value, "user" from a
+        // just-completed upload, or "metadata" from an accepted cover diff.
+        coverSource: book.coverUrl ? coverSource.current : null,
       };
-      // Only reset coverSource when the cover was removed; otherwise keep what
-      // the server has (e.g. "user" from a just-completed upload).
-      if (!book.coverUrl) bookBody.coverSource = null;
 
       const reqs: Promise<Response>[] = [
         fetch(`/api/books/${id}`, {
@@ -242,6 +253,7 @@ export function EditBook({ bookId }: { bookId: string }) {
       onLoad={onLoad}
       onUploadCover={onUploadCover}
       onReEnrich={onReEnrich}
+      onCoverReplaced={onCoverReplaced}
       onSave={onSave}
       onDone={() => router.push("/catalogo")}
     />

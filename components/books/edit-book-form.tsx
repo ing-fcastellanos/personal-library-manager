@@ -30,6 +30,8 @@ export interface EditBookFormProps {
   onUploadCover: (file: File) => Promise<string>;
   /** Fetch source metadata and return only the differing fields. */
   onReEnrich: (book: BookData) => Promise<FieldDiff[]>;
+  /** Called when a re-enrich diff replaces the cover with the source's. */
+  onCoverReplaced?: () => void;
   /** Persist edits. */
   onSave: (id: string, book: BookData, copy: CopyData) => Promise<void>;
   onDone?: () => void;
@@ -49,6 +51,7 @@ export function EditBookForm({
   onLoad,
   onUploadCover,
   onReEnrich,
+  onCoverReplaced,
   onSave,
   onDone,
 }: EditBookFormProps) {
@@ -129,6 +132,7 @@ export function EditBookForm({
         (next as any)[d.key] = d.sourceValue;
       } else if (choices[d.key as string] === "source" && d.key === "cover") {
         next.coverUrl = d.sourceValue as string;
+        onCoverReplaced?.();
       }
     }
     setBook(next);

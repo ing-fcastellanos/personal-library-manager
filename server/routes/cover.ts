@@ -10,18 +10,22 @@ import { requireAuth, type AuthedRequest } from "../middleware/require-auth";
 import { respondInternal } from "../lib/errors";
 
 /**
- * User cover upload API (#15, server-mediated — ADR-0009). Replaces a book's
- * cover with a reader-supplied image, stored via the Admin SDK and marked
- * `coverSource: "user"` so re-enrichment won't overwrite it (design D4/D5). The
- * elevated JSON body limit for this path is configured in `server/index.ts`.
+ * Cover upload API (#15, server-mediated — ADR-0009; `source` extended for #20).
+ * Replaces a book's cover with a supplied image, stored via the Admin SDK.
+ * Defaults to `coverSource: "user"` so re-enrichment won't overwrite it (design
+ * D4/D5); the add-by-photo flow instead passes `source: "ai-photo"`, since a
+ * captured photo was never a deliberate cover choice and stays eligible for
+ * replacement by a re-enrich diff. The elevated JSON body limit for this path
+ * is configured in `server/index.ts`.
  *
- *   POST /api/books/:id/cover  { imageBase64, contentType }
+ *   POST /api/books/:id/cover  { imageBase64, contentType, source? }
  */
 const router = Router();
 
 const coverSchema = z.object({
   imageBase64: z.string().min(1),
   contentType: z.string().min(1),
+  source: z.enum(["user", "ai-photo"]).optional(),
 });
 
 router.post("/books/:id/cover", requireAuth, async (req, res) => {
@@ -41,7 +45,10 @@ router.post("/books/:id/cover", requireAuth, async (req, res) => {
       parsed.data.imageBase64,
       parsed.data.contentType,
     );
-    await updateBook(id, { coverUrl, coverSource: "user" });
+    await updateBook(id, {
+      coverUrl,
+      coverSource: parsed.data.source ?? "user",
+    });
     await recordChange({
       action: "update",
       entityType: "book",

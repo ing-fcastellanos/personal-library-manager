@@ -179,6 +179,9 @@ export function AddBookByPhoto({ onManual }: { onManual?: () => void }) {
       body: JSON.stringify({
         imageBase64: photo!.base64,
         contentType: photo!.contentType,
+        // Not a deliberate cover choice — just how this flow captures the
+        // book — so it stays eligible for a re-enrich cover swap later (#20).
+        source: "ai-photo",
       }),
     });
     if (!coverRes.ok) {
