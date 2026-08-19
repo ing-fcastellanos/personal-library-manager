@@ -31,7 +31,7 @@ const identifyResponse = {
   ],
 };
 
-let calls: Array<{ url: string; method: string }>;
+let calls: Array<{ url: string; method: string; body?: unknown }>;
 
 beforeEach(() => {
   calls = [];
@@ -39,7 +39,11 @@ beforeEach(() => {
   global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? "GET";
-    calls.push({ url, method });
+    calls.push({
+      url,
+      method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    });
     if (url.endsWith("/api/shelves")) return jsonResponse([]);
     if (url.endsWith("/api/ai/identify")) return jsonResponse(identifyResponse);
     if (url.includes("/api/books/duplicates"))
@@ -92,6 +96,21 @@ describe("AddBookByPhoto", () => {
       ).toBeTruthy();
     });
     expect(push).toHaveBeenCalledWith("/agregar/resumen");
+  });
+
+  it("marks the uploaded cover as ai-photo, not a deliberate user upload (#20)", async () => {
+    render(<AddBookByPhoto />);
+    capturePhoto();
+    await screen.findByDisplayValue("Dune");
+    fireEvent.click(screen.getByRole("button", { name: /Guardar libro/ }));
+    await waitFor(() => {
+      const coverCall = calls.find((c) =>
+        c.url.match(/\/api\/books\/b1\/cover$/),
+      );
+      expect((coverCall?.body as { source?: string } | undefined)?.source).toBe(
+        "ai-photo",
+      );
+    });
   });
 
   /**

@@ -34,15 +34,17 @@ describe("bookSchema", () => {
     ).toBe(true);
   });
 
-  it("accepts a coverSource of metadata or user and rejects others (#15)", () => {
-    expect(
-      bookSchema.safeParse({
-        id: "b1",
-        title: "Con portada",
-        coverSource: "user",
-        ...ts,
-      }).success,
-    ).toBe(true);
+  it("accepts a coverSource of metadata, user, or ai-photo and rejects others (#15, #20)", () => {
+    for (const coverSource of ["metadata", "user", "ai-photo"]) {
+      expect(
+        bookSchema.safeParse({
+          id: "b1",
+          title: "Con portada",
+          coverSource,
+          ...ts,
+        }).success,
+      ).toBe(true);
+    }
     expect(
       bookSchema.safeParse({
         id: "b1",

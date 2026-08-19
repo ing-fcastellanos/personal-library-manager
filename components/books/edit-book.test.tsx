@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { EditBook } from "./edit-book";
 
 /**
@@ -90,6 +96,89 @@ describe("EditBook", () => {
     fireEvent.click(screen.getByRole("button", { name: "Quitar" }));
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Quitar" })).toBeNull(),
+    );
+  });
+});
+
+/**
+ * A book's cover is either "user" (someone deliberately uploaded it — #15 D5,
+ * preserved) or "ai-photo" (just how the add-by-photo flow captures the book —
+ * #20, eligible for a re-enrich swap). These lock the distinction in.
+ */
+describe("EditBook — cover replacement (#20)", () => {
+  const coverCandidate = {
+    title: "El nombre del viento",
+    coverUrl: "https://source/cover.jpg",
+  };
+
+  function mockFetchWithCoverSource(coverSource: "user" | "ai-photo") {
+    const withSource = { ...book, coverSource };
+    const patched: { body?: unknown } = {};
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/books/b1") && method === "GET")
+        return jsonResponse(withSource);
+      if (url.endsWith("/api/books/b1/copies")) return jsonResponse(copies);
+      if (url.endsWith("/api/shelves")) return jsonResponse([]);
+      if (url.includes("/api/enrich"))
+        return jsonResponse({ candidate: coverCandidate });
+      if (url.endsWith("/api/books/b1") && method === "PATCH") {
+        patched.body = JSON.parse(String(init?.body));
+        return jsonResponse({ ...withSource });
+      }
+      if (url.includes("/api/copies/") && method === "PATCH")
+        return patchCopy();
+      return jsonResponse({}, 404);
+    }) as unknown as typeof fetch;
+    return patched;
+  }
+
+  it("offers the cover diff for an ai-photo cover", async () => {
+    mockFetchWithCoverSource("ai-photo");
+    render(<EditBook bookId="b1" />);
+    await waitFor(() => screen.getByLabelText(/Título/));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Re-enriquecer desde fuentes/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Portada")).toBeInTheDocument();
+  });
+
+  it("does not offer the cover diff for a deliberately user-uploaded cover", async () => {
+    mockFetchWithCoverSource("user");
+    render(<EditBook bookId="b1" />);
+    await waitFor(() => screen.getByLabelText(/Título/));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Re-enriquecer desde fuentes/ }),
+    );
+    // `coverCandidate` only differs from `book` on cover, so with it blocked
+    // there's nothing left to offer.
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/0 campos distintos/)).toBeInTheDocument();
+    expect(within(dialog).queryByText("Portada")).not.toBeInTheDocument();
+  });
+
+  it("accepting a cover diff persists coverSource as metadata", async () => {
+    const patched = mockFetchWithCoverSource("ai-photo");
+    render(<EditBook bookId="b1" />);
+    await waitFor(() => screen.getByLabelText(/Título/));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Re-enriquecer desde fuentes/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    within(dialog).getByText("Portada");
+    fireEvent.click(screen.getByRole("radio", { name: /De la fuente/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Aplicar/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() =>
+      expect(
+        (patched.body as { coverSource?: string; coverUrl?: string })
+          ?.coverSource,
+      ).toBe("metadata"),
+    );
+    expect((patched.body as { coverUrl?: string })?.coverUrl).toBe(
+      "https://source/cover.jpg",
     );
   });
 });

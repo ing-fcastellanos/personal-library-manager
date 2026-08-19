@@ -34,10 +34,13 @@ export const bookSchema = z.object({
   /** Where the metadata came from: 'google-books' | 'open-library' | 'manual' | 'ai'. */
   source: z.string().nullish(),
   /**
-   * Whether the current cover came from metadata enrichment or was uploaded by a
-   * reader (#15). A `"user"` cover is preserved by re-enrichment.
+   * Where the current cover came from (#15, extended for #20): metadata
+   * enrichment, a reader deliberately uploading one, or the photo captured by
+   * the AI add-by-photo flow. A `"user"` cover is preserved by re-enrichment;
+   * an `"ai-photo"` one is offered for replacement, since it was never a
+   * deliberate cover choice — it's just how that flow captures the book.
    */
-  coverSource: z.enum(["metadata", "user"]).nullish(),
+  coverSource: z.enum(["metadata", "user", "ai-photo"]).nullish(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -63,7 +66,7 @@ export const bookCreateSchema = z.object({
   description: z.string().nullish(),
   workKey: z.string().nullish(),
   source: z.string().nullish(),
-  coverSource: z.enum(["metadata", "user"]).nullish(),
+  coverSource: z.enum(["metadata", "user", "ai-photo"]).nullish(),
 });
 export type BookCreateInput = z.infer<typeof bookCreateSchema>;
 
