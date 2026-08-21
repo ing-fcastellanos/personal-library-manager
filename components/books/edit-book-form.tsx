@@ -28,6 +28,8 @@ export interface EditBookFormProps {
   onLoad: (id: string) => Promise<{ book: BookData; copy: CopyData }>;
   /** Upload a new cover image, resolve with its URL. */
   onUploadCover: (file: File) => Promise<string>;
+  /** Fetch the stock cover from the identification provider (Google Books). */
+  onUseStockCover?: () => Promise<string>;
   /** Fetch source metadata and return only the differing fields. */
   onReEnrich: (book: BookData) => Promise<FieldDiff[]>;
   /** Called when a re-enrich diff replaces the cover with the source's. */
@@ -50,6 +52,7 @@ export function EditBookForm({
   shelves = [],
   onLoad,
   onUploadCover,
+  onUseStockCover,
   onReEnrich,
   onCoverReplaced,
   onSave,
@@ -216,7 +219,9 @@ export function EditBookForm({
             <CoverField
               url={book.coverUrl}
               title={book.title}
+              isbn13={book.isbn13}
               onUpload={onUploadCover}
+              onUseStockCover={onUseStockCover}
               onChange={(url) => setBook((b) => ({ ...b, coverUrl: url }))}
             />
           </div>

@@ -182,3 +182,68 @@ describe("EditBook — cover replacement (#20)", () => {
     );
   });
 });
+
+describe("EditBook — stock cover from provider", () => {
+  it("offers three ways to change the cover", async () => {
+    render(<EditBook bookId="b1" />);
+    await waitFor(() => screen.getByLabelText(/Título/));
+    // Radix's DropdownMenuTrigger opens on pointerdown, not click.
+    fireEvent.pointerDown(screen.getByRole("button", { name: /Cambiar/ }), {
+      button: 0,
+    });
+    expect(
+      await screen.findByRole("menuitem", { name: "Tomar foto" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Elegir de la galería" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Usar portada de Google" }),
+    ).toBeInTheDocument();
+  });
+
+  it("fetches the provider's stock cover and persists coverSource as metadata", async () => {
+    const patched: { body?: unknown } = {};
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/books/b1") && method === "GET")
+        return jsonResponse(book);
+      if (url.endsWith("/api/books/b1/copies")) return jsonResponse(copies);
+      if (url.endsWith("/api/shelves")) return jsonResponse([]);
+      if (url.includes("/api/enrich")) return jsonResponse({ candidate });
+      if (url.endsWith("/api/books/b1/cover/from-source") && method === "POST")
+        return jsonResponse({ coverUrl: "https://storage/covers/stock.webp" });
+      if (url.endsWith("/api/books/b1") && method === "PATCH") {
+        patched.body = JSON.parse(String(init?.body));
+        return jsonResponse({ ...book });
+      }
+      if (url.includes("/api/copies/") && method === "PATCH")
+        return patchCopy();
+      return jsonResponse({}, 404);
+    }) as unknown as typeof fetch;
+
+    render(<EditBook bookId="b1" />);
+    await waitFor(() => screen.getByLabelText(/Título/));
+    // Radix's DropdownMenuTrigger opens on pointerdown, not click.
+    fireEvent.pointerDown(screen.getByRole("button", { name: /Cambiar/ }), {
+      button: 0,
+    });
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Usar portada de Google" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByAltText(/Portada de/)).toHaveAttribute(
+        "src",
+        "https://storage/covers/stock.webp",
+      ),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() =>
+      expect((patched.body as { coverSource?: string })?.coverSource).toBe(
+        "metadata",
+      ),
+    );
+  });
+});

@@ -22,6 +22,8 @@ const uploadCover = vi.fn();
 const getBook = vi.fn();
 const updateBook = vi.fn();
 const recordChange = vi.fn();
+const enrichByIsbn = vi.fn();
+const rehostCover = vi.fn();
 let authed = true;
 
 vi.mock("../../services/covers/service", () => ({
@@ -34,6 +36,12 @@ vi.mock("../../services/books/repository", () => ({
 }));
 vi.mock("../../services/audit/repository", () => ({
   recordChange: (...a: unknown[]) => recordChange(...a),
+}));
+vi.mock("../../services/enrichment/service", () => ({
+  enrichByIsbn: (...a: unknown[]) => enrichByIsbn(...a),
+}));
+vi.mock("../../services/enrichment/cover", () => ({
+  rehostCover: (...a: unknown[]) => rehostCover(...a),
 }));
 vi.mock("../middleware/require-auth", () => ({
   requireAuth: (
@@ -69,6 +77,8 @@ beforeEach(() => {
   getBook.mockReset();
   updateBook.mockReset();
   recordChange.mockReset();
+  enrichByIsbn.mockReset();
+  rehostCover.mockReset();
 });
 
 async function post(id: string, body: unknown) {
@@ -76,6 +86,12 @@ async function post(id: string, body: unknown) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+async function postFromSource(id: string) {
+  return fetch(`${baseUrl}/api/books/${id}/cover/from-source`, {
+    method: "POST",
   });
 }
 
@@ -147,6 +163,93 @@ describe("POST /api/books/:id/cover", () => {
   it("returns 401 when unauthenticated", async () => {
     authed = false;
     const res = await post("b1", validBody);
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("POST /api/books/:id/cover/from-source", () => {
+  it("fetches the source cover, re-hosts it, and marks coverSource metadata", async () => {
+    getBook.mockResolvedValueOnce({
+      id: "b1",
+      title: "Rayuela",
+      isbn13: "9780307474728",
+    });
+    enrichByIsbn.mockResolvedValueOnce({
+      coverUrl: "https://books.google.com/cover.jpg",
+    });
+    rehostCover.mockResolvedValueOnce(
+      "https://storage/covers/9780307474728.webp",
+    );
+    updateBook.mockResolvedValueOnce({ id: "b1" });
+
+    const res = await postFromSource("b1");
+    expect(res.status).toBe(200);
+    expect((await res.json()).coverUrl).toBe(
+      "https://storage/covers/9780307474728.webp",
+    );
+    expect(enrichByIsbn).toHaveBeenCalledWith("9780307474728");
+    expect(rehostCover).toHaveBeenCalledWith(
+      "https://books.google.com/cover.jpg",
+      "9780307474728",
+    );
+    expect(updateBook).toHaveBeenCalledWith("b1", {
+      coverUrl: "https://storage/covers/9780307474728.webp",
+      coverSource: "metadata",
+    });
+    expect(recordChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "update",
+        entityType: "book",
+        entityId: "b1",
+        changedFields: ["coverUrl", "coverSource"],
+      }),
+    );
+  });
+
+  it("returns 404 when the book does not exist", async () => {
+    getBook.mockResolvedValueOnce(null);
+    const res = await postFromSource("missing");
+    expect(res.status).toBe(404);
+    expect(enrichByIsbn).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the book has no isbn", async () => {
+    getBook.mockResolvedValueOnce({ id: "b1", title: "Rayuela", isbn13: null });
+    const res = await postFromSource("b1");
+    expect(res.status).toBe(400);
+    expect(enrichByIsbn).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the source has no cover", async () => {
+    getBook.mockResolvedValueOnce({
+      id: "b1",
+      title: "Rayuela",
+      isbn13: "9780307474728",
+    });
+    enrichByIsbn.mockResolvedValueOnce({ coverUrl: null });
+    const res = await postFromSource("b1");
+    expect(res.status).toBe(404);
+    expect(rehostCover).not.toHaveBeenCalled();
+  });
+
+  it("returns 502 when re-hosting the source cover fails", async () => {
+    getBook.mockResolvedValueOnce({
+      id: "b1",
+      title: "Rayuela",
+      isbn13: "9780307474728",
+    });
+    enrichByIsbn.mockResolvedValueOnce({
+      coverUrl: "https://books.google.com/cover.jpg",
+    });
+    rehostCover.mockResolvedValueOnce(null);
+    const res = await postFromSource("b1");
+    expect(res.status).toBe(502);
+    expect(updateBook).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    authed = false;
+    const res = await postFromSource("b1");
     expect(res.status).toBe(401);
   });
 });

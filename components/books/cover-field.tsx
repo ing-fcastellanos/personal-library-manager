@@ -1,9 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Camera, Trash2, Loader2, AlertCircle } from "lucide-react";
+import {
+  Camera,
+  Images,
+  Sparkles,
+  Trash2,
+  Loader2,
+  AlertCircle,
+  ChevronDown,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { CoverPreview } from "./enrich-skeleton";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -13,31 +27,41 @@ export interface CoverFieldProps {
   /** Current cover URL (metadata or a user upload). */
   url?: string;
   title?: string;
+  /** ISBN-13, when known — enables "Usar portada de Google". */
+  isbn13?: string;
   /**
    * Upload the chosen file; resolve with the new URL. Reject to show an error.
    * Throw `new Error("validation")` for type/size issues handled here already.
    */
   onUpload: (file: File) => Promise<string>;
+  /**
+   * Fetch the stock cover from the book-identification provider (Google
+   * Books); resolve with the new URL. Reject to show an error. Omit to hide
+   * the option entirely.
+   */
+  onUseStockCover?: () => Promise<string>;
   onChange: (url: string | undefined) => void;
 }
 
 type Status =
-  | { kind: "idle" }
-  | { kind: "uploading" }
-  | { kind: "error"; message: string };
+  { kind: "idle" } | { kind: "uploading" } | { kind: "error"; message: string };
 
 /**
- * Cover with Cambiar / Quitar actions. Validates type + size before upload,
- * shows an in-place "subiendo…" overlay with progress, and an inline error tied
- * to the cover region via aria-describedby. Composes CoverPreview + Button.
+ * Cover with a Cambiar menu (tomar foto / elegir de galería / usar portada de
+ * Google) plus Quitar. Validates type + size before upload, shows an in-place
+ * "subiendo…" overlay with progress, and an inline error tied to the cover
+ * region via aria-describedby. Composes CoverPreview + Button.
  */
 export function CoverField({
   url,
   title,
+  isbn13,
   onUpload,
+  onUseStockCover,
   onChange,
 }: CoverFieldProps) {
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
   const [status, setStatus] = React.useState<Status>({ kind: "idle" });
 
   async function handleFile(file: File | undefined) {
@@ -62,6 +86,21 @@ export function CoverField({
       setStatus({
         kind: "error",
         message: "No se pudo subir la imagen. Probá de nuevo.",
+      });
+    }
+  }
+
+  async function handleStockCover() {
+    if (!onUseStockCover) return;
+    setStatus({ kind: "uploading" });
+    try {
+      const next = await onUseStockCover();
+      onChange(next);
+      setStatus({ kind: "idle" });
+    } catch {
+      setStatus({
+        kind: "error",
+        message: "No encontramos una portada del proveedor.",
       });
     }
   }
@@ -93,23 +132,63 @@ export function CoverField({
         </p>
         <div className="flex flex-wrap gap-2">
           <input
-            ref={inputRef}
+            ref={cameraInputRef}
+            type="file"
+            accept={ACCEPT}
+            capture="environment"
+            className="sr-only"
+            aria-label="Tomar foto de la portada"
+            onChange={(e) => {
+              handleFile(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+          <input
+            ref={galleryInputRef}
             type="file"
             accept={ACCEPT}
             className="sr-only"
-            aria-label="Elegir nueva portada"
-            onChange={(e) => handleFile(e.target.files?.[0])}
+            aria-label="Elegir portada de la galería"
+            onChange={(e) => {
+              handleFile(e.target.files?.[0]);
+              e.target.value = "";
+            }}
           />
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            disabled={status.kind === "uploading"}
-            onClick={() => inputRef.current?.click()}
-          >
-            <Camera className="size-[15px]" />
-            Cambiar
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                disabled={status.kind === "uploading"}
+              >
+                <Camera className="size-[15px]" />
+                Cambiar
+                <ChevronDown className="size-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onSelect={() => cameraInputRef.current?.click()}
+              >
+                <Camera />
+                Tomar foto
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => galleryInputRef.current?.click()}
+              >
+                <Images />
+                Elegir de la galería
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!onUseStockCover || !isbn13}
+                onSelect={handleStockCover}
+              >
+                <Sparkles />
+                Usar portada de Google
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {url && (
             <Button
               variant="outline"
