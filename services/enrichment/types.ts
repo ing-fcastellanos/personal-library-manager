@@ -41,6 +41,19 @@ export interface Candidate {
 }
 
 /**
+ * A cover option returned by the publisher-scoped search (#22). Deliberately
+ * thinner than `Candidate` — the caller only needs enough to render a pickable
+ * cover card. `caption` is `"year · publisher"` with either segment dropped when
+ * unknown; it never includes a binding/format guess (e.g. "tapa blanda") since
+ * Google Books does not reliably expose that.
+ */
+export interface PublisherCoverCandidate {
+  id: string;
+  coverUrl: string | null;
+  caption: string;
+}
+
+/**
  * Projects a candidate into the `BookCreateInput` accepted by `POST /api/books`.
  * Derived `*Keys`/`titleKey` are dropped on purpose — the catalog server
  * recomputes them on write (#12 D2). `coverWidth` is a merge-only hint.

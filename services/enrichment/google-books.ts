@@ -89,3 +89,49 @@ export async function googleBooksSearch(
     .map((info) => normalizeGoogleVolume(info))
     .filter((c): c is Candidate => c != null);
 }
+
+/** Quotes a field-restricted query part, stripping embedded `"` so a user-typed
+ * value (e.g. a publisher name) can never break out of the query structure. */
+function quoteField(field: string, value: string): string {
+  const cleaned = value.replace(/"/g, "").trim();
+  return `${field}:"${cleaned}"`;
+}
+
+/**
+ * Builds a Google Books query restricted to the given fields (`intitle:`/
+ * `inauthor:`/`inpublisher:`), omitting any part that isn't provided.
+ */
+export function fieldRestrictedQuery(parts: {
+  title?: string;
+  author?: string;
+  publisher?: string;
+}): string {
+  const segments: string[] = [];
+  if (parts.title) segments.push(quoteField("intitle", parts.title));
+  if (parts.author) segments.push(quoteField("inauthor", parts.author));
+  if (parts.publisher)
+    segments.push(quoteField("inpublisher", parts.publisher));
+  return segments.join(" ");
+}
+
+/**
+ * Searches for editions of `title` from a specific `publisher` (optionally
+ * narrowed by the first author), returning every normalizable candidate
+ * (unranked — the caller ranks/truncates).
+ */
+export async function googleBooksSearchByPublisher(
+  title: string,
+  authors: readonly string[],
+  publisher: string,
+  options: GoogleBooksOptions = {},
+): Promise<Candidate[]> {
+  const query = fieldRestrictedQuery({
+    title,
+    author: authors[0],
+    publisher,
+  });
+  const volumes = await fetchVolumes(query, options);
+  return volumes
+    .map((info) => normalizeGoogleVolume(info))
+    .filter((c): c is Candidate => c != null);
+}

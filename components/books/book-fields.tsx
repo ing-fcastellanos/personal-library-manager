@@ -14,6 +14,11 @@ import {
 
 import { Field } from "./field";
 import { TokenField } from "./token-field";
+import { PublisherCoverSearch } from "./publisher-cover-search";
+import {
+  usePublisherCoverSearch,
+  type ResolvedCover,
+} from "./use-publisher-cover-search";
 import { type BookData, LANGUAGES } from "./types";
 
 export interface BookFieldsProps {
@@ -25,6 +30,13 @@ export interface BookFieldsProps {
   onClearError?: (key: "title") => void;
   /** Prefix to keep input ids unique when two forms mount at once. */
   idPrefix?: string;
+  /**
+   * Edit screen only (#22, `catalog-edit`) — replaces the plain Editorial
+   * input with the inline publisher-scoped cover search. The add screen
+   * doesn't opt in: a book being newly cataloged already went through the
+   * search/candidate flow that chose its cover.
+   */
+  enablePublisherCoverSearch?: boolean;
 }
 
 /**
@@ -37,10 +49,25 @@ export function BookFields({
   errors = {},
   onClearError,
   idPrefix = "b",
+  enablePublisherCoverSearch = false,
 }: BookFieldsProps) {
   const id = (k: string) => `${idPrefix}-${k}`;
   const set = <K extends keyof BookData>(k: K, v: BookData[K]) =>
     onChange({ ...value, [k]: v });
+
+  // Always called (rules-of-hooks) — cheap while idle; only wired into the UI
+  // when `enablePublisherCoverSearch` is set.
+  const publisherSearch = usePublisherCoverSearch(
+    value.publisher ?? "",
+    value.title,
+    value.authors,
+    (cover: ResolvedCover) =>
+      onChange({
+        ...value,
+        publisher: cover.publisher,
+        coverUrl: cover.coverUrl,
+      }),
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -77,14 +104,33 @@ export function BookFields({
       </Field>
 
       <div className="flex gap-3">
-        <Field id={id("pub")} label="Editorial" className="flex-1">
-          <Input
-            id={id("pub")}
-            value={value.publisher ?? ""}
-            onChange={(e) => set("publisher", e.target.value)}
-            className="h-11"
-          />
-        </Field>
+        {enablePublisherCoverSearch ? (
+          <div className="flex-1">
+            <PublisherCoverSearch
+              publisher={publisherSearch.publisher}
+              onPublisherChange={(v) => {
+                publisherSearch.onPublisherChange(v);
+                set("publisher", v);
+              }}
+              phase={publisherSearch.phase}
+              options={publisherSearch.options}
+              selectedId={publisherSearch.selectedId}
+              onPick={publisherSearch.pick}
+              singleCaption={publisherSearch.singleCaption}
+              onDone={publisherSearch.reset}
+              inputId={id("pub")}
+            />
+          </div>
+        ) : (
+          <Field id={id("pub")} label="Editorial" className="flex-1">
+            <Input
+              id={id("pub")}
+              value={value.publisher ?? ""}
+              onChange={(e) => set("publisher", e.target.value)}
+              className="h-11"
+            />
+          </Field>
+        )}
         <Field id={id("year")} label="Año" className="w-24 shrink-0">
           <Input
             id={id("year")}
