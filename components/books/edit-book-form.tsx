@@ -231,6 +231,7 @@ export function EditBookForm({
             errors={errors}
             onClearError={() => setErrors({})}
             idPrefix="eb"
+            enablePublisherCoverSearch
           />
         </div>
 

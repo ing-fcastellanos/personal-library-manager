@@ -11,10 +11,13 @@ import type { AddressInfo } from "node:net";
 
 const enrichByIsbn = vi.fn();
 const searchByText = vi.fn();
+const searchCoverByPublisher = vi.fn();
 
 vi.mock("../../services/enrichment/service", () => ({
   enrichByIsbn: (...args: unknown[]) => enrichByIsbn(...args),
   searchByText: (...args: unknown[]) => searchByText(...args),
+  searchCoverByPublisher: (...args: unknown[]) =>
+    searchCoverByPublisher(...args),
 }));
 
 let server: Server;
@@ -73,5 +76,66 @@ describe("GET /api/enrich", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.candidate).toBeNull();
+  });
+});
+
+describe("GET /api/enrich/cover-by-publisher", () => {
+  it("returns 400 when title is missing", async () => {
+    const res = await fetch(
+      `${baseUrl}/api/enrich/cover-by-publisher?publisher=Debolsillo`,
+    );
+    expect(res.status).toBe(400);
+    expect(searchCoverByPublisher).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when publisher is missing", async () => {
+    const res = await fetch(
+      `${baseUrl}/api/enrich/cover-by-publisher?title=Rayuela`,
+    );
+    expect(res.status).toBe(400);
+    expect(searchCoverByPublisher).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 with a populated candidate list", async () => {
+    searchCoverByPublisher.mockResolvedValueOnce([
+      {
+        id: "9780000000001",
+        coverUrl: "https://covers.example/a.jpg",
+        caption: "2019 · Debolsillo",
+      },
+    ]);
+    const res = await fetch(
+      `${baseUrl}/api/enrich/cover-by-publisher?title=Rayuela&authors=Julio+Cort%C3%A1zar&publisher=Debolsillo`,
+    );
+    expect(res.status).toBe(200);
+    expect(searchCoverByPublisher).toHaveBeenCalledWith(
+      "Rayuela",
+      ["Julio Cortázar"],
+      "Debolsillo",
+    );
+    const body = await res.json();
+    expect(body.candidates).toHaveLength(1);
+  });
+
+  it("returns 200 with an empty list, not an error, when nothing matches", async () => {
+    searchCoverByPublisher.mockResolvedValueOnce([]);
+    const res = await fetch(
+      `${baseUrl}/api/enrich/cover-by-publisher?title=Un+libro+rar%C3%ADsimo&publisher=Editorial+inexistente`,
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.candidates).toEqual([]);
+  });
+
+  it("accepts repeated `authors` params as a list", async () => {
+    searchCoverByPublisher.mockResolvedValueOnce([]);
+    await fetch(
+      `${baseUrl}/api/enrich/cover-by-publisher?title=Rayuela&authors=A&authors=B&publisher=Debolsillo`,
+    );
+    expect(searchCoverByPublisher).toHaveBeenCalledWith(
+      "Rayuela",
+      ["A", "B"],
+      "Debolsillo",
+    );
   });
 });

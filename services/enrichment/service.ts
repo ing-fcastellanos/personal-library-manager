@@ -1,12 +1,14 @@
 import {
   googleBooksByIsbn,
   googleBooksSearch,
+  googleBooksSearchByPublisher,
   GoogleBooksRateLimitError,
 } from "./google-books";
 import { openLibraryByIsbn, openLibrarySearch } from "./open-library";
 import { mergeCandidates } from "./merge";
-import { rankCandidates } from "./rank";
+import { rankCandidates, scoreCandidate } from "./rank";
 import { toIsbn13 } from "./normalize";
+import { slugify } from "../../lib/text/slug";
 import {
   readCache,
   writeCache,
@@ -16,7 +18,7 @@ import {
   SEARCH_HIT_TTL_MS,
   NEGATIVE_TTL_MS,
 } from "./cache";
-import type { Candidate } from "./types";
+import type { Candidate, PublisherCoverCandidate } from "./types";
 
 /**
  * Enrichment orchestration (#13). Exposes the two read paths consumed by
@@ -38,6 +40,7 @@ export interface EnrichDeps {
   openByIsbn?: typeof openLibraryByIsbn;
   googleSearch?: typeof googleBooksSearch;
   openSearch?: typeof openLibrarySearch;
+  googleSearchByPublisher?: typeof googleBooksSearchByPublisher;
   /** Backoff sleep, injectable so retry tests run without real waits. */
   delayImpl?: (ms: number) => Promise<void>;
 }
@@ -149,4 +152,58 @@ export async function searchByText(
     ranked.length ? SEARCH_HIT_TTL_MS : NEGATIVE_TTL_MS,
   );
   return ranked;
+}
+
+/** `"year · publisher"`, either segment dropped when unknown — never a guessed
+ * binding/format (#22 design.md). */
+function coverCaption(candidate: Candidate): string {
+  const parts: string[] = [];
+  if (candidate.publishedYear) parts.push(String(candidate.publishedYear));
+  if (candidate.publisher) parts.push(candidate.publisher);
+  return parts.join(" · ");
+}
+
+/**
+ * Searches for a cover scoped to a specific publisher (#22). Unlike
+ * `searchByText`, ranking doesn't require an author match (a cover-only pick
+ * shouldn't be dropped just because Google Books omitted authors on that
+ * volume) and results without a `coverUrl` are discarded — there's nothing to
+ * offer the reader otherwise. Not cached: publisher-scoped searches are
+ * comparatively rare (user-triggered corrections) rather than every shelf book.
+ */
+export async function searchCoverByPublisher(
+  title: string,
+  authors: readonly string[],
+  publisher: string,
+  deps: EnrichDeps = {},
+): Promise<PublisherCoverCandidate[]> {
+  const googleSearchByPublisher =
+    deps.googleSearchByPublisher ?? googleBooksSearchByPublisher;
+  const delayImpl = deps.delayImpl ?? defaultDelay;
+
+  const found =
+    (await safe(() =>
+      withRateLimitRetry(
+        () => googleSearchByPublisher(title, authors, publisher),
+        delayImpl,
+      ),
+    )) ?? [];
+
+  const querySlug = slugify(title);
+  const ranked = found
+    .filter((candidate) => candidate.coverUrl)
+    .map((candidate, index) => ({
+      candidate,
+      index,
+      score: scoreCandidate(querySlug, candidate),
+    }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, SEARCH_LIMIT)
+    .map(({ candidate }) => candidate);
+
+  return ranked.map((candidate, index) => ({
+    id: candidate.isbn13 ?? `${index}`,
+    coverUrl: candidate.coverUrl,
+    caption: coverCaption(candidate),
+  }));
 }

@@ -41,6 +41,11 @@ import {
   type ShelfBuckets,
 } from "./shelf-add";
 import type { BookData, ExistingBook, Shelf } from "./types";
+import { PublisherCoverSearch } from "./publisher-cover-search";
+import {
+  usePublisherCoverSearch,
+  type ResolvedCover,
+} from "./use-publisher-cover-search";
 
 /**
  * Add books from a whole-shelf photo (#21b, Claude Design handoff "Add by Shelf").
@@ -73,6 +78,9 @@ export function AddBookByShelf() {
   const [summary, setSummary] = React.useState({ added: 0, skipped: 0 });
   // Cherry-pick: indices of `auto` books the reader has toggled OUT of the batch.
   const [excluded, setExcluded] = React.useState<Set<number>>(new Set());
+  // Index of the `auto` row with its inline publisher/cover editor open (#22) —
+  // only one at a time, null when none is expanded.
+  const [expandedRow, setExpandedRow] = React.useState<number | null>(null);
   // The candidate shown in the full-metadata detail dialog (null = closed).
   const [detail, setDetail] = React.useState<IdentifyCandidate | null>(null);
   // The captured shelf photo, kept for reference while reading the results.
@@ -109,6 +117,27 @@ export function AddBookByShelf() {
       if (next.has(i)) next.delete(i);
       else next.add(i);
       return next;
+    });
+  }
+
+  /** Applies a corrected publisher + cover to one `auto` row's best candidate,
+   * so the unchanged intake path (`addAuto`) picks it up automatically (#22). */
+  function applyCoverToAutoRow(index: number, cover: ResolvedCover) {
+    setBuckets((b) => {
+      if (!b) return b;
+      const auto = b.auto.map((row, i) =>
+        i === index && row.best
+          ? {
+              ...row,
+              best: {
+                ...row.best,
+                publisher: cover.publisher,
+                coverUrl: cover.coverUrl,
+              },
+            }
+          : row,
+      );
+      return { ...b, auto };
     });
   }
 
@@ -482,60 +511,27 @@ export function AddBookByShelf() {
                 {buckets.auto.length} listos para agregar
               </span>
             </div>
-            <ul className="max-h-52 overflow-y-auto p-1.5">
-              {buckets.auto.map((b, i) => {
-                const on = !excluded.has(i);
-                return (
-                  <li
-                    key={i}
-                    className={cn(
-                      "flex items-center gap-2 p-2 transition-opacity",
-                      !on && "opacity-45",
-                    )}
-                  >
-                    <CoverThumb
-                      url={b.best!.coverUrl}
-                      className="h-11 w-[30px]"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-semibold">
-                        {b.best!.title}
-                      </p>
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {b.best!.authors?.[0] ?? ""}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setDetail(b.best)}
-                      aria-label={`Ver datos de ${b.best!.title}`}
-                      className="grid size-9 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
-                    >
-                      <Info className="size-[18px]" aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={on}
-                      aria-label={`Incluir ${b.best!.title}`}
-                      onClick={() => toggleExcluded(i)}
-                      className="grid size-9 shrink-0 place-items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      {on ? (
-                        <CheckCircle2
-                          className="size-[22px] text-success"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <Circle
-                          className="size-[22px] text-muted-foreground"
-                          aria-hidden="true"
-                        />
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
+            <ul
+              className={cn(
+                "overflow-y-auto p-1.5",
+                expandedRow != null ? "max-h-[420px]" : "max-h-52",
+              )}
+            >
+              {buckets.auto.map((b, i) => (
+                <AutoBucketRow
+                  key={i}
+                  book={b}
+                  index={i}
+                  included={!excluded.has(i)}
+                  expanded={expandedRow === i}
+                  onToggleInclude={() => toggleExcluded(i)}
+                  onToggleExpand={() =>
+                    setExpandedRow((cur) => (cur === i ? null : i))
+                  }
+                  onShowDetail={() => setDetail(b.best)}
+                  onApplyCover={(cover) => applyCoverToAutoRow(i, cover)}
+                />
+              ))}
             </ul>
             <div className="border-t border-border p-3">
               <button
@@ -980,6 +976,117 @@ function ReviewItem({
 }
 
 // ───────────────────────── small pieces ─────────────────────────
+
+/**
+ * One `auto` bucket row (#22): cover, title/author, and three icon buttons
+ * (edit editorial, view detail, include toggle) shrunk to 32px to fit the new
+ * pencil button. Always calls `usePublisherCoverSearch` (cheap while idle) so
+ * hooks stay unconditional; the search panel itself only renders while
+ * `expanded`.
+ */
+function AutoBucketRow({
+  book,
+  index,
+  included,
+  expanded,
+  onToggleInclude,
+  onToggleExpand,
+  onShowDetail,
+  onApplyCover,
+}: {
+  book: ProcessedBook;
+  index: number;
+  included: boolean;
+  expanded: boolean;
+  onToggleInclude: () => void;
+  onToggleExpand: () => void;
+  onShowDetail: () => void;
+  onApplyCover: (cover: ResolvedCover) => void;
+}) {
+  const best = book.best!;
+  const search = usePublisherCoverSearch(
+    best.publisher ?? "",
+    best.title,
+    best.authors ?? [],
+    onApplyCover,
+  );
+
+  return (
+    <li>
+      <div
+        className={cn(
+          "flex items-center gap-2 p-2 transition-opacity",
+          !included && "opacity-45",
+        )}
+      >
+        <CoverThumb url={best.coverUrl} className="h-11 w-[30px]" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-semibold">{best.title}</p>
+          <p className="truncate text-[11px] text-muted-foreground">
+            {best.authors?.[0] ?? ""}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          aria-label={`Editar editorial de ${best.title}`}
+          aria-expanded={expanded}
+          className={cn(
+            "grid size-8 shrink-0 place-items-center rounded-lg",
+            expanded
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <Pencil className="size-[15px]" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={onShowDetail}
+          aria-label={`Ver datos de ${best.title}`}
+          className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <Info className="size-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={included}
+          aria-label={`Incluir ${best.title}`}
+          onClick={onToggleInclude}
+          className="grid size-8 shrink-0 place-items-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {included ? (
+            <CheckCircle2
+              className="size-[19px] text-success"
+              aria-hidden="true"
+            />
+          ) : (
+            <Circle
+              className="size-[19px] text-muted-foreground"
+              aria-hidden="true"
+            />
+          )}
+        </button>
+      </div>
+      {expanded && (
+        <div className="mx-2 mb-2 rounded-xl border border-border bg-background p-2.5">
+          <PublisherCoverSearch
+            publisher={search.publisher}
+            onPublisherChange={search.onPublisherChange}
+            phase={search.phase}
+            options={search.options}
+            selectedId={search.selectedId}
+            onPick={search.pick}
+            singleCaption={search.singleCaption}
+            onDone={onToggleExpand}
+            inputId={`shelf-pub-${index}`}
+          />
+        </div>
+      )}
+    </li>
+  );
+}
 
 function CoverThumb({
   url,

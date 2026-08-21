@@ -230,6 +230,110 @@ describe("AddBookByShelf", () => {
     expect(await screen.findByText("Epic desert saga.")).toBeInTheDocument();
   });
 
+  it("only one row's inline editor is expanded at a time (#22)", async () => {
+    mockTwoAuto();
+    render(<AddBookByShelf />);
+    capture();
+    await screen.findByText("2 listos para agregar");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Editar editorial de Dune/ }),
+    );
+    expect(screen.getByLabelText("Editorial")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Editar editorial de Hyperion/ }),
+    );
+    // Only one "Editorial" input on screen — Dune's editor closed when Hyperion's opened.
+    expect(screen.getAllByLabelText("Editorial")).toHaveLength(1);
+  });
+
+  it("a corrected publisher/cover reaches intake for that book only (#22)", async () => {
+    global.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      calls.push({ url, method, body });
+      if (url.endsWith("/api/shelves")) return json([]);
+      if (url.endsWith("/api/ai/identify-shelf"))
+        return json({
+          books: [
+            {
+              title: "Dune",
+              authors: ["Herbert"],
+              confidence: 0.95,
+              sourceProvider: "openai",
+            },
+            {
+              title: "Hyperion",
+              authors: ["Simmons"],
+              confidence: 0.95,
+              sourceProvider: "openai",
+            },
+          ],
+        });
+      if (url.includes("/api/enrich/cover-by-publisher")) {
+        return json({
+          candidates: [
+            {
+              id: "1",
+              coverUrl: "https://covers.example/ace.jpg",
+              caption: "1990 · Ace",
+            },
+          ],
+        });
+      }
+      if (url.includes("/api/enrich")) {
+        if (url.includes("Dune"))
+          return json({
+            candidates: [
+              { title: "Dune", authors: ["Herbert"], coverUrl: "orig" },
+            ],
+          });
+        if (url.includes("Hyperion"))
+          return json({
+            candidates: [
+              { title: "Hyperion", authors: ["Simmons"], coverUrl: "orig-h" },
+            ],
+          });
+        return json({ candidates: [] });
+      }
+      if (url.includes("/api/books/duplicates")) return json({ matches: [] });
+      if (url.endsWith("/api/books/intake"))
+        return json({ book: { id: "b1" } }, 201);
+      return json({});
+    }) as unknown as typeof fetch;
+
+    render(<AddBookByShelf />);
+    capture();
+    await screen.findByText("2 listos para agregar");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Editar editorial de Dune/ }),
+    );
+    fireEvent.change(screen.getByLabelText("Editorial"), {
+      target: { value: "Ace" },
+    });
+
+    await screen.findByText("Portada actualizada", {}, { timeout: 1000 });
+
+    fireEvent.click(screen.getByRole("button", { name: /Agregar los 2/ }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/agregar/resumen"));
+
+    const intakes = calls.filter((c) => c.url.endsWith("/api/books/intake"));
+    const dune = intakes.find(
+      (c) => (c.body as { book: { title: string } }).book.title === "Dune",
+    );
+    const hyperion = intakes.find(
+      (c) => (c.body as { book: { title: string } }).book.title === "Hyperion",
+    );
+    expect(dune?.body).toMatchObject({
+      book: { publisher: "Ace" },
+      coverSourceUrl: "https://covers.example/ace.jpg",
+    });
+    expect(hyperion?.body).toMatchObject({ coverSourceUrl: "orig-h" });
+  });
+
   it("shows an empty state when no books are recognized", async () => {
     global.fetch = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
