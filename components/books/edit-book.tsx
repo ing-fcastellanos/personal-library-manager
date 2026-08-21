@@ -112,6 +112,15 @@ export function EditBook({ bookId }: { bookId: string }) {
     [bookId],
   );
 
+  const onUseStockCover = React.useCallback(async (): Promise<string> => {
+    const res = await fetch(`/api/books/${bookId}/cover/from-source`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error("stock cover fetch failed");
+    coverSource.current = "metadata";
+    return ((await res.json()) as { coverUrl: string }).coverUrl;
+  }, [bookId]);
+
   const onReEnrich = React.useCallback(
     async (book: BookData): Promise<FieldDiff[]> => {
       if (!book.isbn13?.trim()) return [];
@@ -252,6 +261,7 @@ export function EditBook({ bookId }: { bookId: string }) {
       shelves={shelves}
       onLoad={onLoad}
       onUploadCover={onUploadCover}
+      onUseStockCover={onUseStockCover}
       onReEnrich={onReEnrich}
       onCoverReplaced={onCoverReplaced}
       onSave={onSave}
