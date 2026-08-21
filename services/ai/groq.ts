@@ -35,9 +35,20 @@ export function createGroqProvider(): AIProvider {
     instruction: string,
     image: AIImage,
   ): Promise<string> {
-    const res = await getClient().chat.completions.create({
+    // qwen3.6-27b is a reasoning model; left at its default it wraps `<think>`
+    // reasoning around the answer, which breaks JSON-mode validation with
+    // Groq's own 400 "Failed to validate JSON" (console.groq.com/docs/reasoning).
+    // `reasoning_format: "hidden"` keeps `content` pure JSON, and
+    // `reasoning_effort: "none"` skips the reasoning pass entirely, which also
+    // avoids it eating into the completion budget on a busy shelf photo.
+    const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming & {
+      reasoning_format: "hidden";
+      reasoning_effort: "none";
+    } = {
       model: MODEL,
       response_format: { type: "json_object" },
+      reasoning_format: "hidden",
+      reasoning_effort: "none",
       messages: [
         {
           role: "user",
@@ -47,7 +58,8 @@ export function createGroqProvider(): AIProvider {
           ],
         },
       ],
-    });
+    };
+    const res = await getClient().chat.completions.create(params);
     return res.choices[0]?.message?.content ?? "";
   }
 
